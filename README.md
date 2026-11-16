@@ -117,3 +117,5 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · `motion`
 ## Origem
 
 Baseado no **UIGen**, projeto do curso *Claude Code in Action* da Anthropic. Migrado para Next 16 / AI SDK 7 e estendido para a aula (UI, Design Review, multi-provedor, mock, e2e e material didático).
+
+> **Sobre licença:** o código original do UIGen foi distribuído pelo curso sem licença open source explícita. Este repositório é material educacional e não adiciona uma licença própria; os direitos sobre o código original continuam com a Anthropic. Use para estudo.
