@@ -10,8 +10,9 @@ const port = isMock ? 3100 : 3200;
 export default defineConfig({
   testDir: "./e2e",
   testIgnore: process.env.CAPTURE ? undefined : "**/capture-*.spec.ts",
-  timeout: isMock ? 90_000 : 240_000,
-  expect: { timeout: isMock ? 20_000 : 120_000 },
+  // Free tiers (ex.: Groq, 8 mil tokens/min) esperam o limite entre passos.
+  timeout: isMock ? 90_000 : 420_000,
+  expect: { timeout: isMock ? 20_000 : 300_000 },
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,

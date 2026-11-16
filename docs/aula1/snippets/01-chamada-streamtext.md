@@ -1,6 +1,6 @@
 # A chamada ao modelo com `streamText`
 
-**Onde:** `src/app/api/chat/route.ts:36-58`
+**Onde:** `src/app/api/chat/route.ts:37-59`
 
 ```ts
   let config;
@@ -13,19 +13,19 @@
   const { provider, modelId, model } = config;
   console.log(`[chat] ${provider}/${modelId}`);
 
+  // Projeto vazio = o usuário quer criar algo. Modelos abertos (ex.: gpt-oss
+  // no Groq) às vezes "respondem" colando o código no chat em vez de chamar
+  // a ferramenta, e aí nenhum arquivo é criado. Nesses provedores, o 1º passo
+  // é obrigado a usar a ferramenta. O Haiku segue o prompt sozinho e ainda
+  // escreve a frase de abertura em stream, então deixamos livre.
+  const isNewProject = !fileSystem.getNode("/")?.children?.size;
+  const forceFirstTool = isNewProject && provider !== "anthropic" && provider !== "mock";
+
   const result = streamText({
     model,
     // System prompt. O providerOptions de cache só é lido pela Anthropic;
     // os outros provedores ignoram.
     instructions: {
-      role: "system",
-      content: generationPrompt,
-      providerOptions: {
-        anthropic: { cacheControl: { type: "ephemeral" } },
-      },
-    },
-    messages: await convertToModelMessages(messages, { tools }),
-    tools,
 ```
 
 ## O que está acontecendo

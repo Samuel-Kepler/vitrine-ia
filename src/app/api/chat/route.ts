@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { getModelConfig } from "@/lib/provider";
 import { generationPrompt } from "@/lib/prompts/generation";
+import { friendlyAIError } from "@/lib/ai-errors";
 
 interface ChatRequestBody {
   messages: UIMessage[];
@@ -43,6 +44,14 @@ export async function POST(req: Request) {
   const { provider, modelId, model } = config;
   console.log(`[chat] ${provider}/${modelId}`);
 
+  // Projeto vazio = o usuário quer criar algo. Modelos abertos (ex.: gpt-oss
+  // no Groq) às vezes "respondem" colando o código no chat em vez de chamar
+  // a ferramenta, e aí nenhum arquivo é criado. Nesses provedores, o 1º passo
+  // é obrigado a usar a ferramenta. O Haiku segue o prompt sozinho e ainda
+  // escreve a frase de abertura em stream, então deixamos livre.
+  const isNewProject = !fileSystem.getNode("/")?.children?.size;
+  const forceFirstTool = isNewProject && provider !== "anthropic" && provider !== "mock";
+
   const result = streamText({
     model,
     // System prompt. O providerOptions de cache só é lido pela Anthropic;
@@ -62,6 +71,15 @@ export async function POST(req: Request) {
     // Loop agêntico: o modelo pode chamar ferramentas várias vezes
     // até terminar. O mock usa poucos passos para não se repetir.
     stopWhen: isStepCount(provider === "mock" ? 4 : 40),
+    // Regra determinística em vez de torcer pelo modelo: no 1º passo de um
+    // projeto novo, ele é OBRIGADO a chamar str_replace_editor.
+    // Free tiers limitam tokens por minuto (Groq: 8 mil). Quando o provedor
+    // responde 429, o SDK espera o tempo do header retry-after e tenta de novo.
+    maxRetries: 6,
+    prepareStep: ({ stepNumber }) =>
+      stepNumber === 0 && forceFirstTool
+        ? { toolChoice: { type: "tool", toolName: "str_replace_editor" } }
+        : undefined,
     onError: ({ error }) => {
       console.error(error);
     },
@@ -69,6 +87,9 @@ export async function POST(req: Request) {
       console.log(
         `[chat] fim: ${finishReason} · ${steps.length} passos · ${totalUsage.outputTokens ?? "?"} tokens de saída`
       );
+      // Roteadores como openrouter/free podem trocar de modelo a cada passo.
+      const used = [...new Set(steps.map((s) => s.response.modelId))];
+      if (used.length && used.join() !== modelId) console.log(`[chat] modelos usados: ${used.join(", ")}`);
     },
   });
 
@@ -76,6 +97,9 @@ export async function POST(req: Request) {
     stream: result.stream,
     tools,
     originalMessages: messages,
+    // Sem isso o navegador recebe só "An error occurred.".
+    onError: (error) => friendlyAIError(error, provider),
+    redactToolErrors: false,
     onEnd: async ({ messages: allMessages }) => {
       if (!projectId) return;
 

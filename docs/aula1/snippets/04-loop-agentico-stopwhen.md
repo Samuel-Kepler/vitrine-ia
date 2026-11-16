@@ -1,6 +1,6 @@
 # O loop agêntico com `stopWhen`
 
-**Onde:** `src/app/api/chat/route.ts:57-72`
+**Onde:** `src/app/api/chat/route.ts:66-81`
 
 ```ts
     messages: await convertToModelMessages(messages, { tools }),
@@ -11,14 +11,14 @@
     // Loop agêntico: o modelo pode chamar ferramentas várias vezes
     // até terminar. O mock usa poucos passos para não se repetir.
     stopWhen: isStepCount(provider === "mock" ? 4 : 40),
-    onError: ({ error }) => {
-      console.error(error);
-    },
-    onFinish: ({ finishReason, steps, totalUsage }) => {
-      console.log(
-        `[chat] fim: ${finishReason} · ${steps.length} passos · ${totalUsage.outputTokens ?? "?"} tokens de saída`
-      );
-    },
+    // Regra determinística em vez de torcer pelo modelo: no 1º passo de um
+    // projeto novo, ele é OBRIGADO a chamar str_replace_editor.
+    // Free tiers limitam tokens por minuto (Groq: 8 mil). Quando o provedor
+    // responde 429, o SDK espera o tempo do header retry-after e tenta de novo.
+    maxRetries: 6,
+    prepareStep: ({ stepNumber }) =>
+      stepNumber === 0 && forceFirstTool
+        ? { toolChoice: { type: "tool", toolName: "str_replace_editor" } }
 ```
 
 ## O que está acontecendo

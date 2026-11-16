@@ -1,6 +1,8 @@
 import type { FileNode } from "@/lib/file-system";
 import { getModelConfig } from "@/lib/provider";
 import { runDesignReview } from "@/lib/review/review";
+import { friendlyAIError, isRateLimit } from "@/lib/ai-errors";
+import { NoObjectGeneratedError, NoOutputGeneratedError } from "ai";
 
 interface ReviewRequestBody {
   files?: Record<string, FileNode>;
@@ -34,11 +36,18 @@ export async function POST(req: Request) {
     return Response.json({ review, provider, modelId });
   } catch (error) {
     console.error(error);
+    if (NoObjectGeneratedError.isInstance(error) || NoOutputGeneratedError.isInstance(error)) {
+      return Response.json(
+        { error: "O modelo não devolveu um review válido. Tente de novo." },
+        { status: 502 }
+      );
+    }
     return Response.json(
-      { error: "O modelo não devolveu um review válido. Tente de novo." },
-      { status: 502 }
+      { error: friendlyAIError(error, provider) },
+      { status: isRateLimit(error) ? 429 : 502 }
     );
   }
 }
 
-export const maxDuration = 60;
+// Folga para esperar o limite por minuto do free tier.
+export const maxDuration = 120;

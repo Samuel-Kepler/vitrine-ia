@@ -31,6 +31,7 @@ export async function runDesignReview(
     model,
     instructions: reviewPrompt,
     prompt: filesToPrompt(files),
+    maxRetries: 6, // espera o retry-after do provedor (limite por minuto)
     // O SDK pede JSON ao provedor e valida a resposta com o schema zod.
     // Se o modelo devolver algo fora do schema, a chamada falha (não chega lixo na UI).
     output: Output.object({
@@ -40,7 +41,6 @@ export async function runDesignReview(
     }),
   });
   return output;
-}
 ```
 
 ## O que está acontecendo

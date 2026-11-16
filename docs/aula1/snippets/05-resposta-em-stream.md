@@ -1,16 +1,16 @@
 # `toUIMessageStream` + resposta em stream
 
-**Onde:** `src/app/api/chat/route.ts:75-79`
+**Onde:** `src/app/api/chat/route.ts:96-100`
 
 ```ts
   const stream = toUIMessageStream({
     stream: result.stream,
     tools,
     originalMessages: messages,
-    onEnd: async ({ messages: allMessages }) => {
+    // Sem isso o navegador recebe só "An error occurred.".
 ```
 
-**Onde:** `src/app/api/chat/route.ts:103-103`
+**Onde:** `src/app/api/chat/route.ts:127-127`
 
 ```ts
   return createUIMessageStreamResponse({ stream });

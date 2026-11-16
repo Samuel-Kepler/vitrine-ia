@@ -61,7 +61,14 @@ AI_PROVIDER=groq
 GROQ_API_KEY=sua-chave
 ```
 
-Muito rápido, com limite de requisições/tokens por minuto. Se aparecer erro de *rate limit* (limite de uso), espere um minuto ou use um modelo menor via `AI_MODEL`.
+É o provedor da turma. O que saber antes da aula (testado em 16/11/2026):
+
+- **Limite: 8 mil tokens por minuto** em todos os modelos de chat do free tier (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `qwen/qwen3.8-27b`). Uma landing de cafeteria gasta isso em uns 3 passos do loop, porque cada passo reenvia o system prompt e os arquivos já criados.
+- **Por isso a landing leva de 1 a 3 minutos** no Groq (no Haiku, uns 30 s). Quando o Groq responde "limite atingido" (HTTP 429), o app espera o tempo que o Groq pede e tenta de novo sozinho (`maxRetries: 6`). Se mesmo assim não der, o chat mostra "Limite de uso do groq atingido... espere 1 minuto e mande *continue*". Os arquivos já criados não se perdem.
+- **Duas proteções só para modelos abertos** (`src/app/api/chat/route.ts`): no 1º passo de um projeto novo o modelo é obrigado a chamar a ferramenta (sem isso, o gpt-oss às vezes cola o código no chat e nenhum arquivo é criado); e a ferramenta compila cada arquivo e devolve o erro de sintaxe ao modelo, que corrige no passo seguinte.
+- A frase de abertura ("Vou criar...") aparece **no fim**, não no começo, por causa do 1º passo forçado.
+- **Limite diário: 200 mil tokens por modelo** (dá umas 10 landings). Quando acaba, o chat avisa "cota diária". Cada modelo tem a sua cota: troque para `AI_MODEL=openai/gpt-oss-20b` ou `AI_MODEL=qwen/qwen3.8-27b` e continue.
+- Cada aluno com a própria chave: o limite é por conta. Gerar, rodar o review e gerar de novo em sequência rápida é o que mais estoura o limite por minuto.
 
 ### OpenRouter
 
@@ -71,13 +78,25 @@ OPENROUTER_API_KEY=sua-chave
 # AI_MODEL=outro-modelo:free
 ```
 
-Os modelos `:free` entram e saem do catálogo. Se o padrão sumir, liste os gratuitos atuais e troque o `AI_MODEL`:
+Bom como **plano B**, não como provedor principal da turma. Comparação feita em 16/11/2026, com o mesmo prompt de cafeteria e o e2e completo:
+
+| | Groq `openai/gpt-oss-120b` | OpenRouter `nvidia/nemotron-3-ultra-550b-a55b:free` | OpenRouter `openrouter/free` |
+|---|---|---|---|
+| Resultado | passou (landing + review) | passou (landing + review) | não terminou em 5 min |
+| Tempo da landing | 1 a 3 min | ~4 min 20 s | – |
+| Passos do loop | 6 a 9 | 10 | ficou reeditando o `/App.jsx` |
+| Limite do free tier | 8 mil tokens/min e 200 mil tokens/dia **por modelo** | 20 req/min e **50 requisições/dia** por conta | idem |
+| Landings por dia, por aluno | ~10 por modelo (dá para trocar de modelo) | ~4 (cada passo é uma requisição) | – |
+
+`openrouter/free` sorteia um modelo gratuito **a cada chamada**, então cada passo do loop pode cair num modelo diferente. O terminal mostra isso em `[chat] modelos usados: ...`. Para um agente em loop, prefira um modelo fixo.
+
+Os modelos `:free` entram e saem do catálogo. Para listar os gratuitos que aceitam *tool calling* (chamada de ferramentas), sem o qual o loop não funciona:
 
 ```bash
-curl -s https://openrouter.ai/api/v1/models | jq -r '.data[].id' | grep ':free'
+curl -s https://openrouter.ai/api/v1/models | jq -r '.data[] | select((.id | endswith(":free")) and (.supported_parameters | index("tools"))) | .id'
 ```
 
-Escolha um modelo com suporte a *tool calling* (chamada de ferramentas), senão o loop não funciona.
+Para ver quantas requisições gratuitas ainda restam hoje: `curl -s https://openrouter.ai/api/v1/key -H "Authorization: Bearer $OPENROUTER_API_KEY" | jq .data.free_model_daily_requests`. Comprar 10 créditos uma vez sobe o limite para 1000 por dia.
 
 ### Como testar a troca de provedor
 

@@ -1,6 +1,6 @@
 # Uma ferramenta (*tool*) com `inputSchema`
 
-**Onde:** `src/lib/tools/str-replace.ts:5-9`
+**Onde:** `src/lib/tools/str-replace.ts:17-21`
 
 ```ts
 const TextEditorInput = z.object({
@@ -10,7 +10,7 @@ const TextEditorInput = z.object({
   path: z.string().describe("Absolute path of the file, e.g. /App.jsx"),
 ```
 
-**Onde:** `src/lib/tools/str-replace.ts:32-54`
+**Onde:** `src/lib/tools/str-replace.ts:44-66`
 
 ```ts
 export const buildStrReplaceTool = (fileSystem: VirtualFileSystem) =>
@@ -35,7 +35,7 @@ export const buildStrReplaceTool = (fileSystem: VirtualFileSystem) =>
           );
 
         case "create":
-          return fileSystem.createFileWithParents(path, file_text || "");
+          return withSyntaxCheck(fileSystem, path, fileSystem.createFileWithParents(path, file_text || ""));
 ```
 
 ## O que está acontecendo

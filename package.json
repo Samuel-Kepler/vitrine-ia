@@ -13,6 +13,7 @@
     "db:reset": "npx prisma migrate reset --force",
     "test:e2e": "playwright test",
     "test:e2e:real": "E2E_PROVIDER=anthropic playwright test",
+    "test:e2e:groq": "E2E_PROVIDER=groq playwright test",
     "docs:capture": "CAPTURE=1 playwright test e2e/capture-docs.spec.ts"
   },
   "dependencies": {

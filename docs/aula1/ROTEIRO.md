@@ -33,6 +33,9 @@ A pergunta que atravessa a aula: **o que está acontecendo por baixo, e como eu 
 
 - **O modelo usa um ícone que não existe** (`Instagram` do `lucide-react`): o preview mostra "Failed to load app". Aconteceu preparando a aula. A correção foi **uma linha no system prompt**, não no código. Corrige o contexto, não xinga o modelo.
 - **Landing grande demais**: com `maxOutputTokens` baixo o loop para no meio (`finishReason: "length"`) e a timeline mostra os passos como "interrompido". O log `[chat] fim: ... tokens de saída` no terminal mostra o porquê.
+- **Limite do free tier do Groq** (8 mil tokens por minuto): o chat avisa "Limite de uso do groq atingido... mande *continue*". Bom para explicar que cada passo do loop reenvia o contexto inteiro, por isso o custo cresce a cada passo.
+- **Modelo aberto colando código no chat** em vez de chamar a ferramenta: com o gpt-oss isso aconteceu nos testes. A correção foi determinística, não no prompt: `prepareStep` obriga o 1º passo a ser uma tool call (`src/app/api/chat/route.ts`).
+- **JSX com erro de sintaxe** (um `)` sobrando, gerado pelo gpt-oss): a ferramenta compila o arquivo e devolve o erro ao modelo, que corrige no passo seguinte. É o loop "agir, olhar, corrigir" com um verificador de verdade (`src/lib/tools/str-replace.ts`).
 - **Plano B**: se a internet ou a cota cair, `AI_PROVIDER=mock` no `.env` e o fluxo inteiro continua funcionando (prints 11–13).
 
 ### Ângulo freelancer (fechamento)
@@ -43,19 +46,19 @@ O que foi vendido na tela: landing page animada + revisão de qualidade automát
 
 ## Exercício guiado (no fork de vocês)
 
-Pré-requisitos: Node 22+, um fork deste repositório e **uma** chave free tier (veja o [README](../../README.md#provedores)).
+Pré-requisitos: Node 22+, um fork deste repositório e uma chave gratuita do **Groq** ([console.groq.com/keys](https://console.groq.com/keys); detalhes no [README](../../README.md#groq)).
 
-### Parte 1 · Trocar o provedor para um free tier (15 min)
+### Parte 1 · Trocar o provedor para o Groq (15 min)
 
-1. `cp .env.example .env` e preencha **só** um provedor. Exemplo com Gemini:
+1. `cp .env.example .env` e preencha **só** o Groq:
    ```
-   AI_PROVIDER=google
-   GOOGLE_GENERATIVE_AI_API_KEY=sua-chave
+   AI_PROVIDER=groq
+   GROQ_API_KEY=sua-chave
    ```
 2. `npm run setup` e depois `npm run dev`.
-3. Abra http://localhost:3000. **Critério de pronto:** o badge no topo mostra `google · gemini-flash-latest` e o terminal loga `[chat] google/gemini-flash-latest`.
-4. Clique em um prompt de exemplo. Anote: quantos passos e tool calls apareceram em "pronto"? Quantos tokens o terminal mostrou?
-5. Desafio: troque para `groq` ou `openrouter` e compare o mesmo prompt. Qual foi mais rápido? Qual seguiu melhor o system prompt?
+3. Abra http://localhost:3000. **Critério de pronto:** o badge no topo mostra `groq · openai/gpt-oss-120b` e o terminal loga `[chat] groq/openai/gpt-oss-120b`.
+4. Clique em um prompt de exemplo e **espere** (de 1 a 3 minutos: o free tier libera 8 mil tokens por minuto). Anote: quantos passos e tool calls apareceram em "pronto"? Quantos tokens o terminal mostrou?
+5. Desafio: troque o modelo com `AI_MODEL=openai/gpt-oss-20b` (ou `qwen/qwen3.8-27b`) e compare o mesmo prompt. Qual seguiu melhor o system prompt? Qual errou mais sintaxe? (Cada modelo tem cota própria de 200 mil tokens por dia, umas 10 landings: trocar de modelo também é o plano B quando a cota acaba.)
 
 ### Parte 2 · Mexer no system prompt (20 min)
 

@@ -1,6 +1,18 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { VirtualFileSystem } from "@/lib/file-system";
+import { transformJSX } from "@/lib/transform/jsx-transformer";
+
+// Depois de gravar, compila o arquivo com o mesmo Babel do preview. Se tiver
+// erro de sintaxe, o modelo recebe o erro como resultado da ferramenta e
+// corrige no próximo passo do loop, em vez de entregar um preview quebrado.
+export function withSyntaxCheck(fileSystem: VirtualFileSystem, path: string, result: string) {
+  if (result.startsWith("Error") || !/\.(jsx?|tsx?)$/.test(path)) return result;
+  const code = fileSystem.readFile(path) ?? "";
+  const { error } = transformJSX(code, path, new Set());
+  if (!error) return result;
+  return `${result}\nERRO DE SINTAXE em ${path} (o preview vai quebrar): ${error}\nCorrija este arquivo agora com str_replace.`;
+}
 
 const TextEditorInput = z.object({
   command: z
@@ -51,13 +63,13 @@ export const buildStrReplaceTool = (fileSystem: VirtualFileSystem) =>
           );
 
         case "create":
-          return fileSystem.createFileWithParents(path, file_text || "");
+          return withSyntaxCheck(fileSystem, path, fileSystem.createFileWithParents(path, file_text || ""));
 
         case "str_replace":
-          return fileSystem.replaceInFile(path, old_str || "", new_str || "");
+          return withSyntaxCheck(fileSystem, path, fileSystem.replaceInFile(path, old_str || "", new_str || ""));
 
         case "insert":
-          return fileSystem.insertInFile(path, insert_line || 0, new_str || "");
+          return withSyntaxCheck(fileSystem, path, fileSystem.insertInFile(path, insert_line || 0, new_str || ""));
 
         case "undo_edit":
           return `Error: undo_edit command is not supported in this version. Use str_replace to revert changes.`;
