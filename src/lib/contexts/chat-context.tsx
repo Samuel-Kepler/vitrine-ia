@@ -25,6 +25,10 @@ interface ChatContextType {
   handleInputChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
   handleSubmit: (e: FormEvent<HTMLFormElement>) => void;
   status: string;
+  error?: Error;
+  // Envia um texto direto (usado pelos prompts de exemplo)
+  sendText: (text: string) => void;
+  stop: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -43,7 +47,7 @@ export function ChatProvider({
     () => new DefaultChatTransport<UIMessage>({ api: "/api/chat" })
   );
 
-  const { messages, sendMessage, status } = useAIChat({
+  const { messages, sendMessage, status, error, stop } = useAIChat({
     id: projectId,
     messages: initialMessages,
     transport,
@@ -57,16 +61,20 @@ export function ChatProvider({
     setInput(e.target.value);
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text) return;
+  const sendText = (raw: string) => {
+    const text = raw.trim();
+    if (!text || status === "submitted" || status === "streaming") return;
     // O body vai junto de cada envio: estado atual dos arquivos + projeto
     sendMessage(
       { text },
       { body: { files: fileSystem.serialize(), projectId } }
     );
     setInput("");
+  };
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    sendText(input);
   };
 
   // Track anonymous work
@@ -84,6 +92,9 @@ export function ChatProvider({
         handleInputChange,
         handleSubmit,
         status,
+        error,
+        sendText,
+        stop,
       }}
     >
       {children}

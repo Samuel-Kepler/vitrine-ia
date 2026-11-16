@@ -245,8 +245,8 @@ test("FileTreeNode highlights selected file", () => {
 
   // Find the div containing the file name
   const fileDiv = screen.getByText("selected.js").parentElement;
-  expect(fileDiv?.className).toContain("bg-blue-50");
-  expect(fileDiv?.className).toContain("text-blue-600");
+  expect(fileDiv?.className).toContain("bg-violet-500/15");
+  expect(fileDiv?.className).toContain("text-violet-200");
 });
 
 test("FileTree renders nested directory structure", () => {

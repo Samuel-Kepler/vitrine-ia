@@ -1,9 +1,9 @@
 import { test, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { MessageList } from "../MessageList";
+import { toolPartToStep } from "../agent-steps";
 import type { UIMessage } from "ai";
 
-// Mock the MarkdownRenderer component
 vi.mock("../MarkdownRenderer", () => ({
   MarkdownRenderer: ({ content }: { content: string }) => <div>{content}</div>,
 }));
@@ -12,270 +12,145 @@ afterEach(() => {
   cleanup();
 });
 
-test("MessageList shows empty state when no messages", () => {
-  render(<MessageList messages={[]} />);
-
-  expect(
-    screen.getByText("Start a conversation to generate React components")
-  ).toBeDefined();
-  expect(
-    screen.getByText("I can help you create buttons, forms, cards, and more")
-  ).toBeDefined();
+const user = (id: string, text: string): UIMessage => ({
+  id,
+  role: "user",
+  parts: [{ type: "text", text }],
 });
 
-test("MessageList renders user messages", () => {
-  const messages: UIMessage[] = [
-    {
-      id: "1",
-      role: "user",
-      parts: [{ type: "text", text: "Create a button component" }],
-    },
-  ];
+const toolPart = (state: string, input: object) =>
+  ({ type: "tool-str_replace_editor", toolCallId: "t1", state, input, output: "ok" }) as any;
 
-  render(<MessageList messages={messages} />);
-
+test("renders user messages", () => {
+  render(<MessageList messages={[user("1", "Create a button component")]} />);
   expect(screen.getByText("Create a button component")).toBeDefined();
 });
 
-test("MessageList renders assistant messages", () => {
+test("renders assistant text and a 'pronto' footer when finished", () => {
   const messages: UIMessage[] = [
-    {
-      id: "1",
-      role: "assistant",
-      parts: [{ type: "text", text: "I'll help you create a button component." }],
-    },
+    { id: "2", role: "assistant", parts: [{ type: "text", text: "I'll help you." }] },
   ];
-
   render(<MessageList messages={messages} />);
-
-  expect(
-    screen.getByText("I'll help you create a button component.")
-  ).toBeDefined();
+  expect(screen.getByText("I'll help you.")).toBeDefined();
+  expect(screen.getByTestId("done").textContent).toContain("pronto");
+  expect(screen.getByTestId("done").textContent).toContain("0 tool calls");
 });
 
-test("MessageList renders messages with parts", () => {
+test("renders tool calls as timeline steps with verb, path and tool name", () => {
   const messages: UIMessage[] = [
     {
-      id: "1",
+      id: "a",
       role: "assistant",
       parts: [
         { type: "text", text: "Creating your component..." },
-        {
-          type: "tool-str_replace_editor",
-          toolCallId: "asdf",
-          state: "output-available",
-          input: {},
-          output: "Success",
-        },
+        toolPart("output-available", { command: "create", path: "/App.jsx" }),
       ],
     },
   ];
-
   render(<MessageList messages={messages} />);
-
   expect(screen.getByText("Creating your component...")).toBeDefined();
+  const step = screen.getByTestId("tool-step");
+  expect(step.textContent).toContain("criou");
+  expect(step.textContent).toContain("/App.jsx");
   expect(screen.getByText("str_replace_editor")).toBeDefined();
+  expect(screen.getByTestId("done").textContent).toContain("1 tool call");
 });
 
-test("MessageList shows streamed text and loading indicator on last assistant message", () => {
+test("streams the last text token by token with a caret while loading", () => {
   const messages: UIMessage[] = [
-    {
-      id: "1",
-      role: "assistant",
-      parts: [{ type: "text", text: "Generating your component..." }],
-    },
-  ];
-
-  render(<MessageList messages={messages} isLoading={true} />);
-
-  // Partial text stays visible while the response is still streaming
-  expect(screen.getByText("Generating your component...")).toBeDefined();
-  expect(screen.getByText("Generating...")).toBeDefined();
-});
-
-test("MessageList shows loading state for last assistant message without content", () => {
-  const messages: UIMessage[] = [
-    {
-      id: "1",
-      role: "assistant",
-      parts: [],
-    },
-  ];
-
-  render(<MessageList messages={messages} isLoading={true} />);
-
-  expect(screen.getByText("Generating...")).toBeDefined();
-});
-
-test("MessageList doesn't show loading state for non-last messages", () => {
-  const messages: UIMessage[] = [
-    {
-      id: "1",
-      role: "assistant",
-      parts: [{ type: "text", text: "First response" }],
-    },
+    user("1", "Make a card"),
     {
       id: "2",
-      role: "user",
-      parts: [{ type: "text", text: "Another request" }],
+      role: "assistant",
+      parts: [{ type: "text", text: "Generating your component", state: "streaming" }],
     },
   ];
-
-  render(<MessageList messages={messages} isLoading={true} />);
-
-  // Loading state should not appear because the last message is from user, not assistant
-  expect(screen.queryByText("Generating...")).toBeNull();
+  const { container } = render(<MessageList messages={messages} isLoading />);
+  const streaming = screen.getByTestId("streaming-text");
+  expect(streaming.textContent).toBe("Generating your component");
+  expect(streaming.querySelectorAll(".token-in")).toHaveLength(3);
+  expect(container.querySelector(".caret")).not.toBeNull();
+  expect(screen.getByTestId("thinking")).toBeDefined();
+  expect(screen.queryByTestId("done")).toBeNull();
 });
 
-test("MessageList renders reasoning parts", () => {
+test("shows 'pensando' while waiting for the first assistant chunk", () => {
+  render(<MessageList messages={[user("1", "Make a card")]} isLoading />);
+  expect(screen.getByTestId("thinking").textContent).toContain("pensando");
+});
+
+test("only the last assistant message is live", () => {
+  const messages: UIMessage[] = [
+    { id: "1", role: "assistant", parts: [{ type: "text", text: "First" }] },
+    user("2", "again"),
+    { id: "3", role: "assistant", parts: [{ type: "text", text: "Second" }] },
+  ];
+  render(<MessageList messages={messages} isLoading />);
+  expect(screen.getAllByTestId("done")).toHaveLength(1);
+  expect(screen.getAllByTestId("thinking")).toHaveLength(1);
+});
+
+test("marks loop iterations from step-start parts", () => {
   const messages: UIMessage[] = [
     {
       id: "1",
       role: "assistant",
       parts: [
-        { type: "text", text: "Let me analyze this." },
-        {
-          type: "reasoning",
-          text: "The user wants a button component with specific styling.",
-        },
-      ],
-    },
-  ];
-
-  render(<MessageList messages={messages} />);
-
-  expect(screen.getByText("Reasoning")).toBeDefined();
-  expect(
-    screen.getByText("The user wants a button component with specific styling.")
-  ).toBeDefined();
-});
-
-test("MessageList renders multiple messages in correct order", () => {
-  const messages: UIMessage[] = [
-    {
-      id: "1",
-      role: "user",
-      parts: [{ type: "text", text: "First user message" }],
-    },
-    {
-      id: "2",
-      role: "assistant",
-      parts: [{ type: "text", text: "First assistant response" }],
-    },
-    {
-      id: "3",
-      role: "user",
-      parts: [{ type: "text", text: "Second user message" }],
-    },
-    {
-      id: "4",
-      role: "assistant",
-      parts: [{ type: "text", text: "Second assistant response" }],
-    },
-  ];
-
-  const { container } = render(<MessageList messages={messages} />);
-
-  // Get all message containers in order
-  const messageContainers = container.querySelectorAll(".rounded-xl");
-
-  // Verify we have 4 messages
-  expect(messageContainers).toHaveLength(4);
-
-  // Check the content of each message in order
-  expect(messageContainers[0].textContent).toContain("First user message");
-  expect(messageContainers[1].textContent).toContain(
-    "First assistant response"
-  );
-  expect(messageContainers[2].textContent).toContain("Second user message");
-  expect(messageContainers[3].textContent).toContain(
-    "Second assistant response"
-  );
-});
-
-test("MessageList handles step-start parts", () => {
-  const messages: UIMessage[] = [
-    {
-      id: "1",
-      role: "assistant",
-      parts: [
+        { type: "step-start" },
         { type: "text", text: "Step 1 content" },
         { type: "step-start" },
         { type: "text", text: "Step 2 content" },
       ],
     },
   ];
-
   render(<MessageList messages={messages} />);
-
   expect(screen.getByText("Step 1 content")).toBeDefined();
   expect(screen.getByText("Step 2 content")).toBeDefined();
-  // Check that a separator exists (hr element)
-  const container = screen.getByText("Step 1 content").closest(".rounded-xl");
-  expect(container?.querySelector("hr")).toBeDefined();
+  expect(screen.getByText(/loop · passo 2/)).toBeDefined();
+  expect(screen.getByTestId("done").textContent).toContain("2 passos");
 });
 
-test("MessageList applies correct styling for user vs assistant messages", () => {
+test("renders reasoning parts", () => {
   const messages: UIMessage[] = [
     {
       id: "1",
-      role: "user",
-      parts: [{ type: "text", text: "User message" }],
-    },
-    {
-      id: "2",
       role: "assistant",
-      parts: [{ type: "text", text: "Assistant message" }],
+      parts: [{ type: "reasoning", text: "The user wants a button." }],
     },
   ];
-
   render(<MessageList messages={messages} />);
-
-  const userMessage = screen.getByText("User message").closest(".rounded-xl");
-  const assistantMessage = screen
-    .getByText("Assistant message")
-    .closest(".rounded-xl");
-
-  // User messages should have blue background
-  expect(userMessage?.className).toContain("bg-blue-600");
-  expect(userMessage?.className).toContain("text-white");
-
-  // Assistant messages should have white background
-  expect(assistantMessage?.className).toContain("bg-white");
-  expect(assistantMessage?.className).toContain("text-neutral-900");
+  expect(screen.getByText("Reasoning")).toBeDefined();
+  expect(screen.getByText("The user wants a button.")).toBeDefined();
 });
 
-test("MessageList renders text from parts", () => {
+test("renders messages in order", () => {
   const messages: UIMessage[] = [
-    {
-      id: "1",
-      role: "assistant",
-      parts: [{ type: "text", text: "This is from parts" }],
-    },
+    user("1", "First user"),
+    { id: "2", role: "assistant", parts: [{ type: "text", text: "First assistant" }] },
+    user("3", "Second user"),
   ];
+  const { container } = render(<MessageList messages={messages} />);
+  const roles = Array.from(container.querySelectorAll("[data-role]")).map((el) =>
+    el.getAttribute("data-role")
+  );
+  expect(roles).toEqual(["user", "assistant", "user"]);
+});
 
+test("a tool without output in a finished message is marked as interrupted", () => {
+  const messages: UIMessage[] = [
+    { id: "a", role: "assistant", parts: [toolPart("input-available", { command: "create", path: "/App.jsx" })] },
+  ];
   render(<MessageList messages={messages} />);
-
-  expect(screen.getByText("This is from parts")).toBeDefined();
+  expect(screen.getByTestId("tool-step").textContent).toContain("interrompido");
 });
 
-test("MessageList shows loading for assistant message with empty parts", () => {
-  const messages: UIMessage[] = [
-    {
-      id: "1",
-      role: "assistant",
-      parts: [],
-    },
-  ];
-
-  const { container } = render(
-    <MessageList messages={messages} isLoading={true} />
-  );
-
-  // Check that exactly one "Generating..." text appears
-  const loadingText = container.querySelectorAll(".text-neutral-500");
-  const generatingElements = Array.from(loadingText).filter(
-    (el) => el.textContent === "Generating..."
-  );
-  expect(generatingElements).toHaveLength(1);
+test("toolPartToStep maps commands and states", () => {
+  expect(toolPartToStep(toolPart("input-available", { command: "str_replace", path: "/a.jsx" }))).toMatchObject({
+    verb: "editando",
+    target: "/a.jsx",
+    state: "running",
+  });
+  expect(
+    toolPartToStep({ ...toolPart("output-error", { command: "rename", path: "/a", new_path: "/b" }), type: "tool-file_manager" })
+  ).toMatchObject({ verb: "moveu", target: "/a → /b", tool: "file_manager", state: "error" });
 });

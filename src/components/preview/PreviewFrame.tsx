@@ -101,31 +101,31 @@ export function PreviewFrame() {
   if (error) {
     if (error === "firstLoad") {
       return (
-        <div className="h-full flex items-center justify-center p-8 bg-gray-50">
-          <div className="text-center max-w-md">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
-              <svg
-                className="h-8 w-8 text-blue-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
+        <div className="relative flex h-full items-center justify-center overflow-hidden bg-zinc-950 p-8" data-testid="preview-empty">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(139,92,246,.15),transparent_60%)]" />
+          <div className="relative w-full max-w-md">
+            {/* "Wireframe" de landing page esperando o código chegar */}
+            <div className="space-y-3 rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl">
+              <div className="flex items-center justify-between">
+                <div className="skeleton h-3 w-20 rounded-full" />
+                <div className="skeleton h-6 w-16 rounded-full" />
+              </div>
+              <div className="skeleton mt-6 h-8 w-4/5 rounded-lg" />
+              <div className="skeleton h-8 w-3/5 rounded-lg" />
+              <div className="skeleton h-3 w-2/3 rounded-full" />
+              <div className="flex gap-2 pt-2">
+                <div className="h-9 w-28 rounded-full bg-gradient-to-r from-violet-500/60 to-fuchsia-500/60" />
+                <div className="skeleton h-9 w-24 rounded-full" />
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-4">
+                <div className="skeleton h-16 rounded-xl" />
+                <div className="skeleton h-16 rounded-xl" />
+                <div className="skeleton h-16 rounded-xl" />
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Welcome to UI Generator
-            </h3>
-            <p className="text-sm text-gray-600 mb-3">
-              Start building React components with AI assistance
-            </p>
-            <p className="text-xs text-gray-500">
-              Ask the AI to create your first component to see it live here
+            <p className="mt-6 text-center text-sm font-semibold text-white">O preview aparece aqui, ao vivo</p>
+            <p className="mt-1 text-center text-xs text-zinc-500">
+              Cada arquivo que a IA cria no sistema de arquivos virtual re-renderiza este iframe.
             </p>
           </div>
         </div>
@@ -133,18 +133,13 @@ export function PreviewFrame() {
     }
 
     return (
-      <div className="h-full flex items-center justify-center p-8 bg-gray-50">
-        <div className="text-center max-w-md">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-            <AlertCircle className="h-8 w-8 text-gray-400" />
+      <div className="flex h-full items-center justify-center bg-zinc-950 p-8">
+        <div className="max-w-md text-center">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
+            <AlertCircle className="h-8 w-8 text-zinc-500" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No Preview Available
-          </h3>
-          <p className="text-sm text-gray-500">{error}</p>
-          <p className="text-xs text-gray-400 mt-2">
-            Start by creating a React component using the AI assistant
-          </p>
+          <h3 className="mb-2 text-lg font-semibold text-white">Sem preview</h3>
+          <p className="text-sm text-zinc-400">{error}</p>
         </div>
       </div>
     );

@@ -3,6 +3,7 @@ import { getProjects } from "@/actions/get-projects";
 import { createProject } from "@/actions/create-project";
 import { MainContent } from "./main-content";
 import { redirect } from "next/navigation";
+import { getActiveModelInfo } from "@/lib/provider";
 
 export default async function Home() {
   const user = await getUser();
@@ -26,5 +27,5 @@ export default async function Home() {
   }
 
   // For anonymous users, show the main content without a project
-  return <MainContent user={user} />;
+  return <MainContent user={user} modelInfo={getActiveModelInfo()} />;
 }

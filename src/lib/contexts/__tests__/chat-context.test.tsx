@@ -147,10 +147,23 @@ describe("ChatContext", () => {
     expect(anonTracker.setHasAnonWork).not.toHaveBeenCalled();
   });
 
+  test("does not send while the model is still streaming", () => {
+    (useAIChat as any).mockReturnValue({ ...mockUseAIChat, status: "streaming" });
+    render(
+      <ChatProvider>
+        <TestComponent />
+      </ChatProvider>
+    );
+    expect(screen.getByTestId("status").textContent).toBe("streaming");
+    fireEvent.change(screen.getByTestId("input"), { target: { value: "Make a button" } });
+    fireEvent.submit(screen.getByTestId("form"));
+    expect(mockSendMessage).not.toHaveBeenCalled();
+  });
+
   test("manages input locally and sends it with sendMessage", () => {
     (useAIChat as any).mockReturnValue({
       ...mockUseAIChat,
-      status: "streaming",
+      status: "ready",
     });
 
     render(
@@ -159,7 +172,7 @@ describe("ChatContext", () => {
       </ChatProvider>
     );
 
-    expect(screen.getByTestId("status").textContent).toBe("streaming");
+    expect(screen.getByTestId("status").textContent).toBe("ready");
 
     const textarea = screen.getByTestId("input") as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: "Make a button" } });

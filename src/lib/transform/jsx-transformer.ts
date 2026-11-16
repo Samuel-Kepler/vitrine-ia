@@ -314,6 +314,33 @@ export function createPreviewHTML(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Preview</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Animações extras disponíveis para o código gerado (o system prompt lista estas classes)
+    tailwind.config = {
+      theme: {
+        extend: {
+          keyframes: {
+            'fade-up': { '0%': { opacity: '0', transform: 'translateY(24px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+            'fade-in': { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+            'scale-in': { '0%': { opacity: '0', transform: 'scale(.92)' }, '100%': { opacity: '1', transform: 'scale(1)' } },
+            float: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-12px)' } },
+            'gradient-x': { '0%,100%': { backgroundPosition: '0% 50%' }, '50%': { backgroundPosition: '100% 50%' } },
+            marquee: { '0%': { transform: 'translateX(0)' }, '100%': { transform: 'translateX(-50%)' } },
+            shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
+          },
+          animation: {
+            'fade-up': 'fade-up .8s cubic-bezier(.2,.8,.2,1) both',
+            'fade-in': 'fade-in .8s ease-out both',
+            'scale-in': 'scale-in .6s cubic-bezier(.2,.8,.2,1) both',
+            float: 'float 6s ease-in-out infinite',
+            'gradient-x': 'gradient-x 8s ease infinite',
+            marquee: 'marquee 24s linear infinite',
+            shimmer: 'shimmer 2.5s linear infinite',
+          },
+        },
+      },
+    };
+  </script>
   <style>
     body {
       margin: 0;

@@ -56,12 +56,19 @@ export async function POST(req: Request) {
     },
     messages: await convertToModelMessages(messages, { tools }),
     tools,
-    maxOutputTokens: 10_000,
+    // Landing pages completas passam fácil de 10k tokens. Se o limite
+    // estourar (finishReason "length"), o loop para no meio.
+    maxOutputTokens: 32_000,
     // Loop agêntico: o modelo pode chamar ferramentas várias vezes
     // até terminar. O mock usa poucos passos para não se repetir.
     stopWhen: isStepCount(provider === "mock" ? 4 : 40),
     onError: ({ error }) => {
       console.error(error);
+    },
+    onFinish: ({ finishReason, steps, totalUsage }) => {
+      console.log(
+        `[chat] fim: ${finishReason} · ${steps.length} passos · ${totalUsage.outputTokens ?? "?"} tokens de saída`
+      );
     },
   });
 

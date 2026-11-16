@@ -1,7 +1,7 @@
 import { test, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MessageInput } from "../MessageInput";
+import { MessageInput, INPUT_PLACEHOLDER } from "../MessageInput";
 
 afterEach(() => {
   cleanup();
@@ -17,7 +17,7 @@ test("renders with placeholder text", () => {
 
   render(<MessageInput {...mockProps} />);
   
-  const textarea = screen.getByPlaceholderText("Describe the React component you want to create...");
+  const textarea = screen.getByPlaceholderText(INPUT_PLACEHOLDER);
   expect(textarea).toBeDefined();
 });
 
@@ -46,7 +46,7 @@ test("calls handleInputChange when typing", async () => {
 
   render(<MessageInput {...mockProps} />);
   
-  const textarea = screen.getByPlaceholderText("Describe the React component you want to create...");
+  const textarea = screen.getByPlaceholderText(INPUT_PLACEHOLDER);
   await userEvent.type(textarea, "Hello");
   
   expect(handleInputChange).toHaveBeenCalled();
@@ -173,76 +173,21 @@ test("enables submit button when input has content and not loading", () => {
   expect(submitButton).toHaveProperty("disabled", false);
 });
 
-test("applies correct CSS classes based on loading state", () => {
-  const { rerender } = render(
-    <MessageInput
-      input="Test"
-      handleInputChange={vi.fn()}
-      handleSubmit={vi.fn()}
-      isLoading={false}
-    />
-  );
+test("shows a spinner instead of the arrow while loading", () => {
+  const props = { input: "Test", handleInputChange: vi.fn(), handleSubmit: vi.fn() };
+  const { rerender } = render(<MessageInput {...props} isLoading={false} />);
+  expect(screen.getByRole("button").querySelector("svg")?.getAttribute("class")).not.toContain("animate-spin");
 
-  let submitButton = screen.getByRole("button");
-  expect(submitButton.className).toContain("disabled:opacity-40");
-  expect(submitButton.className).toContain("hover:bg-blue-50");
-
-  rerender(
-    <MessageInput
-      input="Test"
-      handleInputChange={vi.fn()}
-      handleSubmit={vi.fn()}
-      isLoading={true}
-    />
-  );
-
-  submitButton = screen.getByRole("button");
-  expect(submitButton.className).toContain("disabled:cursor-not-allowed");
-  expect(submitButton.className).toContain("disabled:opacity-40");
+  rerender(<MessageInput {...props} isLoading={true} />);
+  expect(screen.getByRole("button").querySelector("svg")?.getAttribute("class")).toContain("animate-spin");
 });
 
-test("applies pulse animation to send icon when loading", () => {
-  const { rerender } = render(
-    <MessageInput
-      input="Test"
-      handleInputChange={vi.fn()}
-      handleSubmit={vi.fn()}
-      isLoading={false}
-    />
-  );
-
-  let sendIcon = screen.getByRole("button").querySelector("svg");
-  expect(sendIcon?.getAttribute("class")).not.toContain("animate-pulse");
-
-  rerender(
-    <MessageInput
-      input="Test"
-      handleInputChange={vi.fn()}
-      handleSubmit={vi.fn()}
-      isLoading={true}
-    />
-  );
-
-  sendIcon = screen.getByRole("button").querySelector("svg");
-  expect(sendIcon?.getAttribute("class")).toContain("text-neutral-300");
-});
-
-test("textarea has correct styling classes", () => {
-  const mockProps = {
-    input: "",
-    handleInputChange: vi.fn(),
-    handleSubmit: vi.fn(),
-    isLoading: false,
-  };
-
-  render(<MessageInput {...mockProps} />);
-  
-  const textarea = screen.getByRole("textbox");
-  expect(textarea.className).toContain("min-h-[80px]");
-  expect(textarea.className).toContain("max-h-[200px]");
-  expect(textarea.className).toContain("resize-none");
-  expect(textarea.className).toContain("focus:ring-2");
-  expect(textarea.className).toContain("focus:ring-blue-500/10");
+test("send button is highlighted only when it can send", () => {
+  const props = { handleInputChange: vi.fn(), handleSubmit: vi.fn(), isLoading: false };
+  const { rerender } = render(<MessageInput {...props} input="" />);
+  expect(screen.getByRole("button").className).not.toContain("from-violet-500");
+  rerender(<MessageInput {...props} input="oi" />);
+  expect(screen.getByRole("button").className).toContain("from-violet-500");
 });
 
 test("submit button click triggers form submission", async () => {

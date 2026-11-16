@@ -43,8 +43,13 @@ vi.mock("../MessageInput", () => ({
   ),
 }));
 
+const someMessages = [
+  { id: "1", role: "user", parts: [{ type: "text", text: "Hello" }] },
+];
+
 const mockUseChat = {
-  messages: [],
+  messages: someMessages as any[],
+  sendText: vi.fn(),
   input: "",
   handleInputChange: vi.fn(),
   handleSubmit: vi.fn(),
@@ -139,12 +144,8 @@ test("isLoading is false when status is idle", () => {
 
 test("scrolls when messages change", () => {
   const { rerender } = render(<ChatInterface />);
+  expect(screen.getByTestId("message-list").closest("[data-radix-scroll-area-viewport]")).toBeTruthy();
 
-  // Get initial scroll container
-  const scrollContainer = screen.getByTestId("message-list").closest("[data-radix-scroll-area-viewport]");
-  expect(scrollContainer).toBeDefined();
-
-  // Update messages - this should trigger the useEffect
   (useChat as any).mockReturnValue({
     ...mockUseChat,
     messages: [
@@ -152,28 +153,23 @@ test("scrolls when messages change", () => {
       { id: "2", role: "assistant", content: "Hi there!" },
     ],
   });
-
   rerender(<ChatInterface />);
-
-  // Verify component re-rendered with new messages
-  const messageList = screen.getByTestId("message-list");
-  expect(messageList.textContent).toContain("2 messages");
+  expect(screen.getByTestId("message-list").textContent).toContain("2 messages");
 });
 
-test("renders with correct layout classes", () => {
-  const { container } = render(<ChatInterface />);
+test("shows the empty state with clickable example prompts when there are no messages", async () => {
+  const sendText = vi.fn();
+  (useChat as any).mockReturnValue({ ...mockUseChat, messages: [], sendText });
+  render(<ChatInterface />);
 
-  const mainDiv = container.firstChild as HTMLElement;
-  expect(mainDiv.className).toContain("flex");
-  expect(mainDiv.className).toContain("flex-col");
-  expect(mainDiv.className).toContain("h-full");
-  expect(mainDiv.className).toContain("p-4");
-  expect(mainDiv.className).toContain("overflow-hidden");
+  expect(screen.getByTestId("empty-state")).toBeDefined();
+  expect(screen.queryByTestId("message-list")).toBeNull();
+  await userEvent.click(screen.getByText("Cafeteria"));
+  expect(sendText).toHaveBeenCalledWith(expect.stringContaining("cafeteria"));
+});
 
-  const scrollArea = screen.getByTestId("message-list").closest(".flex-1");
-  expect(scrollArea?.className).toContain("overflow-hidden");
-
-  const inputWrapper = screen.getByTestId("message-input").parentElement;
-  expect(inputWrapper?.className).toContain("mt-4");
-  expect(inputWrapper?.className).toContain("flex-shrink-0");
+test("shows the model error", () => {
+  (useChat as any).mockReturnValue({ ...mockUseChat, error: new Error("quota exceeded") });
+  render(<ChatInterface />);
+  expect(screen.getByRole("alert").textContent).toContain("quota exceeded");
 });

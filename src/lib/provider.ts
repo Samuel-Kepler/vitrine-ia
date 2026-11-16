@@ -89,3 +89,25 @@ export function getModelConfig(): ModelConfig {
   const modelId = process.env.AI_MODEL?.trim() || DEFAULT_MODELS[provider];
   return { provider, modelId, model: buildModel(provider, modelId) };
 }
+
+// Só o "rótulo" do provedor ativo, para o badge da UI (não cria o modelo).
+export interface ActiveModelInfo {
+  provider: ProviderId;
+  modelId: string;
+  error?: string;
+}
+
+export function getActiveModelInfo(
+  env: Record<string, string | undefined> = process.env
+): ActiveModelInfo {
+  try {
+    const provider = resolveProvider(env);
+    return { provider, modelId: env.AI_MODEL?.trim() || DEFAULT_MODELS[provider] };
+  } catch (error) {
+    return {
+      provider: (env.AI_PROVIDER?.trim().toLowerCase() || "mock") as ProviderId,
+      modelId: "não configurado",
+      error: (error as Error).message,
+    };
+  }
+}

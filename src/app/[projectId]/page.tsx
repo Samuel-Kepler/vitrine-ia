@@ -2,6 +2,7 @@ import { getUser } from "@/actions";
 import { getProject } from "@/actions/get-project";
 import { MainContent } from "@/app/main-content";
 import { redirect } from "next/navigation";
+import { getActiveModelInfo } from "@/lib/provider";
 
 interface PageProps {
   params: Promise<{ projectId: string }>;
@@ -23,5 +24,5 @@ export default async function ProjectPage({ params }: PageProps) {
     redirect("/");
   }
 
-  return <MainContent user={user} project={project} />;
+  return <MainContent user={user} project={project} modelInfo={getActiveModelInfo()} />;
 }

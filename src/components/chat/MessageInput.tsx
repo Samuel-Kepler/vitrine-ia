@@ -1,7 +1,8 @@
 "use client";
 
 import { ChangeEvent, FormEvent, KeyboardEvent } from "react";
-import { Send } from "lucide-react";
+import { ArrowUp, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface MessageInputProps {
   input: string;
@@ -10,42 +11,46 @@ interface MessageInputProps {
   isLoading: boolean;
 }
 
-export function MessageInput({
-  input,
-  handleInputChange,
-  handleSubmit,
-  isLoading,
-}: MessageInputProps) {
+export const INPUT_PLACEHOLDER = "Descreva a landing page ou o componente que você quer criar...";
+
+export function MessageInput({ input, handleInputChange, handleSubmit, isLoading }: MessageInputProps) {
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      const form = e.currentTarget.form;
-      if (form) {
-        form.requestSubmit();
-      }
+      e.currentTarget.form?.requestSubmit();
     }
   };
+  const canSend = !isLoading && input.trim().length > 0;
 
   return (
-    <form onSubmit={handleSubmit} className="relative p-4 bg-white border-t border-neutral-200/60">
-      <div className="relative max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit} className="p-4">
+      <div className="glow-ring relative rounded-2xl">
         <textarea
           value={input}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder="Describe the React component you want to create..."
+          placeholder={INPUT_PLACEHOLDER}
           disabled={isLoading}
-          className="w-full min-h-[80px] max-h-[200px] pl-4 pr-14 py-3.5 rounded-xl border border-neutral-200 bg-neutral-50/50 text-neutral-900 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500/50 focus:bg-white transition-all placeholder:text-neutral-400 text-[15px] font-normal shadow-sm"
           rows={3}
+          className="w-full min-h-[84px] max-h-[200px] resize-none rounded-2xl border border-white/10 bg-zinc-900/80 py-3.5 pl-4 pr-14 text-[15px] text-white placeholder:text-zinc-500 transition-all focus:border-violet-400/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60"
         />
-        <button 
-          type="submit" 
-          disabled={isLoading || !input.trim()}
-          className="absolute right-3 bottom-3 p-2.5 rounded-lg transition-all hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent group"
+        <button
+          type="submit"
+          aria-label="Enviar"
+          disabled={!canSend}
+          className={cn(
+            "absolute bottom-3 right-3 grid h-9 w-9 place-items-center rounded-xl transition-all disabled:cursor-not-allowed",
+            canSend
+              ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-900/40 hover:scale-105 active:scale-95"
+              : "bg-white/5 text-zinc-500"
+          )}
         >
-          <Send className={`h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${isLoading || !input.trim() ? 'text-neutral-300' : 'text-blue-600'}`} />
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
         </button>
       </div>
+      <p className="mt-2 px-1 text-[11px] text-zinc-500">
+        Enter envia · Shift+Enter quebra linha
+      </p>
     </form>
   );
 }

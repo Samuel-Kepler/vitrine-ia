@@ -8,6 +8,7 @@ import { POST } from "../route";
 
 beforeEach(() => {
   process.env.AI_PROVIDER = "mock";
+  process.env.MOCK_TOKEN_DELAY_MS = "0";
 });
 
 async function readStream(res: Response) {
@@ -39,7 +40,7 @@ test("streams text and tool calls from the mock model (end to end)", async () =>
   const toolInputs = chunks.filter((c) => c.type === "tool-input-available");
   expect(toolInputs.map((c) => c.toolName)).toContain("str_replace_editor");
   expect(toolInputs.map((c) => c.input.path)).toEqual(
-    expect.arrayContaining(["/App.jsx", "/components/Card.jsx"])
+    expect.arrayContaining(["/App.jsx", "/components/PricingCard.jsx"])
   );
   expect(chunks.filter((c) => c.type === "tool-output-available").length).toBe(
     toolInputs.length
