@@ -139,6 +139,8 @@ jobs:
           gh pr create --draft --base main --head "$B" \
             --title "🤖 [agent] $ISSUE_TITLE (#$ISSUE_NUMBER)" \
             --body "$(cat <<EOF
+          Closes #$ISSUE_NUMBER
+
           ## Plano do agente
           $SUMMARY
 
