@@ -1,0 +1,52 @@
+# ============================================================
+# AULA 1 → AULA 2: o Design Review (structured output) vira issues.
+#
+#   roda o review no site do cliente (agent/demo-site/)
+#   → DesignReview validado por zod (contrato src/lib/review/schema.ts)
+#   → reviewToIssues() → `gh issue create` com labels design-review + severity:<x>
+#
+# Aí a demo fecha o ciclo: uma pessoa aplica `agent:ready` numa dessas
+# issues e o workflow agent-loop resolve.
+# ============================================================
+name: review-to-issues
+
+on:
+  workflow_dispatch: # demo ao vivo: "rodar review agora"
+  schedule:
+    - cron: "0 9 * * 1" # ou toda segunda 9h UTC, como se fosse o cliente
+
+permissions:
+  contents: read
+  issues: write # criar as issues do review
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Garantir labels do ciclo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "design-review" --color a2eeef --force
+          gh label create "severity:high" --color d73a4a --force
+          gh label create "severity:medium" --color fbca04 --force
+          gh label create "severity:low" --color 0e8a16 --force
+          gh label create "agent:ready" --color 6f42c1 --force
+
+      - name: Rodar Design Review e abrir issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AI_PROVIDER: anthropic
+          AI_MODEL: claude-haiku-5-5
+        run: npx tsx agent/review-to-issues.ts --create
