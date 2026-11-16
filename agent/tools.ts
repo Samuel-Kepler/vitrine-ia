@@ -7,7 +7,7 @@
 //
 // O agente NÃO ganha uma tool de shell: os testes rodam fora do modelo,
 // no `verify.ts`. Modelo propõe, código verifica.
-import { tool } from "ai";
+import { tool, type Tool } from "ai";
 import { z } from "zod";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -20,9 +20,9 @@ export interface FsToolsOptions {
 
 export interface FsToolsResult {
   tools: {
-    list_files: ReturnType<typeof tool>;
-    read_file: ReturnType<typeof tool>;
-    write_file: ReturnType<typeof tool>;
+    list_files: Tool;
+    read_file: Tool;
+    write_file: Tool;
   };
   // Arquivos que o agente escreveu ao longo de toda a rodada —
   // o workflow usa isso para montar o resumo do PR.
