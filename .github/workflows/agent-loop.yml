@@ -81,8 +81,8 @@ jobs:
           fi
           {
             echo "ISSUE_NUMBER=$N"
-            echo "ISSUE_TITLE<<EOF"; cat /tmp/title; echo "EOF"
-            echo "ISSUE_BODY<<EOF"; cat /tmp/body; echo "EOF"
+            echo "ISSUE_TITLE<<AULA2_EOF"; cat /tmp/title; echo; echo "AULA2_EOF"
+            echo "ISSUE_BODY<<AULA2_EOF"; cat /tmp/body; echo; echo "AULA2_EOF"
             echo "ISSUE_LABELS=$(cat /tmp/labels)"
           } >> "$GITHUB_ENV"
 
