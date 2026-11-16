@@ -1,0 +1,187 @@
+# ============================================================
+# AULA 2 — Loop Engineering: o ciclo inteiro em um workflow.
+#
+#   1. GATILHO      label `agent:ready` numa issue (só quem tem
+#                   permissão de escrita aplica label → protege repo público)
+#   2. CONTEXTO     o agente lê a issue + os arquivos da allowlist
+#   3. AÇÃO         branch agent/issue-<n> + edições via tools
+#   4. VERIFICAÇÃO  lint + testes de verdade; erro volta pro modelo (até N×)
+#   5. CHECKPOINT   PR em DRAFT com plano, testes e prints antes/depois.
+#                   Nada entra na main sem um humano apertar "merge".
+#   6. GUARDRAILS   permissions mínimas, limites e allowlist em agent/config.ts
+# ============================================================
+name: agent-loop
+
+on:
+  # O gatilho protagonista: alguém com permissão rotula a issue.
+  issues:
+    types: [labeled]
+  # Plano B para a demo ao vivo: disparar na mão informando o número da issue.
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Número da issue para o agente resolver"
+        required: true
+
+# GUARDRAIL: o mínimo necessário. Sem `packages`, sem `actions: write`, etc.
+permissions:
+  contents: write      # criar branch e commitar a correção + prints
+  pull-requests: write # abrir o PR draft
+  issues: write        # comentar o resultado na issue
+
+# Uma issue = um agente por vez. Disparos repetidos (label tirada e posta de
+# novo) não correm em paralelo.
+concurrency:
+  group: agent-loop-${{ github.event.issue.number || inputs.issue_number }}
+
+env:
+  AI_PROVIDER: anthropic
+  AI_MODEL: claude-haiku-5-5
+  AGENT_MAX_ATTEMPTS: "3"      # tentativas do loop editar→verificar
+  AGENT_MAX_STEPS: "10"        # tool calls por tentativa
+  AGENT_MAX_TOKENS: "120000"   # orçamento de tokens da rodada inteira
+  AGENT_ALLOWED_PATHS: "agent/demo-site/"  # o agente NÃO escreve fora daqui
+  AGENT_VERIFY_COMMANDS: "npm run lint, npm test -- --run"
+
+jobs:
+  agent:
+    name: "issue → agente → PR draft"
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'agent:ready'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # CONTEXTO: uniformiza os dados da issue nos dois gatilhos.
+      # Multiline vai para $GITHUB_ENV com a sintaxe de heredoc.
+      - name: Carregar dados da issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EV_TITLE: ${{ github.event.issue.title }}
+          EV_BODY: ${{ github.event.issue.body }}
+          EV_LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            N="${{ inputs.issue_number }}"
+            gh issue view "$N" --json title --jq .title > /tmp/title
+            gh issue view "$N" --json body --jq '.body // ""' > /tmp/body
+            gh issue view "$N" --json labels --jq '[.[].name] | join(",")' > /tmp/labels
+          else
+            N="${{ github.event.issue.number }}"
+            printf '%s' "$EV_TITLE" > /tmp/title
+            printf '%s' "$EV_BODY" > /tmp/body
+            printf '%s' "$EV_LABELS" > /tmp/labels
+          fi
+          {
+            echo "ISSUE_NUMBER=$N"
+            echo "ISSUE_TITLE<<AULA2_EOF"; cat /tmp/title; echo; echo "AULA2_EOF"
+            echo "ISSUE_BODY<<AULA2_EOF"; cat /tmp/body; echo; echo "AULA2_EOF"
+            echo "ISSUE_LABELS=$(cat /tmp/labels)"
+          } >> "$GITHUB_ENV"
+
+      # Print ANTES: site estático, sem build — Chromium direto no arquivo.
+      - name: Screenshot ANTES
+        run: |
+          npx playwright install --with-deps chromium
+          npx tsx agent/screenshot.ts --out antes.png
+
+      # AÇÃO começa criando a branch de trabalho.
+      - name: Criar branch agent/issue-N
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "agent/issue-$ISSUE_NUMBER"
+
+      # O LOOP DE VERDADE: agent/loop.ts (generateText + tools + stopWhen).
+      # Se falhar, os steps finais tratam — o job nunca morre em silêncio.
+      - name: Rodar o agente (editar → verificar → repetir)
+        id: agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npx tsx agent/run-agent.ts 2>&1 | tee agent.log
+
+      - name: Screenshot DEPOIS
+        if: steps.agent.outcome == 'success'
+        run: npx tsx agent/screenshot.ts --out depois.png
+
+      # Commit da correção + prints na branch (os prints ganham URL pública
+      # raw.githubusercontent.com e entram embutidos no corpo do PR).
+      - name: Commit e push
+        if: steps.agent.outcome == 'success'
+        run: |
+          mkdir -p "agent-runs/issue-$ISSUE_NUMBER"
+          mv antes.png depois.png "agent-runs/issue-$ISSUE_NUMBER/"
+          git add -A
+          git commit -m "fix: resolve issue #$ISSUE_NUMBER (agente, verificado por lint+testes)" || echo "nada para commitar"
+          git push -u origin "agent/issue-$ISSUE_NUMBER"
+
+      # CHECKPOINT HUMANO: o PR nasce DRAFT. O humano olha os prints,
+      # lê o plano e decide: "Ready for review" + merge — ou fecha.
+      - name: Abrir PR draft
+        if: steps.agent.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          B="agent/issue-$ISSUE_NUMBER"
+          SUMMARY=$(jq -r .summary agent-report.json)
+          ATTEMPTS=$(jq -r .attempts agent-report.json)
+          TOKENS=$(jq -r .totalTokens agent-report.json)
+          FILES=$(jq -r '.changedFiles[]' agent-report.json | sed 's/^/- `/' | sed 's/$/`/')
+          BASE="https://raw.githubusercontent.com/$REPO/$B/agent-runs/issue-$ISSUE_NUMBER"
+          gh pr create --draft --base main --head "$B" \
+            --title "🤖 [agent] $ISSUE_TITLE (#$ISSUE_NUMBER)" \
+            --body "$(cat <<EOF
+          ## Plano do agente
+          $SUMMARY
+
+          ## Verificação
+          ✅ \`npm run lint\` e \`npm test\` passaram (tentativa $ATTEMPTS de $AGENT_MAX_ATTEMPTS, $TOKENS tokens)
+
+          ## Arquivos alterados
+          $FILES
+
+          ## Antes / Depois
+          | Antes | Depois |
+          |---|---|
+          | ![antes]($BASE/antes.png) | ![depois]($BASE/depois.png) |
+
+          ---
+          > PR gerado pelo workflow \`agent-loop\` (Aula 2 — Loop Engineering).
+          > Nada entra na \`main\` sem revisão humana.
+          >
+          > ⚠️ PRs criados com \`GITHUB_TOKEN\` **não disparam outros workflows**
+          > (proteção anti-recursão do Actions). Se este repo tivesse CI de PR,
+          > a alternativa seria um PAT ou um GitHub App.
+          EOF
+          )"
+
+      - name: Comentar na issue (sucesso)
+        if: steps.agent.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_URL=$(gh pr view "agent/issue-$ISSUE_NUMBER" --json url --jq .url)
+          gh issue comment "$ISSUE_NUMBER" --body "🤖 PR draft aberto: $PR_URL — aguardando revisão humana."
+          gh issue edit "$ISSUE_NUMBER" --remove-label "agent:ready" \
+            --add-label "agent:pr-open" 2>/dev/null \
+            || gh issue edit "$ISSUE_NUMBER" --remove-label "agent:ready"
+
+      # Falha também é feedback do ciclo: registra na issue e devolve
+      # a bola para o humano (que pode relabelar `agent:ready`).
+      - name: Comentar na issue (falha)
+        if: failure() && steps.agent.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SUMMARY=$(jq -r .summary agent-report.json 2>/dev/null || echo "(sem resumo)")
+          gh issue comment "$ISSUE_NUMBER" --body "🤖 O agente não conseguiu resolver em $AGENT_MAX_ATTEMPTS tentativas (ou estourou o orçamento de tokens). Última mensagem do modelo: $SUMMARY — veja a saída do verificador nos logs deste workflow."
+          gh label create "agent:failed" --color d73a4a --force
+          gh issue edit "$ISSUE_NUMBER" --remove-label "agent:ready" --add-label "agent:failed"
