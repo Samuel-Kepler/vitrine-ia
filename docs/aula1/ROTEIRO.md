@@ -7,6 +7,7 @@ A pergunta que atravessa a aula: **o que está acontecendo por baixo, e como eu 
 - Prints: [`screens/`](screens) (2880×1800, Haiku real salvo onde não diz o contrário)
 - GIFs e vídeos: [`gifs/`](gifs) (cada `.gif` tem um `.mp4` mais leve para slide)
 - Snippets: [`snippets/`](snippets) (código real com caminho e linha + explicação)
+- Rede: [`NETWORK.md`](NETWORK.md) (DevTools + `npm run dev:debug` para ver cada requisição ao modelo)
 - Como regerar tudo: [final deste arquivo](#como-regerar-o-material)
 
 ---

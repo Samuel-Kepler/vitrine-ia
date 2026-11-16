@@ -10,11 +10,12 @@
 // Sem AI_PROVIDER, usamos o primeiro provedor com chave configurada,
 // e caímos no modelo mock se não houver nenhuma.
 import type { LanguageModel } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
-import { google } from "@ai-sdk/google";
-import { groq } from "@ai-sdk/groq";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogle } from "@ai-sdk/google";
+import { createGroq } from "@ai-sdk/groq";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { MockLanguageModel } from "./mock-model";
+import { createDebugFetch, isAIDebug } from "./debug-fetch";
 
 export const PROVIDERS = ["anthropic", "google", "groq", "openrouter"] as const;
 export type ProviderId = (typeof PROVIDERS)[number] | "mock";
@@ -70,15 +71,17 @@ export function resolveProvider(
 }
 
 function buildModel(provider: ProviderId, modelId: string): LanguageModel {
+  // AI_DEBUG=1 troca o fetch do provedor por um que loga cada requisição HTTP.
+  const fetch = isAIDebug() && provider !== "mock" ? createDebugFetch(provider) : undefined;
   switch (provider) {
     case "anthropic":
-      return anthropic(modelId);
+      return createAnthropic({ fetch })(modelId);
     case "google":
-      return google(modelId);
+      return createGoogle({ fetch })(modelId);
     case "groq":
-      return groq(modelId);
+      return createGroq({ fetch })(modelId);
     case "openrouter":
-      return createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY })(modelId);
+      return createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY, fetch })(modelId);
     case "mock":
       return new MockLanguageModel(modelId);
   }

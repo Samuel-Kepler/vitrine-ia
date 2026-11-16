@@ -107,6 +107,14 @@ Para ver quantas requisições gratuitas ainda restam hoje: `curl -s https://ope
 
 Cada aluno usa a própria chave: a cota é por conta/projeto. **Nunca** commite o `.env` (ele já está no `.gitignore`).
 
+## Ver as requisições ao modelo
+
+```bash
+npm run dev:debug        # loga cada chamada HTTP ao provedor e salva os corpos em logs/ai/
+```
+
+Passo a passo para a aula (DevTools + logs): [`docs/aula1/NETWORK.md`](docs/aula1/NETWORK.md).
+
 ## Testes
 
 ```bash
