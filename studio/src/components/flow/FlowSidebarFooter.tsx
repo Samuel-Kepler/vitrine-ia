@@ -30,7 +30,9 @@ export function FlowSidebarFooter({ generateLabel, onGenerate, disabled, disable
         <div className="rounded-md bg-canvas p-2.5 text-xs text-gray-700">
           <ul className="list-disc space-y-1 pl-4">
             {notes.map((n, i) => (
-              <li key={i}>{n}</li>
+              <li key={i} className={i === 0 && n.includes(" falhou: ") ? "font-medium text-amber-800" : undefined} data-testid={i === 0 ? "suggest-source" : undefined}>
+                {n}
+              </li>
             ))}
           </ul>
           {canUndoSuggest() ? (

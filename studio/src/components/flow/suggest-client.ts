@@ -23,14 +23,21 @@ export async function runSuggest(): Promise<{ error?: string; info?: string }> {
     snapshot = { arch: s.arch, db: s.db };
     s.setArch(expandArch(json.suggestion.arch));
     s.setDb(expandDb(json.suggestion.db));
-    s.setSuggestNotes([`Fonte: ${json.fallback ? "sugestão automática" : `${json.provider} · ${json.modelId}`}`, ...json.suggestion.notes]);
+    s.setSuggestNotes([sourceLine(json), ...json.suggestion.notes]);
     s.setFlowSel(null);
-    return json.error ? { error: json.error } : {};
+    return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : String(err) };
   } finally {
     useStudio.getState().setBusy(false);
   }
+}
+
+/** Primeira linha das notas: de onde veio a sugestão e, se caiu no plano B, por quê. */
+export function sourceLine(r: Pick<SuggestResult, "fallback" | "provider" | "modelId" | "error">): string {
+  if (r.provider === "mock") return "Fonte: sugestão automática (provedor mock, sem IA).";
+  if (!r.fallback) return `Fonte: ${r.provider} · ${r.modelId}`;
+  return `Fonte: sugestão automática — ${r.provider} · ${r.modelId} falhou: ${r.error ?? "motivo desconhecido"}`;
 }
 
 export function canUndoSuggest() {

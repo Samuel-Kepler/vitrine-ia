@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return Response.json({ error: "Requisição inválida: " + parsed.error.issues[0]?.message }, { status: 400 });
   try {
     const r = await suggest(parsed.data);
-    console.log(`[suggest] ${r.provider}/${r.modelId} · ${r.fallback ? "fallback" : "ok"}`);
+    console.log(`[suggest] ${r.provider}/${r.modelId} · ${r.fallback ? `fallback: ${r.error}` : "ok"}`);
     return Response.json(r);
   } catch (err) {
     if (err instanceof ProviderConfigError) return Response.json({ error: err.message }, { status: 400 });

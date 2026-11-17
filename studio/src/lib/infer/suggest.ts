@@ -21,7 +21,7 @@ export const SuggestionSchema = z.object({
           key: ident.describe("short unique key, snake_case"),
           kind: z.enum(ARCH_KINDS),
           name: z.string().min(1).max(60).describe("display name in Portuguese"),
-          routes: z.array(z.string().max(80)).max(30).optional().describe('only for api/service, e.g. "POST /leads"'),
+          routes: z.array(z.string().max(80)).max(30).nullable().describe('only for api/service, e.g. "POST /leads"; null otherwise'),
         }),
       )
       .min(1)
@@ -38,10 +38,10 @@ export const SuggestionSchema = z.object({
               z.object({
                 name: ident,
                 type: z.enum(COL_TYPES),
-                pk: z.boolean().optional(),
-                nullable: z.boolean().optional(),
-                unique: z.boolean().optional(),
-                default: z.string().max(40).optional().describe('"now", "uuid", "autoincrement" or a literal'),
+                pk: z.boolean().nullable(),
+                nullable: z.boolean().nullable(),
+                unique: z.boolean().nullable(),
+                default: z.string().max(40).nullable().describe('"now", "uuid", "autoincrement", a literal, or null'),
               }),
             )
             .min(1)
@@ -60,6 +60,21 @@ Regras:
 - Ligações: from = quem chama/grava; to = quem é chamado. api->postgres "writes" ou "reads"; api->queue "event"; queue->worker "event"; chamadas "http".
 - Banco: tabelas em snake_case plural, sempre com "id" uuid pk default "uuid" e created_at timestamp default "now" quando fizer sentido. Não crie colunas de chave estrangeira: use relations (from = tabela filha).
 - Seja enxuto: nada de microsserviços sem motivo.`;
+
+// Provedores com saída estruturada estrita (Groq, OpenAI) exigem que toda
+// propriedade esteja em "required"; por isso os opcionais são nullable e os
+// nulls são removidos aqui.
+type Raw = z.infer<typeof SuggestionSchema>;
+function dropNulls<T extends object>(o: T) {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null)) as { [K in keyof T]: Exclude<T[K], null> | undefined };
+}
+export function normalizeSuggestion(raw: Raw): Suggestion {
+  return {
+    arch: { nodes: raw.arch.nodes.map(dropNulls) as Suggestion["arch"]["nodes"], edges: raw.arch.edges },
+    db: { tables: raw.db.tables.map((t) => ({ name: t.name, columns: t.columns.map(dropNulls) as Suggestion["db"]["tables"][number]["columns"] })), relations: raw.db.relations },
+    notes: raw.notes,
+  };
+}
 
 export interface SuggestResult {
   suggestion: Suggestion;
@@ -94,8 +109,8 @@ export async function suggest(input: { draft: DraftNode[]; brief?: string; setti
       maxRetries: 4,
       providerOptions: resolved.providerOptions as never,
     });
-    return { ...base, suggestion: res.output as Suggestion, fallback: false };
+    return { ...base, suggestion: normalizeSuggestion(res.output as Raw), fallback: false };
   } catch (err) {
-    return fallback(`${friendlyAIError(err, resolved.kind, resolved.baseURL)} Usei a sugestão automática.`);
+    return fallback(friendlyAIError(err, resolved.kind, resolved.baseURL));
   }
 }

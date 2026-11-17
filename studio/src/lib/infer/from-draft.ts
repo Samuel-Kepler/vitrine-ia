@@ -38,6 +38,10 @@ function fieldType(label: string): { type: ColType; unique?: boolean } {
   return { type: "varchar" };
 }
 
+// Palavras inteiras: "conta" não pode casar dentro de "Contato". \b do JS só
+// entende ASCII (falha em "área"), então os limites são feitos com \p{L}.
+const WANTS_LOGIN = /(?<!\p{L})(login|entrar|conta|contas|cadastro|cadastre-se|minha [aá]rea|[aá]rea do cliente)(?!\p{L})/u;
+
 export function inferFromDraft(draft: DraftNode[], brief = ""): Suggestion {
   const all = walk(draft);
   const has = (t: DraftNode["type"]) => all.some((n) => n.type === t);
@@ -85,7 +89,7 @@ export function inferFromDraft(draft: DraftNode[], brief = ""): Suggestion {
     notes.push("Depoimentos → tabela testimonials, editável sem novo deploy.");
   }
 
-  if (/login|entrar|conta|cadastro|minha área|area do cliente/.test(text)) {
+  if (WANTS_LOGIN.test(text)) {
     db.tables.push({ name: "users", columns: [ID, { name: "email", type: "varchar", unique: true }, { name: "name", type: "varchar", nullable: true }, CREATED] });
     arch.nodes.push({ key: "auth", kind: "auth", name: "Login" });
     arch.edges.push({ from: "api", to: "auth", kind: "http" });

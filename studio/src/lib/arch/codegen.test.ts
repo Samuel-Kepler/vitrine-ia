@@ -35,6 +35,28 @@ describe("inferência + codegen", () => {
     expect(files.find((f) => f.path === "docker-compose.yml")!.content).toContain("postgres:17-alpine");
   });
 
+  it("POST valida o corpo com zod derivado das colunas e mapeia erros do Postgres", async () => {
+    const { graph, er } = sample();
+    const files = archFiles(graph, er);
+    const api = files.find((f) => f.path === "services/api/src/index.ts")!.content;
+    const schemas = files.find((f) => f.path === "services/api/src/schemas.ts")!.content;
+    expect(api).toContain("LeadsInput.safeParse");
+    expect(api).toContain('"23505"');
+    expect(api).toMatch(/409/);
+    expect(JSON.parse(files.find((f) => f.path === "services/api/package.json")!.content).dependencies.zod).toBeTruthy();
+
+    // Executa o schema gerado (com o zod v4 do próprio studio).
+    const z = await import("zod/v4");
+    const body = schemas.replace(/^import .*$/m, "").replace(/export const (\w+) =/g, "out.$1 =");
+    const out: Record<string, { safeParse(v: unknown): { success: boolean } }> = {};
+    new Function("z", "out", body)(z, out);
+    expect(out.LeadsInput.safeParse({ nome: "Ana", email: "ana@ex.com" }).success).toBe(true);
+    expect(out.LeadsInput.safeParse({ nome: "", email: "ana@ex.com" }).success).toBe(false);
+    expect(out.LeadsInput.safeParse({ nome: "Ana", email: "não-é-email" }).success).toBe(false);
+    expect(out.LeadsInput.safeParse({ email: "ana@ex.com" }).success).toBe(false);
+    expect(out.LeadsInput.safeParse(undefined).success).toBe(false);
+  });
+
   it("SQL respeita a ordem pai -> filho e cria FK", () => {
     const { er } = sample();
     const sql = toSql(er, "postgres");
