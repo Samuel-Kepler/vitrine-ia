@@ -90,11 +90,16 @@ export function inferFromDraft(draft: DraftNode[], brief = ""): Suggestion {
   }
 
   if (WANTS_LOGIN.test(text)) {
-    db.tables.push({ name: "users", columns: [ID, { name: "email", type: "varchar", unique: true }, { name: "name", type: "varchar", nullable: true }, CREATED] });
+    // Mesmo formato que ensureAuthUsers (auth "Própria", o padrão do bloco).
+    db.tables.push({ name: "users", columns: [ID, { name: "email", type: "varchar", unique: true }, { name: "password_hash", type: "text" }, { name: "name", type: "varchar", nullable: true }, CREATED] });
     arch.nodes.push({ key: "auth", kind: "auth", name: "Login" });
     arch.edges.push({ from: "api", to: "auth", kind: "http" });
-    if (db.tables.some((t) => t.name === "subscriptions")) db.relations.push({ from: "subscriptions", to: "users", kind: "n-1" });
-    notes.push("O texto fala em login/conta → bloco de Autenticação e tabela users.");
+    if (db.tables.some((t) => t.name === "subscriptions")) {
+      db.relations.push({ from: "subscriptions", to: "users", kind: "n-1" });
+      const i = routes.indexOf("POST /subscriptions");
+      if (i >= 0) routes[i] = "POST /subscriptions auth";
+    }
+    notes.push("O texto fala em login/conta → Autenticação própria (register/login/me com JWT) e tabela users com password_hash.");
   }
 
   if (has("image") || /foto|upload|arquivo|cardápio em pdf/.test(text)) {

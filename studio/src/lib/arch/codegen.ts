@@ -1,9 +1,10 @@
 // Grafo de arquitetura -> moldes de backend (Node 24 + Hono + Docker).
 // Determinístico. Quando uma rota bate com uma tabela do canvas Banco e o
 // serviço grava no Postgres, o handler já sai com SQL de verdade.
-import { ARCH, routeLines, type ArchGraph, type ArchNode } from "./model";
-import { fkColumns, pascal, snake, type ColType, type ErModel, type Table } from "@/lib/db/model";
+import { ARCH, authMode, routeLines, type ArchGraph, type ArchNode, type RouteLine } from "./model";
+import { ensureAuthUsers, fkColumns, pascal, PASSWORD_COL, pkOf, snake, USERS_TABLE, type ColType, type ErModel, type Table } from "@/lib/db/model";
 import { toSql, type GeneratedFile } from "@/lib/db/codegen";
+import { authFile, JWT_SECRET_DEFAULT, type OwnAuthSpec } from "./codegen-auth";
 
 export const TEMPLATE_VERSIONS = {
   hono: "4.13.19",
@@ -35,6 +36,10 @@ interface ServicePlan {
   publishes: ArchNode[];
   consumes: ArchNode[];
   storage?: ArchNode;
+  /** Bloco de Autenticação "Própria" ligado a este serviço (exige Postgres com escrita). */
+  ownAuth?: ArchNode;
+  /** Precisa de src/auth.ts (auth própria ou alguma rota marcada com "auth"). */
+  jwt: boolean;
 }
 
 function plan(graph: ArchGraph): ServicePlan[] {
@@ -51,13 +56,20 @@ function plan(graph: ArchGraph): ServicePlan[] {
       const inc = graph.edges.filter((e) => e.target === node.id).map((e) => ({ e, s: byId.get(e.source)! })).filter((x) => x.s);
       const dbEdges = out.filter((x) => x.t.kind === "postgres");
       const explicit = Number(node.props.port);
+      const dbWrites = dbEdges.some((x) => x.e.kind === "writes");
+      const http = node.kind !== "worker";
+      // Auth própria vira código dentro do serviço; só faz sentido com Postgres gravável.
+      const ownAuth = http && dbWrites ? out.find((x) => x.t.kind === "auth" && authMode(x.t) === "propria")?.t : undefined;
+      const anyProtected = http && routeLines(node.props.routes).some((r) => r.protected);
       return {
         node,
         slug,
         port: Number.isInteger(explicit) && explicit > 0 ? explicit : nextPort++,
-        httpTargets: out.filter((x) => x.e.kind === "http" && ["api", "service", "external", "auth"].includes(x.t.kind)).map((x) => x.t),
+        httpTargets: out.filter((x) => x.e.kind === "http" && ["api", "service", "external", "auth"].includes(x.t.kind) && x.t !== ownAuth).map((x) => x.t),
         db: dbEdges[0]?.t,
-        dbWrites: dbEdges.some((x) => x.e.kind === "writes"),
+        dbWrites,
+        ownAuth,
+        jwt: !!ownAuth || anyProtected,
         cache: out.find((x) => x.t.kind === "cache")?.t,
         publishes: out.filter((x) => x.t.kind === "queue").map((x) => x.t),
         consumes: inc.filter((x) => x.s.kind === "queue").map((x) => x.s),
@@ -86,6 +98,7 @@ function bodyFields(t: Table, er: ErModel): BodyField[] {
   const out: BodyField[] = [];
   for (const c of t.columns) {
     if (c.default && GENERATED_DEFAULTS.has(c.default)) continue;
+    if (snake(c.name) === PASSWORD_COL) continue; // só /auth/register grava o hash
     if (c.pk && c.default) continue;
     let z = zodFor(c.type, c.name, !c.nullable && !c.default);
     if (c.nullable) z += ".nullish()";
@@ -125,6 +138,27 @@ function zodFor(type: ColType, name: string, required: boolean): string {
 
 const schemaName = (t: Table) => `${pascal(t.name)}Input`;
 
+/** Colunas devolvidas ao cliente: "*" ou, se a tabela guarda hash de senha, a lista sem ele. */
+function selectList(t: Table, er: ErModel): string {
+  if (!t.columns.some((c) => snake(c.name) === PASSWORD_COL)) return "*";
+  const cols = [...t.columns.map((c) => snake(c.name)).filter((n) => n !== PASSWORD_COL), ...fkColumns(er).filter((f) => f.table.id === t.id).map((f) => f.name)];
+  return cols.map((c) => `"${c}"`).join(", ");
+}
+
+/** FK desta tabela para users: numa rota protegida vem do token, não do corpo. */
+function userFk(t: Table, er: ErModel): string | undefined {
+  return fkColumns(er).find((f) => f.table.id === t.id && snake(f.ref.name) === USERS_TABLE)?.name;
+}
+
+function ownAuthSpec(er: ErModel): OwnAuthSpec {
+  const users = er.tables.find((t) => snake(t.name) === USERS_TABLE)!;
+  return {
+    userCols: selectList(users, er),
+    pk: snake(pkOf(users)?.name ?? "id"),
+    extraFields: bodyFields(users, er).filter((f) => f.name !== "email"),
+  };
+}
+
 /** Tabelas que recebem POST com SQL gerado neste serviço. */
 function postTables(p: ServicePlan, er: ErModel): Table[] {
   if (!p.db || !p.dbWrites) return [];
@@ -150,42 +184,51 @@ function schemasFile(tables: Table[], er: ErModel): string {
   return parts.join("\n") + "\n";
 }
 
-function routeHandler(p: ServicePlan, method: string, path: string, er: ErModel): string {
+function routeHandler(p: ServicePlan, route: RouteLine, er: ErModel): string {
+  const { method, path } = route;
   const honoPath = path.replace(/\{(\w+)\}/g, ":$1");
   const table = p.db ? tableForPath(path, er) : undefined;
   const hasId = /\/:\w+|\{\w+\}/.test(path);
   const tn = table ? snake(table.name) : "";
   const publish = p.publishes[0];
   const notify = publish ? `\n  await publish("${streamName(publish)}", { type: "${tn || "evento"}.${method === "POST" ? "created" : "changed"}", data: row });` : "";
+  const guard = route.protected ? "requireAuth, " : "";
+  const cols = table ? selectList(table, er) : "*";
 
   if (table && method === "GET" && !hasId) {
-    return `app.get("${honoPath}", async (c) => {
-  const { rows } = await db.query('select * from "${tn}" limit 100');
+    return `app.get("${honoPath}", ${guard}async (c) => {
+  const { rows } = await db.query('select ${cols} from "${tn}" limit 100');
   return c.json(rows);
 });`;
   }
   if (table && method === "GET" && hasId) {
-    return `app.get("${honoPath}", async (c) => {
-  const { rows } = await db.query('select * from "${tn}" where "${snake(table.columns.find((col) => col.pk)?.name ?? "id")}" = $1', [c.req.param("${honoPath.match(/:(\w+)/)?.[1] ?? "id"}")]);
+    return `app.get("${honoPath}", ${guard}async (c) => {
+  const { rows } = await db.query('select ${cols} from "${tn}" where "${snake(table.columns.find((col) => col.pk)?.name ?? "id")}" = $1', [c.req.param("${honoPath.match(/:(\w+)/)?.[1] ?? "id"}")]);
   return rows[0] ? c.json(rows[0]) : c.json({ error: "não encontrado" }, 404);
 });`;
   }
   if (table && method === "POST" && p.dbWrites && !hasId && bodyFields(table, er).length) {
-    return `app.post("${honoPath}", async (c) => {
-  const parsed = ${schemaName(table)}.safeParse(await c.req.json().catch(() => undefined));
+    // Rota protegida com FK para users: o dono vem do token (sub), não do corpo.
+    const owner = route.protected ? userFk(table, er) : undefined;
+    const schema = owner ? `${schemaName(table)}.omit({ ${JSON.stringify(owner)}: true })` : schemaName(table);
+    const data = owner
+      ? `const data: [string, unknown][] = [...Object.entries(parsed.data).filter(([, v]) => v !== undefined), ["${owner}", c.get("jwtPayload").sub]];`
+      : "const data = Object.entries(parsed.data).filter(([, v]) => v !== undefined);";
+    return `app.post("${honoPath}", ${guard}async (c) => {
+  const parsed = ${schema}.safeParse(await c.req.json().catch(() => undefined));
   if (!parsed.success) return c.json({ error: "Corpo inválido.", issues: issuesOf(parsed.error) }, 400);
   // Só entram colunas conhecidas pelo schema (o zod descarta o resto), então os nomes são seguros.
-  const data = Object.entries(parsed.data).filter(([, v]) => v !== undefined);
+  ${data}
   const sql = data.length
-    ? \`insert into "${tn}" (\${data.map(([k]) => \`"\${k}"\`).join(", ")}) values (\${data.map((_, i) => \`$\${i + 1}\`).join(", ")}) returning *\`
-    : 'insert into "${tn}" default values returning *';
+    ? \`insert into "${tn}" (\${data.map(([k]) => \`"\${k}"\`).join(", ")}) values (\${data.map((_, i) => \`$\${i + 1}\`).join(", ")}) returning ${cols}\`
+    : 'insert into "${tn}" default values returning ${cols}';
   const { rows } = await db.query(sql, data.map(([, v]) => (v !== null && typeof v === "object" ? JSON.stringify(v) : v)));
   const row = rows[0];${notify}
   return c.json(row, 201);
 });`;
   }
   const verb = method.toLowerCase();
-  return `app.${verb}("${honoPath}", async (c) => {
+  return `app.${verb}("${honoPath}", ${guard}async (c) => {
   // TODO: implemente ${method} ${path}
   return c.json({ todo: "${method} ${path}" }, 501);
 });`;
@@ -198,6 +241,7 @@ function serviceIndex(p: ServicePlan, er: ErModel): string {
   if (p.db) imports.push('import { db } from "./db.js";');
   const posts = isHttp ? postTables(p, er) : [];
   if (posts.length) imports.push('import type { z } from "zod";', `import { ${posts.map(schemaName).join(", ")} } from "./schemas.js";`);
+  if (isHttp && p.jwt) imports.push(`import { ${p.ownAuth ? "authRoutes, " : ""}requireAuth, type AuthEnv } from "./auth.js";`);
   if (p.cache) imports.push('import { cache } from "./cache.js";');
   if (p.publishes.length) imports.push('import { publish } from "./queue.js";');
   if (p.consumes.length) imports.push('import { consume } from "./queue.js";');
@@ -207,10 +251,13 @@ function serviceIndex(p: ServicePlan, er: ErModel): string {
 
   if (isHttp) {
     const routes = routeLines(p.node.props.routes);
-    parts.push("const app = new Hono();", "", 'app.get("/health", (c) => c.json({ ok: true, service: "' + p.slug + '" }));', "");
+    parts.push(p.jwt ? "const app = new Hono<AuthEnv>();" : "const app = new Hono();", "", 'app.get("/health", (c) => c.json({ ok: true, service: "' + p.slug + '" }));', "");
     if (posts.length) parts.push(ISSUES_FN, "");
     parts.push(onErrorHandler(!!p.db), "");
-    for (const r of routes.filter((r) => !(r.method === "GET" && r.path === "/health"))) parts.push(routeHandler(p, r.method, r.path, er), "");
+    if (p.ownAuth) parts.push("// POST /auth/register, POST /auth/login, GET /auth/me (ver src/auth.ts)", 'app.route("/auth", authRoutes);', "");
+    // Com auth própria, /auth/* já vem de src/auth.ts: linhas iguais no canvas não duplicam a rota.
+    const own = (r: RouteLine) => !!p.ownAuth && /^\/auth(\/|$)/.test(r.path);
+    for (const r of routes.filter((r) => !(r.method === "GET" && r.path === "/health") && !own(r))) parts.push(routeHandler(p, r, er), "");
     if (p.httpTargets.length || p.cache) {
       parts.push(
         `// Exemplo de uso das dependências ligadas no canvas:`,
@@ -301,7 +348,7 @@ function serviceFiles(p: ServicePlan, er: ErModel): GeneratedFile[] {
   }
   if (p.cache || p.publishes.length || p.consumes.length) deps.ioredis = TEMPLATE_VERSIONS.ioredis;
   const posts = p.node.kind !== "worker" ? postTables(p, er) : [];
-  if (posts.length) deps.zod = TEMPLATE_VERSIONS.zod;
+  if (posts.length || p.ownAuth) deps.zod = TEMPLATE_VERSIONS.zod;
 
   const files: GeneratedFile[] = [
     {
@@ -334,6 +381,7 @@ function serviceFiles(p: ServicePlan, er: ErModel): GeneratedFile[] {
     { path: `${base}/src/index.ts`, content: serviceIndex(p, er) },
   ];
   if (posts.length) files.push({ path: `${base}/src/schemas.ts`, content: schemasFile(posts, er) });
+  if (p.jwt && p.node.kind !== "worker") files.push({ path: `${base}/src/auth.ts`, content: authFile(p.ownAuth ? ownAuthSpec(er) : undefined) });
   if (p.db) {
     files.push({
       path: `${base}/src/db.ts`,
@@ -403,17 +451,25 @@ export async function consume(stream: string, group: string, handle: (event: unk
 }
 
 function openapi(p: ServicePlan): string {
-  const routes = routeLines(p.node.props.routes);
-  const byPath = new Map<string, string[]>();
-  for (const r of routes) byPath.set(r.path, [...(byPath.get(r.path) ?? []), r.method]);
-  if (!byPath.has("/health")) byPath.set("/health", ["GET"]);
+  const routes: RouteLine[] = routeLines(p.node.props.routes).filter((r) => !(p.ownAuth && /^\/auth(\/|$)/.test(r.path)));
+  if (p.ownAuth) {
+    routes.push({ method: "POST", path: "/auth/register", protected: false }, { method: "POST", path: "/auth/login", protected: false }, { method: "GET", path: "/auth/me", protected: true });
+  }
+  const byPath = new Map<string, RouteLine[]>();
+  for (const r of routes) byPath.set(r.path, [...(byPath.get(r.path) ?? []), r]);
+  if (!byPath.has("/health")) byPath.set("/health", [{ method: "GET", path: "/health", protected: false }]);
   const lines = ["openapi: 3.1.0", "info:", `  title: ${JSON.stringify(p.node.name)}`, "  version: 0.1.0", "servers:", `  - url: http://localhost:${p.port}`, "paths:"];
-  for (const [path, methods] of byPath) {
+  for (const [path, rs] of byPath) {
     lines.push(`  ${path.replace(/:(\w+)/g, "{$1}")}:`);
-    for (const m of methods) {
-      lines.push(`    ${m.toLowerCase()}:`, `      summary: ${m} ${path}`, "      responses:", `        "${m === "POST" ? "201" : "200"}":`, "          description: OK");
+    for (const r of rs) {
+      const ok = r.method === "POST" && path !== "/auth/login" ? "201" : "200";
+      lines.push(`    ${r.method.toLowerCase()}:`, `      summary: ${r.method} ${path}`);
+      if (r.protected) lines.push("      security:", "        - bearerAuth: []");
+      lines.push("      responses:", `        "${ok}":`, "          description: OK");
+      if (r.protected) lines.push('        "401":', "          description: Token ausente ou inválido");
     }
   }
+  if (routes.some((r) => r.protected)) lines.push("components:", "  securitySchemes:", "    bearerAuth:", "      type: http", "      scheme: bearer", "      bearerFormat: JWT");
   return lines.join("\n") + "\n";
 }
 
@@ -429,6 +485,7 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
     if (p.db) env.push(`DATABASE_URL: postgres://app:app@postgres:5432/${dbName(p.db)}`);
     if (p.cache) env.push("REDIS_URL: redis://redis:6379");
     if (p.publishes.length || p.consumes.length) env.push("QUEUE_URL: redis://redis:6379");
+    if (p.jwt) env.push(`JWT_SECRET: \${JWT_SECRET:-${JWT_SECRET_DEFAULT}}`);
     for (const t of p.httpTargets) {
       const target = plans.find((x) => x.node.id === t.id);
       env.push(`${envName(t)}_URL: ${target ? `http://${target.slug}:${target.port}` : `\${${envName(t)}_URL:-${t.props.url || t.props.issuer || ""}}`}`);
@@ -547,6 +604,7 @@ ${plans
 
 ${others.length ? `## Infraestrutura e externos\n\n${others.map((n) => `- **${n.name}** — ${ARCH[n.kind].label}${n.props.url ? ` (${n.props.url})` : ""}`).join("\n")}\n` : ""}
 ${hasSchema ? README_DB : ""}
+${readmeAuth(plans)}
 ## Rodar um serviço sem Docker
 
 \`\`\`bash
@@ -572,11 +630,43 @@ function envExample(graph: ArchGraph, plans: ServicePlan[]): string {
   }
   for (const [k, v] of targets) lines.push(`${k}=${v}`);
   if (graph.nodes.some((n) => n.kind === "storage")) lines.push("S3_ENDPOINT=http://localhost:9000", "S3_BUCKET=uploads");
+  if (plans.some((p) => p.jwt)) lines.push("# Segredo do JWT (HS256). Troque em produção: openssl rand -base64 32", `JWT_SECRET=${JWT_SECRET_DEFAULT}`);
   return lines.join("\n") + "\n";
 }
 
-export function archFiles(graph: ArchGraph, er: ErModel): GeneratedFile[] {
+function readmeAuth(plans: ServicePlan[]): string {
+  const own = plans.find((p) => p.ownAuth);
+  const guarded = plans.flatMap((p) => routeLines(p.node.props.routes).filter((r) => r.protected).map((r) => `\`${r.method} ${r.path}\` (${p.node.name})`));
+  if (!own && !guarded.length) return "";
+  const base = own ? `http://localhost:${own.port}` : "";
+  return `## Autenticação
+
+${
+  own
+    ? `Autenticação própria em \`services/${own.slug}/src/auth.ts\`: tabela \`users\` (email único + \`password_hash\`),
+senha com scrypt do \`node:crypto\` e token JWT HS256 (\`hono/jwt\`) válido por 7 dias. A senha e o hash
+nunca voltam nas respostas.
+
+\`\`\`bash
+# cadastrar (senha com 8+ caracteres) e entrar
+curl -X POST ${base}/auth/register -H "content-type: application/json" -d '{"email":"ana@ex.com","password":"segredo123"}'
+curl -X POST ${base}/auth/login    -H "content-type: application/json" -d '{"email":"ana@ex.com","password":"segredo123"}'
+# rota protegida: sem token -> 401
+curl ${base}/auth/me -H "Authorization: Bearer <token>"
+\`\`\`
+`
+    : "As rotas protegidas validam um JWT HS256 assinado com `JWT_SECRET` (o mesmo segredo do emissor dos tokens).\n"
+}
+${guarded.length ? `Rotas que exigem \`Authorization: Bearer <token>\`: ${guarded.join(", ")}. Numa rota protegida que grava em tabela com chave para \`users\`, o dono vem do token.\n` : ""}
+\`JWT_SECRET\` vem do ambiente (veja \`.env.example\`; no compose há um valor de desenvolvimento). Troque em produção.
+`;
+}
+
+export function archFiles(graph: ArchGraph, erIn: ErModel): GeneratedFile[] {
   const plans = plan(graph);
+  // Auth própria garante users(email único, password_hash) no schema gerado,
+  // mesmo que o canvas Banco ainda não tenha a tabela.
+  const er = plans.some((p) => p.ownAuth) ? ensureAuthUsers(erIn) : erIn;
   const hasSchema = er.tables.length > 0;
   const files: GeneratedFile[] = [
     { path: "README.md", content: readme(graph, plans, hasSchema) },

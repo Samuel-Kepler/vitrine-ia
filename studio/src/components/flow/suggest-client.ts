@@ -21,8 +21,9 @@ export async function runSuggest(): Promise<{ error?: string; info?: string }> {
     const json = (await res.json()) as SuggestResult & { error?: string };
     if (!res.ok) return { error: json.error ?? `Erro ${res.status}` };
     snapshot = { arch: s.arch, db: s.db };
-    s.setArch(expandArch(json.suggestion.arch));
+    // Banco antes da arquitetura: setArch completa users se a auth for Própria.
     s.setDb(expandDb(json.suggestion.db));
+    s.setArch(expandArch(json.suggestion.arch));
     s.setSuggestNotes([sourceLine(json), ...json.suggestion.notes]);
     s.setFlowSel(null);
     return {};

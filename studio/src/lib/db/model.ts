@@ -138,6 +138,48 @@ export function joinTables(model: ErModel): JoinTable[] {
     });
 }
 
+export const USERS_TABLE = "users";
+export const PASSWORD_COL = "password_hash";
+
+let uid = 0;
+const authId = (p: string) => `${p}auth${Date.now().toString(36)}${(uid++).toString(36)}`;
+
+/**
+ * Autenticação própria precisa de users com email único (NOT NULL) e
+ * password_hash. Cria a tabela ou completa a existente. Devolve o mesmo objeto
+ * quando nada muda (seguro para chamar em efeitos).
+ */
+export function ensureAuthUsers(model: ErModel): ErModel {
+  const t = model.tables.find((x) => snake(x.name) === USERS_TABLE);
+  if (!t) {
+    const table: Table = {
+      id: authId("t"),
+      name: USERS_TABLE,
+      columns: [
+        { id: authId("c"), name: "id", type: "uuid", pk: true, default: "uuid" },
+        { id: authId("c"), name: "email", type: "varchar", unique: true },
+        { id: authId("c"), name: PASSWORD_COL, type: "text" },
+        { id: authId("c"), name: "name", type: "varchar", nullable: true },
+        { id: authId("c"), name: "created_at", type: "timestamp", default: "now" },
+      ],
+      position: { x: 40 + (model.tables.length % 3) * 300, y: 40 + Math.floor(model.tables.length / 3) * 280 },
+    };
+    return { ...model, tables: [...model.tables, table] };
+  }
+  let columns = t.columns;
+  const email = columns.find((c) => snake(c.name) === "email");
+  if (!email) {
+    columns = [...columns, { id: authId("c"), name: "email", type: "varchar", unique: true }];
+  } else if (!email.unique || email.nullable || email.default) {
+    columns = columns.map((c) => (c === email ? { ...c, unique: true, nullable: false, default: undefined } : c));
+  }
+  const pw = columns.find((c) => snake(c.name) === PASSWORD_COL);
+  if (!pw) columns = [...columns, { id: authId("c"), name: PASSWORD_COL, type: "text" }];
+  else if (pw.nullable || pw.unique) columns = columns.map((c) => (c === pw ? { ...c, type: "text", nullable: false, unique: false } : c));
+  if (columns === t.columns) return model;
+  return { ...model, tables: model.tables.map((x) => (x === t ? { ...t, columns } : x)) };
+}
+
 export function snake(s: string): string {
   return (
     s

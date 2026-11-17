@@ -59,6 +59,7 @@ Regras:
 - Arquitetura: um nó "web" (o site) e uma "api" com as rotas que a página usa. Adicione fila+worker só se houver trabalho assíncrono (ex.: e-mail após cadastro), "external" para serviços de terceiros (pagamento, e-mail), "auth" se houver login, "postgres" se houver dados.
 - Ligações: from = quem chama/grava; to = quem é chamado. api->postgres "writes" ou "reads"; api->queue "event"; queue->worker "event"; chamadas "http".
 - Banco: tabelas em snake_case plural, sempre com "id" uuid pk default "uuid" e created_at timestamp default "now" quando fizer sentido. Não crie colunas de chave estrangeira: use relations (from = tabela filha).
+- Login: o bloco "auth" gera register/login/me dentro da API (não liste rotas /auth). Inclua a tabela "users" com "email" varchar unique e "password_hash" text. Rotas que exigem usuário logado terminam com " auth" (ex.: "POST /subscriptions auth").
 - Seja enxuto: nada de microsserviços sem motivo.`;
 
 // Provedores com saída estruturada estrita (Groq, OpenAI) exigem que toda

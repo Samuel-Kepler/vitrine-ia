@@ -31,9 +31,21 @@ export interface ArchGraph {
 export interface ArchFieldDef {
   key: string;
   label: string;
-  kind: "text" | "lines";
+  kind: "text" | "lines" | "select";
   placeholder?: string;
+  options?: { value: string; label: string }[];
+  /** Só mostra o campo quando outra prop tem este valor. */
+  showIf?: { key: string; value: string };
+  help?: string;
 }
+
+const ROUTES_FIELD: ArchFieldDef = {
+  key: "routes",
+  label: "Rotas (MÉTODO /caminho [auth])",
+  kind: "lines",
+  placeholder: "GET /leads\nPOST /leads\nPOST /subscriptions auth",
+  help: "Termine a linha com auth (ou 🔒) para exigir token JWT nessa rota.",
+};
 
 export interface ArchKindDef {
   kind: ArchKind;
@@ -55,10 +67,7 @@ export const ARCH: Record<ArchKind, ArchKindDef> = {
     color: "#6366f1",
     runnable: true,
     defaults: { routes: "GET /health", port: "" },
-    fields: [
-      { key: "routes", label: "Rotas (MÉTODO /caminho)", kind: "lines", placeholder: "GET /leads\nPOST /leads" },
-      { key: "port", label: "Porta", kind: "text", placeholder: "automática" },
-    ],
+    fields: [ROUTES_FIELD, { key: "port", label: "Porta", kind: "text", placeholder: "automática" }],
   },
   service: {
     kind: "service",
@@ -67,10 +76,7 @@ export const ARCH: Record<ArchKind, ArchKindDef> = {
     color: "#8b5cf6",
     runnable: true,
     defaults: { routes: "GET /health", port: "" },
-    fields: [
-      { key: "routes", label: "Rotas (MÉTODO /caminho)", kind: "lines" },
-      { key: "port", label: "Porta", kind: "text", placeholder: "automática" },
-    ],
+    fields: [ROUTES_FIELD, { key: "port", label: "Porta", kind: "text", placeholder: "automática" }],
   },
   worker: { kind: "worker", label: "Worker", hint: "Consome uma fila", color: "#a855f7", runnable: true, defaults: {}, fields: [] },
   queue: {
@@ -113,11 +119,23 @@ export const ARCH: Record<ArchKind, ArchKindDef> = {
   auth: {
     kind: "auth",
     label: "Autenticação",
-    hint: "Provedor de login (JWT)",
+    hint: "Login com JWT: própria (gerada na API) ou externa",
     color: "#f43f5e",
     runnable: false,
-    defaults: { issuer: "https://auth.exemplo.com" },
-    fields: [{ key: "issuer", label: "Emissor (issuer)", kind: "text" }],
+    defaults: { mode: "propria", issuer: "https://auth.exemplo.com" },
+    fields: [
+      {
+        key: "mode",
+        label: "Tipo",
+        kind: "select",
+        options: [
+          { value: "propria", label: "Própria (gera na API ligada)" },
+          { value: "externa", label: "Externa (cliente HTTP)" },
+        ],
+        help: "Própria: tabela users (email único + password_hash), POST /auth/register, POST /auth/login e GET /auth/me com JWT.",
+      },
+      { key: "issuer", label: "URL do provedor (issuer)", kind: "text", showIf: { key: "mode", value: "externa" } },
+    ],
   },
 };
 
@@ -145,10 +163,33 @@ export const ArchGraphSchema = z.object({
   edges: z.array(z.object({ id: z.string(), source: z.string(), target: z.string(), kind: z.enum(EDGE_KINDS) })).max(300),
 });
 
-export function routeLines(routes: string | undefined): { method: string; path: string }[] {
+export type AuthMode = "propria" | "externa";
+/** Nós antigos (sem "mode") contam como Própria, o padrão. */
+export function authMode(n: Pick<ArchNode, "props">): AuthMode {
+  return n.props.mode === "externa" ? "externa" : "propria";
+}
+
+/** Algum serviço HTTP está ligado a uma Autenticação Própria (precisa de users no ER). */
+export function usesOwnAuth(g: ArchGraph): boolean {
+  const byId = new Map(g.nodes.map((n) => [n.id, n]));
+  return g.edges.some((e) => {
+    const s = byId.get(e.source);
+    const t = byId.get(e.target);
+    return !!s && !!t && (s.kind === "api" || s.kind === "service") && t.kind === "auth" && authMode(t) === "propria";
+  });
+}
+
+export interface RouteLine {
+  method: string;
+  path: string;
+  /** Linha terminada em "auth" ou "🔒": exige JWT. */
+  protected: boolean;
+}
+
+export function routeLines(routes: string | undefined): RouteLine[] {
   return (routes ?? "")
     .split("\n")
-    .map((l) => l.trim().match(/^(GET|POST|PUT|PATCH|DELETE)\s+(\/\S*)$/i))
+    .map((l) => l.trim().match(/^(GET|POST|PUT|PATCH|DELETE)\s+(\/\S*?)(?:\s*(🔒)|\s+(auth))?$/iu))
     .filter((m): m is RegExpMatchArray => !!m)
-    .map((m) => ({ method: m[1].toUpperCase(), path: m[2] }));
+    .map((m) => ({ method: m[1].toUpperCase(), path: m[2], protected: !!(m[3] || m[4]) }));
 }

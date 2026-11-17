@@ -1,5 +1,5 @@
 // Revisão sem IA: regras rápidas para o grafo de arquitetura e o diagrama ER.
-import { ARCH, routeLines, type ArchGraph } from "@/lib/arch/model";
+import { ARCH, authMode, routeLines, type ArchGraph } from "@/lib/arch/model";
 import { fkColumns, pkOf, snake, type ErModel } from "@/lib/db/model";
 
 export type Severity = "error" | "warning" | "info";
@@ -64,6 +64,17 @@ export function reviewArch(g: ArchGraph, er?: ErModel): Finding[] {
     if (cycle) {
       out.push({ code: "A13", severity: "warning", message: `Chamadas HTTP em ciclo: ${cycle.map((id) => byId.get(id)?.name).join(" → ")}.` });
       break;
+    }
+  }
+  for (const n of g.nodes.filter((x) => x.kind === "api" || x.kind === "service")) {
+    const outgoing = g.edges.filter((e) => e.source === n.id);
+    const auth = outgoing.map((e) => byId.get(e.target)).find((t) => t?.kind === "auth");
+    const writesPg = outgoing.some((e) => e.kind === "writes" && byId.get(e.target)?.kind === "postgres");
+    if (auth && authMode(auth) === "propria" && !writesPg) {
+      out.push({ code: "A15", severity: "error", message: `"${n.name}" usa Autenticação própria, mas não grava no Postgres. Ligue ${n.name} → Banco (grava).`, targetId: n.id });
+    }
+    if (!auth && routeLines(n.props.routes).some((r) => r.protected)) {
+      out.push({ code: "A16", severity: "info", message: `"${n.name}" tem rotas com auth sem bloco de Autenticação ligado: o token é validado só com JWT_SECRET.`, targetId: n.id });
     }
   }
   const publicApi = g.nodes.some((n) => n.kind === "api");

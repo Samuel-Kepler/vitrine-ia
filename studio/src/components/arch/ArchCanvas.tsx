@@ -18,7 +18,7 @@ import {
 } from "@xyflow/react";
 import { Boxes, Cloud, Cog, Database, Globe, HardDrive, KeyRound, Layers, Server, Trash2, Zap } from "lucide-react";
 import { useStudio } from "@/lib/draft/store";
-import { ARCH, ARCH_KINDS, EDGE_KINDS, EDGE_LABELS, defaultEdgeKind, type ArchKind, type ArchNode } from "@/lib/arch/model";
+import { ARCH, ARCH_KINDS, EDGE_KINDS, EDGE_LABELS, authMode, defaultEdgeKind, type ArchKind, type ArchNode } from "@/lib/arch/model";
 import { archFiles } from "@/lib/arch/codegen";
 import { dbFiles } from "@/lib/db/codegen";
 import { reviewArch } from "@/lib/review/rules";
@@ -252,10 +252,25 @@ function NodeEditor({ id }: { id: string }) {
         <span className="mb-1 block text-xs font-medium">Nome</span>
         <input className={input} value={node.name} onChange={(e) => patch({ name: e.target.value })} />
       </label>
-      {def.fields.map((f) => (
+      {def.fields
+        .filter((f) => !f.showIf || (node.props[f.showIf.key] ?? def.defaults[f.showIf.key]) === f.showIf.value)
+        .map((f) => (
         <label key={f.key} className="mt-3 block">
           <span className="mb-1 block text-xs font-medium">{f.label}</span>
-          {f.kind === "lines" ? (
+          {f.kind === "select" ? (
+            <select
+              className={input}
+              data-testid={`field-${f.key}`}
+              value={node.props[f.key] ?? def.defaults[f.key] ?? ""}
+              onChange={(e) => patch({ props: { ...node.props, [f.key]: e.target.value } })}
+            >
+              {f.options?.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          ) : f.kind === "lines" ? (
             <textarea
               className={`${input} min-h-32 font-mono text-xs`}
               placeholder={f.placeholder}
@@ -265,8 +280,12 @@ function NodeEditor({ id }: { id: string }) {
           ) : (
             <input className={input} placeholder={f.placeholder} value={node.props[f.key] ?? ""} onChange={(e) => patch({ props: { ...node.props, [f.key]: e.target.value } })} />
           )}
+          {f.help ? <span className="mt-1 block text-[11px] text-muted">{f.help}</span> : null}
         </label>
       ))}
+      {node.kind === "auth" && authMode(node) === "propria" ? (
+        <p className="mt-2 text-[11px] text-muted">Ligue uma API → Autenticação. A API precisa gravar no Postgres; a tabela users entra no canvas Banco automaticamente.</p>
+      ) : null}
       {node.kind === "api" || node.kind === "service" ? (
         <p className="mt-2 text-[11px] text-muted">Rota com nome de tabela (ex.: POST /leads) + ligação “grava” no Postgres = handler com SQL pronto.</p>
       ) : null}

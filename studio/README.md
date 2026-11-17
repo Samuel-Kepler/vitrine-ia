@@ -70,13 +70,29 @@ Ollama sugerido para começar: `ollama pull qwen2.5-coder:7b`. Modelos pequenos 
 
 Os modos **Arquitetura** e **Banco** (topo) são canvases React Flow que dividem o mesmo projeto:
 
-- **Sugerir da landing** lê o rascunho da aba UI e propõe os dois de uma vez: formulário → tabela `leads` + `POST /leads` + fila e worker de notificação; planos → `plans`/`subscriptions` + API de pagamento; depoimentos → `testimonials`; texto com "login/conta" → bloco de Autenticação + `users`. Com IA, a resposta vem por saída estruturada (JSON validado por zod); com o mock ou se a IA falhar, usa a inferência determinística (`src/lib/infer/`).
+- **Sugerir da landing** lê o rascunho da aba UI e propõe os dois de uma vez: formulário → tabela `leads` + `POST /leads` + fila e worker de notificação; planos → `plans`/`subscriptions` + API de pagamento; depoimentos → `testimonials`; menu ou texto com "Entrar", "Login", "Minha conta", "Área do cliente" (palavra inteira: "Contato" não conta) → Autenticação própria + `users` com `password_hash`, e `POST /subscriptions auth`. Com IA, a resposta vem por saída estruturada (JSON validado por zod); com o mock ou se a IA falhar, usa a inferência determinística (`src/lib/infer/`). A linha **Fonte** na barra lateral diz de onde veio a sugestão e, quando caiu na automática, o motivo.
 - **Gerar moldes do backend**: um serviço Node 24 + Hono por API/Serviço/Worker, `docker-compose.yml` (Postgres 17, Redis, MinIO conforme o canvas), `.env.example`, OpenAPI e README. Rota com nome de tabela + ligação “grava” no Postgres sai com SQL pronto; fila vira Redis Streams (`publish`/`consume`).
 - **Gerar schema**: SQL para Postgres, MySQL e SQLite, Prisma, Drizzle (pg-core) e DBML. Relações criam as colunas FK sozinhas; muitos-para-muitos cria a tabela de junção.
-- **Revisão** sem IA nos dois canvases (ex.: worker sem fila, site acessando o banco direto, tabela sem PK, palavra reservada).
+- **Revisão** sem IA nos dois canvases (ex.: worker sem fila, site acessando o banco direto, tabela sem PK, palavra reservada, auth própria sem Postgres).
 - Tudo baixa como `.zip`.
 
-O código gerado foi compilado com `tsc` (ver `src/lib/arch/codegen.test.ts`: `GEN_OUT=<pasta> npx vitest run src/lib/arch` grava o backend de exemplo).
+### O que o backend gerado traz
+
+- **Validação**: o corpo de cada `POST /<tabela>` é validado com zod derivado das colunas (`src/schemas.ts`): NOT NULL sem default é obrigatório, `email` vira `z.email()`, uuid/inteiros/datas checados, mensagens em português. Corpo inválido ou JSON quebrado → **400** com `issues`; UNIQUE → **409**; FK inexistente → **409**; erro de tipo no banco → **400**.
+- **Docker**: Postgres (`pg_isready` com o nome do banco do canvas) e Redis (`redis-cli ping`) com healthcheck; os serviços esperam com `depends_on: condition: service_healthy`. Dockerfile multi-stage em `node:24-alpine`: `tsc` no build, `npm prune --omit=dev`, usuário `node` (não-root), `npm ci` se houver lockfile, `HEALTHCHECK` em `/health`. O schema só roda na criação do volume: para reaplicar, `docker compose down -v` (apaga os dados).
+- **Autenticação** (bloco Autenticação, campo **Tipo** no inspetor):
+  - **Própria** (padrão): na API ligada ao bloco (que precisa gravar no Postgres) gera `src/auth.ts` com `POST /auth/register`, `POST /auth/login` (devolvem JWT) e `GET /auth/me`. Senha com `scrypt` do `node:crypto` (sem binário nativo, roda no Alpine), JWT HS256 com `hono/jwt`, `JWT_SECRET` no `.env.example` e no compose. A senha e o hash nunca voltam nas respostas (nem em `GET /users`). O canvas Banco ganha/completa `users` (email único + `password_hash`) sozinho.
+  - **Externa**: comportamento anterior, cliente HTTP para a URL do provedor.
+  - **Rotas protegidas**: termine a linha com `auth` ou `🔒` (ex.: `POST /subscriptions auth`). Só essas recebem o middleware (sem token → 401). Se a tabela tem FK para `users`, o dono vem do token, não do corpo.
+
+O código gerado é compilado com `tsc` nos testes manuais. Para gravar o backend de exemplo (a pasta `examples/` fica fora do git):
+
+```bash
+GEN_OUT=examples/backend-cafeteria npx vitest run src/lib/arch
+cd examples/backend-cafeteria && docker compose up --build
+```
+
+Diagnóstico do Sugerir com o provedor do `.env`: `RUN_LIVE=1 npx vitest run src/lib/infer/suggest.live.test.ts`.
 
 ## Próximos passos
 

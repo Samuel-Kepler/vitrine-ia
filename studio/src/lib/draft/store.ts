@@ -22,8 +22,8 @@ import {
 import { starterDraft } from "./starter";
 import type { ReimagineResult } from "@/lib/reimagine/reimagine";
 import type { ProviderSettings } from "@/lib/ai/settings";
-import type { ArchGraph } from "@/lib/arch/model";
-import type { ErModel } from "@/lib/db/model";
+import { usesOwnAuth, type ArchGraph } from "@/lib/arch/model";
+import { ensureAuthUsers, type ErModel } from "@/lib/db/model";
 
 export interface SavedComponent {
   id: string;
@@ -102,7 +102,11 @@ export const useStudio = create<StudioState>()(
         suggestNotes: [],
 
         setMode: (mode) => set({ mode, flowSel: null }),
-        setArch: (g) => set({ arch: typeof g === "function" ? g(get().arch) : g }),
+        setArch: (g) => {
+          const arch = typeof g === "function" ? g(get().arch) : g;
+          // Autenticação Própria ligada a uma API: o diagrama ER ganha/completa users(email, password_hash).
+          set({ arch, db: usesOwnAuth(arch) ? ensureAuthUsers(get().db) : get().db });
+        },
         setDb: (m) => set({ db: typeof m === "function" ? m(get().db) : m }),
         setFlowSel: (flowSel) => set({ flowSel }),
         setSuggestNotes: (suggestNotes) => set({ suggestNotes }),
