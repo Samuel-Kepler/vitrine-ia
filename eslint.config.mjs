@@ -12,7 +12,7 @@ const config = [
       "react-hooks/purity": "warn",
     },
   },
-  { ignores: ["src/generated/**", ".next/**", "node_modules/**", "_backup_pre_upgrade/**"] },
+  { ignores: ["src/generated/**", ".next/**", "node_modules/**", "_backup_pre_upgrade/**", "studio/**"] },
 ];
 
 export default config;

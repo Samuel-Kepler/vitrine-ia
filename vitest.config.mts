@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [tsconfigPaths(), react()],
   test: {
     environment: 'jsdom',
-    // e2e/ é do Playwright (npm run test:e2e)
-    exclude: [...configDefaults.exclude, 'e2e/**', '_backup_pre_upgrade/**'],
+    // e2e/ é do Playwright (npm run test:e2e); studio/ é um projeto à parte com config própria
+    exclude: [...configDefaults.exclude, 'e2e/**', '_backup_pre_upgrade/**', 'studio/**'],
   },
 })

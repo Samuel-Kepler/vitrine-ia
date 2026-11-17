@@ -1,0 +1,37 @@
+# dependências e build
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# segredos: só o .env.example vai para o git
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# testes e logs
+coverage/
+test-results/
+playwright-report/
+logs/
+*.log
+npm-debug.log*
+
+# gerado pelo `next dev`
+AGENTS.md
+
+# sistema/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.vercel/
+
+# cópias brutas de páginas do a2ui.org baixadas na pesquisa (conteúdo de terceiros)
+docs/research/page_*.md
+docs/research/spec-v1.0.md

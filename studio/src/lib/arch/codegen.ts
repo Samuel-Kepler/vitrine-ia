@@ -1,0 +1,427 @@
+// Grafo de arquitetura -> moldes de backend (Node 24 + Hono + Docker).
+// Determinístico. Quando uma rota bate com uma tabela do canvas Banco e o
+// serviço grava no Postgres, o handler já sai com SQL de verdade.
+import { ARCH, routeLines, type ArchGraph, type ArchNode } from "./model";
+import { fkColumns, snake, type ErModel, type Table } from "@/lib/db/model";
+import { toSql, type GeneratedFile } from "@/lib/db/codegen";
+
+export const TEMPLATE_VERSIONS = {
+  hono: "4.13.19",
+  "@hono/node-server": "2.1.9",
+  pg: "8.23.1",
+  "@types/pg": "8.23.1",
+  ioredis: "6.0.0",
+  tsx: "4.23.15",
+  typescript: "5.9.3",
+  "@types/node": "24.19.2",
+} as const;
+
+export function slugName(s: string): string {
+  return snake(s).replace(/_/g, "-") || "servico";
+}
+const envName = (n: ArchNode) => snake(n.name).toUpperCase();
+
+interface ServicePlan {
+  node: ArchNode;
+  slug: string;
+  port: number;
+  httpTargets: ArchNode[];
+  db?: ArchNode;
+  dbWrites: boolean;
+  cache?: ArchNode;
+  publishes: ArchNode[];
+  consumes: ArchNode[];
+  storage?: ArchNode;
+}
+
+function plan(graph: ArchGraph): ServicePlan[] {
+  const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+  const slugs = new Set<string>();
+  let nextPort = 3001;
+  return graph.nodes
+    .filter((n) => ARCH[n.kind].runnable)
+    .map((node) => {
+      let slug = slugName(node.name);
+      for (let i = 2; slugs.has(slug); i++) slug = `${slugName(node.name)}-${i}`;
+      slugs.add(slug);
+      const out = graph.edges.filter((e) => e.source === node.id).map((e) => ({ e, t: byId.get(e.target)! })).filter((x) => x.t);
+      const inc = graph.edges.filter((e) => e.target === node.id).map((e) => ({ e, s: byId.get(e.source)! })).filter((x) => x.s);
+      const dbEdges = out.filter((x) => x.t.kind === "postgres");
+      const explicit = Number(node.props.port);
+      return {
+        node,
+        slug,
+        port: Number.isInteger(explicit) && explicit > 0 ? explicit : nextPort++,
+        httpTargets: out.filter((x) => x.e.kind === "http" && ["api", "service", "external", "auth"].includes(x.t.kind)).map((x) => x.t),
+        db: dbEdges[0]?.t,
+        dbWrites: dbEdges.some((x) => x.e.kind === "writes"),
+        cache: out.find((x) => x.t.kind === "cache")?.t,
+        publishes: out.filter((x) => x.t.kind === "queue").map((x) => x.t),
+        consumes: inc.filter((x) => x.s.kind === "queue").map((x) => x.s),
+        storage: out.find((x) => x.t.kind === "storage")?.t,
+      };
+    });
+}
+
+const streamName = (q: ArchNode) => q.props.stream?.trim() || snake(q.name);
+
+function tableForPath(path: string, er: ErModel): Table | undefined {
+  const seg = path.split("/").filter(Boolean)[0];
+  if (!seg) return undefined;
+  return er.tables.find((t) => snake(t.name) === snake(seg));
+}
+
+function insertableColumns(t: Table, er: ErModel): string[] {
+  const cols = t.columns.filter((c) => !c.pk && !c.default).map((c) => snake(c.name));
+  const fks = fkColumns(er)
+    .filter((f) => f.table.id === t.id)
+    .map((f) => f.name);
+  return [...cols, ...fks];
+}
+
+function routeHandler(p: ServicePlan, method: string, path: string, er: ErModel): string {
+  const honoPath = path.replace(/\{(\w+)\}/g, ":$1");
+  const table = p.db ? tableForPath(path, er) : undefined;
+  const hasId = /\/:\w+|\{\w+\}/.test(path);
+  const tn = table ? snake(table.name) : "";
+  const publish = p.publishes[0];
+  const notify = publish ? `\n  await publish("${streamName(publish)}", { type: "${tn || "evento"}.${method === "POST" ? "created" : "changed"}", data: row });` : "";
+
+  if (table && method === "GET" && !hasId) {
+    return `app.get("${honoPath}", async (c) => {
+  const { rows } = await db.query('select * from "${tn}" limit 100');
+  return c.json(rows);
+});`;
+  }
+  if (table && method === "GET" && hasId) {
+    return `app.get("${honoPath}", async (c) => {
+  const { rows } = await db.query('select * from "${tn}" where "${snake(table.columns.find((col) => col.pk)?.name ?? "id")}" = $1', [c.req.param("${honoPath.match(/:(\w+)/)?.[1] ?? "id"}")]);
+  return rows[0] ? c.json(rows[0]) : c.json({ error: "não encontrado" }, 404);
+});`;
+  }
+  if (table && method === "POST" && p.dbWrites) {
+    const cols = insertableColumns(table, er);
+    if (cols.length) {
+      const list = cols.map((c) => `"${c}"`).join(", ");
+      const params = cols.map((_, i) => `$${i + 1}`).join(", ");
+      return `app.post("${honoPath}", async (c) => {
+  const body = await c.req.json<Record<string, unknown>>();
+  // TODO: valide o corpo (ex.: zod) antes de gravar.
+  const values = [${cols.map((c) => `body.${c.match(/^[a-z_][a-z0-9_]*$/) ? c : `["${c}"]`}`).join(", ")}];
+  const { rows } = await db.query('insert into "${tn}" (${list}) values (${params}) returning *', values);
+  const row = rows[0];${notify}
+  return c.json(row, 201);
+});`;
+    }
+  }
+  const verb = method.toLowerCase();
+  return `app.${verb}("${honoPath}", async (c) => {
+  // TODO: implemente ${method} ${path}
+  return c.json({ todo: "${method} ${path}" }, 501);
+});`;
+}
+
+function serviceIndex(p: ServicePlan, er: ErModel): string {
+  const imports: string[] = [];
+  const isHttp = p.node.kind !== "worker";
+  if (isHttp) imports.push('import { Hono } from "hono";', 'import { serve } from "@hono/node-server";');
+  if (p.db) imports.push('import { db } from "./db.js";');
+  if (p.cache) imports.push('import { cache } from "./cache.js";');
+  if (p.publishes.length) imports.push('import { publish } from "./queue.js";');
+  if (p.consumes.length) imports.push('import { consume } from "./queue.js";');
+  if (p.httpTargets.length) imports.push(`import { ${p.httpTargets.map((t) => clientFn(t)).join(", ")} } from "./clients.js";`);
+  const uniqImports = [...new Set(imports)];
+  const parts = [`// ${p.node.name} — gerado pelo Vitrine Studio`, ...uniqImports, ""];
+
+  if (isHttp) {
+    const routes = routeLines(p.node.props.routes);
+    parts.push("const app = new Hono();", "", 'app.get("/health", (c) => c.json({ ok: true, service: "' + p.slug + '" }));', "");
+    for (const r of routes.filter((r) => !(r.method === "GET" && r.path === "/health"))) parts.push(routeHandler(p, r.method, r.path, er), "");
+    if (p.httpTargets.length || p.cache) {
+      parts.push(
+        `// Exemplo de uso das dependências ligadas no canvas:`,
+        ...p.httpTargets.map((t) => `//   await ${clientFn(t)}("/caminho")  -> ${t.name}`),
+        ...(p.cache ? [`//   await cache.get("chave") / cache.set("chave", valor, "EX", 60)`] : []),
+        "",
+      );
+    }
+    parts.push(
+      `const port = Number(process.env.PORT ?? ${p.port});`,
+      `serve({ fetch: app.fetch, port }, () => console.log(\`${p.slug} ouvindo em http://localhost:\${port}\`));`,
+    );
+  }
+  for (const q of p.consumes) {
+    parts.push(
+      "",
+      `await consume("${streamName(q)}", "${p.slug}", async (event) => {`,
+      `  console.log("[${p.slug}] evento recebido", event);`,
+      `  // TODO: processe o evento (ex.: enviar e-mail, atualizar CRM)`,
+      `});`,
+    );
+  }
+  if (!isHttp && !p.consumes.length) {
+    parts.push("// Worker sem fila ligada: ligue uma Fila -> este worker no canvas.", 'setInterval(() => console.log("worker vivo"), 60_000);');
+  }
+  return parts.join("\n") + "\n";
+}
+
+const clientFn = (t: ArchNode) => `call${snake(t.name).split("_").map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join("")}`;
+
+function serviceFiles(p: ServicePlan, er: ErModel): GeneratedFile[] {
+  const base = `services/${p.slug}`;
+  const deps: Record<string, string> = {};
+  const devDeps: Record<string, string> = { tsx: TEMPLATE_VERSIONS.tsx, typescript: TEMPLATE_VERSIONS.typescript, "@types/node": TEMPLATE_VERSIONS["@types/node"] };
+  if (p.node.kind !== "worker") Object.assign(deps, { hono: TEMPLATE_VERSIONS.hono, "@hono/node-server": TEMPLATE_VERSIONS["@hono/node-server"] });
+  if (p.db) {
+    deps.pg = TEMPLATE_VERSIONS.pg;
+    devDeps["@types/pg"] = TEMPLATE_VERSIONS["@types/pg"];
+  }
+  if (p.cache || p.publishes.length || p.consumes.length) deps.ioredis = TEMPLATE_VERSIONS.ioredis;
+
+  const files: GeneratedFile[] = [
+    {
+      path: `${base}/package.json`,
+      content:
+        JSON.stringify(
+          {
+            name: p.slug,
+            private: true,
+            type: "module",
+            scripts: { dev: "tsx watch src/index.ts", build: "tsc", start: "node dist/index.js", typecheck: "tsc --noEmit" },
+            dependencies: deps,
+            devDependencies: devDeps,
+          },
+          null,
+          2,
+        ) + "\n",
+    },
+    {
+      path: `${base}/tsconfig.json`,
+      content:
+        JSON.stringify(
+          { compilerOptions: { target: "ES2023", module: "NodeNext", moduleResolution: "NodeNext", strict: true, outDir: "dist", rootDir: "src", skipLibCheck: true }, include: ["src"] },
+          null,
+          2,
+        ) + "\n",
+    },
+    {
+      path: `${base}/Dockerfile`,
+      content: `FROM node:24-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+FROM node:24-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm install --omit=dev
+COPY --from=build /app/dist ./dist
+${p.node.kind === "worker" ? "" : `EXPOSE ${p.port}\n`}CMD ["node", "dist/index.js"]
+`,
+    },
+    { path: `${base}/src/index.ts`, content: serviceIndex(p, er) },
+  ];
+  if (p.db) {
+    files.push({
+      path: `${base}/src/db.ts`,
+      content: `import pg from "pg";
+
+export const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+`,
+    });
+  }
+  if (p.cache) {
+    files.push({
+      path: `${base}/src/cache.ts`,
+      content: `import { Redis } from "ioredis";
+
+export const cache = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+`,
+    });
+  }
+  if (p.publishes.length || p.consumes.length) {
+    files.push({
+      path: `${base}/src/queue.ts`,
+      content: `// Fila com Redis Streams. Molde simples: sem retry nem dead-letter.
+import { Redis } from "ioredis";
+
+const redis = new Redis(process.env.QUEUE_URL ?? "redis://localhost:6379");
+
+export async function publish(stream: string, event: unknown): Promise<void> {
+  await redis.xadd(stream, "*", "data", JSON.stringify(event));
+}
+
+export async function consume(stream: string, group: string, handle: (event: unknown) => Promise<void>): Promise<never> {
+  const consumer = \`\${group}-\${process.pid}\`;
+  await redis.xgroup("CREATE", stream, group, "$", "MKSTREAM").catch(() => {}); // já existe
+  for (;;) {
+    const res = (await redis.xreadgroup("GROUP", group, consumer, "COUNT", 10, "BLOCK", 5000, "STREAMS", stream, ">")) as
+      | [string, [string, string[]][]][]
+      | null;
+    for (const [, entries] of res ?? []) {
+      for (const [id, fields] of entries) {
+        await handle(JSON.parse(fields[1] ?? "null"));
+        await redis.xack(stream, group, id);
+      }
+    }
+  }
+}
+`,
+    });
+  }
+  if (p.httpTargets.length) {
+    files.push({
+      path: `${base}/src/clients.ts`,
+      content:
+        `// Clientes HTTP para as dependências ligadas no canvas.\n` +
+        p.httpTargets
+          .map(
+            (t) => `export async function ${clientFn(t)}(path: string, init?: RequestInit): Promise<Response> {
+  const base = process.env.${envName(t)}_URL ?? "${t.kind === "external" || t.kind === "auth" ? t.props.url || t.props.issuer || "" : `http://localhost`}";
+  return fetch(new URL(path, base), init);
+}`,
+          )
+          .join("\n\n") +
+        "\n",
+    });
+  }
+  if (p.node.kind === "api") files.push({ path: `${base}/openapi.yaml`, content: openapi(p) });
+  return files;
+}
+
+function openapi(p: ServicePlan): string {
+  const routes = routeLines(p.node.props.routes);
+  const byPath = new Map<string, string[]>();
+  for (const r of routes) byPath.set(r.path, [...(byPath.get(r.path) ?? []), r.method]);
+  if (!byPath.has("/health")) byPath.set("/health", ["GET"]);
+  const lines = ["openapi: 3.1.0", "info:", `  title: ${JSON.stringify(p.node.name)}`, "  version: 0.1.0", "servers:", `  - url: http://localhost:${p.port}`, "paths:"];
+  for (const [path, methods] of byPath) {
+    lines.push(`  ${path.replace(/:(\w+)/g, "{$1}")}:`);
+    for (const m of methods) {
+      lines.push(`    ${m.toLowerCase()}:`, `      summary: ${m} ${path}`, "      responses:", `        "${m === "POST" ? "201" : "200"}":`, "          description: OK");
+    }
+  }
+  return lines.join("\n") + "\n";
+}
+
+function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): string {
+  const lines = ["# Gerado pelo Vitrine Studio", "services:"];
+  const pg = graph.nodes.find((n) => n.kind === "postgres");
+  const needsRedis = graph.nodes.some((n) => n.kind === "cache" || n.kind === "queue");
+  const storage = graph.nodes.find((n) => n.kind === "storage");
+  for (const p of plans) {
+    lines.push(`  ${p.slug}:`, `    build: ./services/${p.slug}`);
+    if (p.node.kind !== "worker") lines.push("    ports:", `      - "${p.port}:${p.port}"`);
+    const env = [`PORT: "${p.port}"`];
+    if (p.db) env.push(`DATABASE_URL: postgres://app:app@postgres:5432/${p.db.props.database || "app"}`);
+    if (p.cache) env.push("REDIS_URL: redis://redis:6379");
+    if (p.publishes.length || p.consumes.length) env.push("QUEUE_URL: redis://redis:6379");
+    for (const t of p.httpTargets) {
+      const target = plans.find((x) => x.node.id === t.id);
+      env.push(`${envName(t)}_URL: ${target ? `http://${target.slug}:${target.port}` : `\${${envName(t)}_URL:-${t.props.url || t.props.issuer || ""}}`}`);
+    }
+    if (p.storage) env.push("S3_ENDPOINT: http://minio:9000", `S3_BUCKET: ${p.storage.props.bucket || "uploads"}`);
+    lines.push("    environment:", ...env.map((e) => `      ${e}`));
+    const deps = [p.db ? "postgres" : "", needsRedis && (p.cache || p.publishes.length || p.consumes.length) ? "redis" : "", p.storage ? "minio" : "", ...p.httpTargets.map((t) => plans.find((x) => x.node.id === t.id)?.slug ?? "")].filter(Boolean);
+    if (deps.length) lines.push("    depends_on:", ...[...new Set(deps)].map((d) => `      - ${d}`));
+  }
+  if (pg) {
+    lines.push(
+      "  postgres:",
+      "    image: postgres:17-alpine",
+      "    environment:",
+      "      POSTGRES_USER: app",
+      "      POSTGRES_PASSWORD: app",
+      `      POSTGRES_DB: ${pg.props.database || "app"}`,
+      "    ports:",
+      '      - "5432:5432"',
+      "    volumes:",
+      "      - pgdata:/var/lib/postgresql/data",
+      ...(hasSchema ? ["      - ./db/schema.postgres.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro"] : []),
+    );
+  }
+  if (needsRedis) lines.push("  redis:", "    image: redis:7-alpine", "    ports:", '      - "6379:6379"');
+  if (storage) {
+    lines.push(
+      "  minio:",
+      "    image: minio/minio:latest",
+      "    command: server /data --console-address :9001",
+      "    environment:",
+      "      MINIO_ROOT_USER: minio",
+      "      MINIO_ROOT_PASSWORD: minio12345",
+      "    ports:",
+      '      - "9000:9000"',
+      '      - "9001:9001"',
+    );
+  }
+  if (pg) lines.push("volumes:", "  pgdata:");
+  return lines.join("\n") + "\n";
+}
+
+function readme(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): string {
+  const others = graph.nodes.filter((n) => !ARCH[n.kind].runnable);
+  return `# Backend gerado pelo Vitrine Studio
+
+Molde inicial: compila, sobe com Docker e tem TODOs onde entra a regra de negócio.
+
+## Subir tudo
+
+\`\`\`bash
+docker compose up --build
+\`\`\`
+
+## Serviços
+
+| Serviço | Tipo | Porta | Depende de |
+|---|---|---|---|
+${plans
+  .map(
+    (p) =>
+      `| ${p.node.name} (\`services/${p.slug}\`) | ${ARCH[p.node.kind].label} | ${p.node.kind === "worker" ? "–" : p.port} | ${[p.db?.name, p.cache?.name, ...p.publishes.map((q) => q.name), ...p.consumes.map((q) => `${q.name} (consome)`), ...p.httpTargets.map((t) => t.name)].filter(Boolean).join(", ") || "–"} |`,
+  )
+  .join("\n")}
+
+${others.length ? `## Infraestrutura e externos\n\n${others.map((n) => `- **${n.name}** — ${ARCH[n.kind].label}${n.props.url ? ` (${n.props.url})` : ""}`).join("\n")}\n` : ""}
+${hasSchema ? "## Banco\n\n`db/` traz o schema em SQL (Postgres, MySQL, SQLite), Prisma, Drizzle e DBML. O Postgres do compose já roda `db/schema.postgres.sql` na primeira subida.\n" : ""}
+## Rodar um serviço sem Docker
+
+\`\`\`bash
+cd services/<nome>
+npm install
+npm run dev
+\`\`\`
+
+Variáveis de ambiente: veja \`.env.example\`.
+`;
+}
+
+function envExample(graph: ArchGraph, plans: ServicePlan[]): string {
+  const lines = ["# Variáveis usadas pelos serviços (valores para rodar fora do Docker)"];
+  if (graph.nodes.some((n) => n.kind === "postgres")) lines.push("DATABASE_URL=postgres://app:app@localhost:5432/app");
+  if (graph.nodes.some((n) => n.kind === "cache")) lines.push("REDIS_URL=redis://localhost:6379");
+  if (graph.nodes.some((n) => n.kind === "queue")) lines.push("QUEUE_URL=redis://localhost:6379");
+  const targets = new Map<string, string>();
+  for (const p of plans) for (const t of p.httpTargets) {
+    const tp = plans.find((x) => x.node.id === t.id);
+    targets.set(`${envName(t)}_URL`, tp ? `http://localhost:${tp.port}` : t.props.url || t.props.issuer || "");
+  }
+  for (const [k, v] of targets) lines.push(`${k}=${v}`);
+  if (graph.nodes.some((n) => n.kind === "storage")) lines.push("S3_ENDPOINT=http://localhost:9000", "S3_BUCKET=uploads");
+  return lines.join("\n") + "\n";
+}
+
+export function archFiles(graph: ArchGraph, er: ErModel): GeneratedFile[] {
+  const plans = plan(graph);
+  const hasSchema = er.tables.length > 0;
+  const files: GeneratedFile[] = [
+    { path: "README.md", content: readme(graph, plans, hasSchema) },
+    { path: "docker-compose.yml", content: compose(graph, plans, hasSchema && graph.nodes.some((n) => n.kind === "postgres")) },
+    { path: ".env.example", content: envExample(graph, plans) },
+    ...plans.flatMap((p) => serviceFiles(p, er)),
+  ];
+  if (hasSchema && graph.nodes.some((n) => n.kind === "postgres")) files.push({ path: "db/schema.postgres.sql", content: toSql(er, "postgres") });
+  return files;
+}
