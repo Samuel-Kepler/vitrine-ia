@@ -57,6 +57,34 @@ describe("inferência + codegen", () => {
     expect(out.LeadsInput.safeParse(undefined).success).toBe(false);
   });
 
+  it("compose espera Postgres/Redis saudáveis e o Dockerfile roda sem root", () => {
+    const { graph, er } = sample();
+    const files = archFiles(graph, er);
+    const compose = files.find((f) => f.path === "docker-compose.yml")!.content;
+    expect(compose).toContain("pg_isready -U app -d app");
+    expect(compose).toContain('test: ["CMD", "redis-cli", "ping"]');
+    expect(compose).toMatch(/api:[\s\S]*?postgres:\n\s+condition: service_healthy[\s\S]*?redis:\n\s+condition: service_healthy/);
+    expect(compose).not.toMatch(/depends_on:\n\s+- /);
+    const docker = files.find((f) => f.path === "services/api/Dockerfile")!.content;
+    expect(docker).toContain("FROM node:24-alpine AS build");
+    expect(docker).toContain("npm ci");
+    expect(docker).toContain("USER node");
+    expect(docker).toContain("npm prune --omit=dev");
+    expect(files.find((f) => f.path === "README.md")!.content).toContain("docker compose down -v");
+  });
+
+  it("healthcheck, POSTGRES_DB e DATABASE_URL usam o nome do banco do canvas", () => {
+    const { graph, er } = sample();
+    graph.nodes.find((n) => n.kind === "postgres")!.props.database = "Loja Café";
+    const files = archFiles(graph, er);
+    const compose = files.find((f) => f.path === "docker-compose.yml")!.content;
+    expect(compose).toContain("POSTGRES_DB: loja_cafe");
+    expect(compose).toContain("pg_isready -U app -d loja_cafe");
+    expect(compose).toContain("@postgres:5432/loja_cafe");
+    expect(compose).not.toMatch(/-d app\b/);
+    expect(files.find((f) => f.path === ".env.example")!.content).toContain("localhost:5432/loja_cafe");
+  });
+
   it("SQL respeita a ordem pai -> filho e cria FK", () => {
     const { er } = sample();
     const sql = toSql(er, "postgres");

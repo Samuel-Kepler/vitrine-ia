@@ -35,3 +35,6 @@ Thumbs.db
 # cópias brutas de páginas do a2ui.org baixadas na pesquisa (conteúdo de terceiros)
 docs/research/page_*.md
 docs/research/spec-v1.0.md
+
+# backend de exemplo gerado localmente (GEN_OUT=examples/backend-cafeteria npx vitest run src/lib/arch)
+examples/

@@ -21,6 +21,8 @@ export function slugName(s: string): string {
   return snake(s).replace(/_/g, "-") || "servico";
 }
 const envName = (n: ArchNode) => snake(n.name).toUpperCase();
+/** Nome do banco configurado no canvas, seguro para URL, POSTGRES_DB e pg_isready. */
+export const dbName = (n: ArchNode) => (n.props.database?.trim() ? snake(n.props.database) : "app");
 
 interface ServicePlan {
   node: ArchNode;
@@ -259,6 +261,33 @@ function onErrorHandler(hasDb: boolean): string {
 });`;
 }
 
+// Multi-stage: instala e compila com tsc, depois copia só dist + deps de produção
+// para uma imagem alpine rodando como o usuário "node" (não-root).
+function dockerfile(p: ServicePlan): string {
+  const http = p.node.kind !== "worker";
+  return `FROM node:24-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json* ./
+# npm ci quando houver lockfile (build reprodutível); senão npm install.
+RUN if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build && npm prune --omit=dev
+
+FROM node:24-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build --chown=node:node /app/package.json ./
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+USER node
+${http ? `ENV PORT=${p.port}
+EXPOSE ${p.port}
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 CMD wget -qO- http://127.0.0.1:$PORT/health || exit 1
+` : ""}CMD ["node", "dist/index.js"]
+`;
+}
+
 const clientFn = (t: ArchNode) => `call${snake(t.name).split("_").map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join("")}`;
 
 function serviceFiles(p: ServicePlan, er: ErModel): GeneratedFile[] {
@@ -300,24 +329,8 @@ function serviceFiles(p: ServicePlan, er: ErModel): GeneratedFile[] {
           2,
         ) + "\n",
     },
-    {
-      path: `${base}/Dockerfile`,
-      content: `FROM node:24-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-FROM node:24-alpine
-WORKDIR /app
-ENV NODE_ENV=production
-COPY package*.json ./
-RUN npm install --omit=dev
-COPY --from=build /app/dist ./dist
-${p.node.kind === "worker" ? "" : `EXPOSE ${p.port}\n`}CMD ["node", "dist/index.js"]
-`,
-    },
+    { path: `${base}/Dockerfile`, content: dockerfile(p) },
+    { path: `${base}/.dockerignore`, content: "node_modules\ndist\nnpm-debug.log\n.env\n" },
     { path: `${base}/src/index.ts`, content: serviceIndex(p, er) },
   ];
   if (posts.length) files.push({ path: `${base}/src/schemas.ts`, content: schemasFile(posts, er) });
@@ -412,8 +425,8 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
   for (const p of plans) {
     lines.push(`  ${p.slug}:`, `    build: ./services/${p.slug}`);
     if (p.node.kind !== "worker") lines.push("    ports:", `      - "${p.port}:${p.port}"`);
-    const env = [`PORT: "${p.port}"`];
-    if (p.db) env.push(`DATABASE_URL: postgres://app:app@postgres:5432/${p.db.props.database || "app"}`);
+    const env = p.node.kind === "worker" ? [] : [`PORT: "${p.port}"`];
+    if (p.db) env.push(`DATABASE_URL: postgres://app:app@postgres:5432/${dbName(p.db)}`);
     if (p.cache) env.push("REDIS_URL: redis://redis:6379");
     if (p.publishes.length || p.consumes.length) env.push("QUEUE_URL: redis://redis:6379");
     for (const t of p.httpTargets) {
@@ -422,8 +435,17 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
     }
     if (p.storage) env.push("S3_ENDPOINT: http://minio:9000", `S3_BUCKET: ${p.storage.props.bucket || "uploads"}`);
     lines.push("    environment:", ...env.map((e) => `      ${e}`));
-    const deps = [p.db ? "postgres" : "", needsRedis && (p.cache || p.publishes.length || p.consumes.length) ? "redis" : "", p.storage ? "minio" : "", ...p.httpTargets.map((t) => plans.find((x) => x.node.id === t.id)?.slug ?? "")].filter(Boolean);
-    if (deps.length) lines.push("    depends_on:", ...[...new Set(deps)].map((d) => `      - ${d}`));
+    // Banco e Redis precisam estar prontos (healthcheck), não só "iniciados".
+    const deps = new Map<string, string>();
+    if (p.db) deps.set("postgres", "service_healthy");
+    if (needsRedis && (p.cache || p.publishes.length || p.consumes.length)) deps.set("redis", "service_healthy");
+    if (p.storage) deps.set("minio", "service_started");
+    for (const t of p.httpTargets) {
+      const tp = plans.find((x) => x.node.id === t.id);
+      if (tp) deps.set(tp.slug, tp.node.kind === "worker" ? "service_started" : "service_healthy");
+    }
+    if (deps.size) lines.push("    depends_on:", ...[...deps].flatMap(([d, cond]) => [`      ${d}:`, `        condition: ${cond}`]));
+    lines.push("    restart: on-failure");
   }
   if (pg) {
     lines.push(
@@ -432,15 +454,32 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
       "    environment:",
       "      POSTGRES_USER: app",
       "      POSTGRES_PASSWORD: app",
-      `      POSTGRES_DB: ${pg.props.database || "app"}`,
+      `      POSTGRES_DB: ${dbName(pg)}`,
       "    ports:",
       '      - "5432:5432"',
       "    volumes:",
       "      - pgdata:/var/lib/postgresql/data",
       ...(hasSchema ? ["      - ./db/schema.postgres.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro"] : []),
+      "    healthcheck:",
+      `      test: ["CMD-SHELL", "pg_isready -U app -d ${dbName(pg)}"]`,
+      "      interval: 5s",
+      "      timeout: 3s",
+      "      retries: 10",
     );
   }
-  if (needsRedis) lines.push("  redis:", "    image: redis:7-alpine", "    ports:", '      - "6379:6379"');
+  if (needsRedis) {
+    lines.push(
+      "  redis:",
+      "    image: redis:7-alpine",
+      "    ports:",
+      '      - "6379:6379"',
+      "    healthcheck:",
+      '      test: ["CMD", "redis-cli", "ping"]',
+      "      interval: 5s",
+      "      timeout: 3s",
+      "      retries: 10",
+    );
+  }
   if (storage) {
     lines.push(
       "  minio:",
@@ -457,6 +496,31 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
   if (pg) lines.push("volumes:", "  pgdata:");
   return lines.join("\n") + "\n";
 }
+
+const README_DB = `## Banco
+
+\`db/\` traz o schema em SQL (Postgres, MySQL, SQLite), Prisma, Drizzle e DBML.
+
+**O schema só é aplicado quando o volume do Postgres é criado.** O compose monta
+\`db/schema.postgres.sql\` em \`/docker-entrypoint-initdb.d/\`, e a imagem do Postgres
+só roda esses scripts com o diretório de dados vazio. Se você mudar o schema depois
+da primeira subida, ele **não** é reaplicado. Para recriar o banco do zero
+(apaga todos os dados):
+
+\`\`\`bash
+docker compose down -v   # remove os containers e o volume pgdata
+docker compose up --build
+\`\`\`
+
+Os serviços só sobem depois que o Postgres e o Redis passam no healthcheck
+(\`depends_on: condition: service_healthy\`).
+
+## Erros da API
+
+- Corpo inválido (campo obrigatório faltando, tipo errado, e-mail inválido, JSON quebrado): **400** com \`issues\`.
+- Valor duplicado em coluna UNIQUE: **409**.
+- Referência para registro inexistente (chave estrangeira): **409**.
+`;
 
 function readme(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): string {
   const others = graph.nodes.filter((n) => !ARCH[n.kind].runnable);
@@ -482,7 +546,7 @@ ${plans
   .join("\n")}
 
 ${others.length ? `## Infraestrutura e externos\n\n${others.map((n) => `- **${n.name}** — ${ARCH[n.kind].label}${n.props.url ? ` (${n.props.url})` : ""}`).join("\n")}\n` : ""}
-${hasSchema ? "## Banco\n\n`db/` traz o schema em SQL (Postgres, MySQL, SQLite), Prisma, Drizzle e DBML. O Postgres do compose já roda `db/schema.postgres.sql` na primeira subida.\n" : ""}
+${hasSchema ? README_DB : ""}
 ## Rodar um serviço sem Docker
 
 \`\`\`bash
@@ -497,7 +561,8 @@ Variáveis de ambiente: veja \`.env.example\`.
 
 function envExample(graph: ArchGraph, plans: ServicePlan[]): string {
   const lines = ["# Variáveis usadas pelos serviços (valores para rodar fora do Docker)"];
-  if (graph.nodes.some((n) => n.kind === "postgres")) lines.push("DATABASE_URL=postgres://app:app@localhost:5432/app");
+  const pgNode = graph.nodes.find((n) => n.kind === "postgres");
+  if (pgNode) lines.push(`DATABASE_URL=postgres://app:app@localhost:5432/${dbName(pgNode)}`);
   if (graph.nodes.some((n) => n.kind === "cache")) lines.push("REDIS_URL=redis://localhost:6379");
   if (graph.nodes.some((n) => n.kind === "queue")) lines.push("QUEUE_URL=redis://localhost:6379");
   const targets = new Map<string, string>();
