@@ -9,7 +9,7 @@ Irmão do [`vitrine-ia`](../vitrine-ia) (inspiração: multi-provedor, mock, pre
 ```bash
 npm install
 cp .env.example .env      # opcional: sem chave nenhuma o app usa o modelo mock
-npm run dev               # http://localhost:3000
+npm run dev               # http://localhost:3200 (porta fixa; a API gerada usa 3001)
 ```
 
 Funciona igual no Windows (os scripts não usam variáveis no estilo `VAR=x cmd`).
