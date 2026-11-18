@@ -2,7 +2,7 @@
 
 Monte a página arrastando blocos e clique em **Reimaginar**: a IA transforma o rascunho numa landing page descrita em **[A2UI v1.0](https://a2ui.org/)** (JSON declarativo, catálogo de componentes travado, sem código executável), renderizada ao vivo e exportável em HTML.
 
-Irmão do [`vitrine-ia`](../vitrine-ia) (inspiração: multi-provedor, mock, preview ao vivo), mas com o A2UI como base. Funciona com IA de nuvem **ou local** (Ollama, LM Studio, llama.cpp, qualquer servidor compatível com OpenAI).
+Vive dentro do repositório [`vitrine-ia`](..) (inspiração: multi-provedor, mock, preview ao vivo), mas com o A2UI como base. Funciona com IA de nuvem **ou local** (Ollama, LM Studio, llama.cpp, qualquer servidor compatível com OpenAI).
 
 ## Rodar
 
@@ -19,6 +19,92 @@ npm test                  # vitest: compilador A2UI, Reimaginar com mock, árvor
 npm run typecheck
 npm run build
 ```
+
+## Demonstração rápida
+
+Roteiro de 10 a 15 minutos: do rascunho até a API rodando no Docker.
+
+### 1. Pré-requisitos
+
+- **Node 24** (`node -v`).
+- **Docker Desktop aberto**, com **"Engine running"** no canto inferior esquerdo. Confira com `docker version`: precisa aparecer a seção `Server`.
+- **Chave do Groq** no `studio/.env`:
+
+  ```
+  AI_PROVIDER=groq
+  GROQ_API_KEY=gsk_...
+  ```
+
+  Deixe **uma só** linha `AI_PROVIDER` (se houver duas, vale a última). Sem chave, o app usa o modelo mock e a demo continua funcionando, mas sem IA.
+
+### 2. Subir o Studio
+
+```powershell
+cd studio
+npm install
+npm run dev
+```
+
+Abra **http://localhost:3200**. A porta é fixa: a 3001 fica livre para a API gerada.
+
+### 3. Rascunho da Cafeteria e Reimaginar
+
+1. No modo **UI**, aba **Rascunho**, o Studio abre com o rascunho do **Café Aurora**: menu, hero, benefícios (torra própria, abre às 7h, wifi), formulário "receba novidades" e rodapé. Se o rascunho estiver diferente, limpe os dados do site (F12 → Application → Local Storage → apague `vitrine-studio:v1`) e recarregue a página.
+2. Mostre o arrastar e soltar: puxe um bloco da paleta para o canvas e edite o texto no inspetor.
+3. Em **Briefing do negócio**, escreva por exemplo: `cafeteria no centro, grãos especiais, wifi pra trabalhar`.
+4. Clique em **Reimaginar**. A aba **Landing** mostra a página com o selo **A2UI validado**, o provedor e os tokens usados. Se a IA citar números ou nomes que não estavam no rascunho, aparece um aviso amarelo listando cada um.
+5. Opcional: aba **Código A2UI** para mostrar o JSON declarativo e o botão **HTML** para exportar.
+
+### 4. Sugerir da landing (Arquitetura e Banco)
+
+1. Troque para o modo **Arquitetura** e clique em **Sugerir da landing**. A linha **Fonte** mostra o modelo usado (ou o motivo de ter caído na sugestão automática). Vão aparecer:
+   - Site → API (rotas `POST /leads`, `GET /leads`);
+   - Fila → worker Notificações → serviço de e-mail;
+   - API → Banco (grava).
+2. Troque para o modo **Banco**: a tabela `leads` (nome, email, origem) já está lá. Ela veio do formulário da landing.
+3. Mostre o painel de **revisão** nos dois modos (avisos automáticos, sem IA).
+
+### 5. Gerar os moldes e rodar no Docker
+
+1. No modo **Arquitetura**, clique em **Gerar moldes do backend** → **Baixar .zip** e extraia, por exemplo em `C:\demo\backend`.
+2. No PowerShell:
+
+   ```powershell
+   cd C:\demo\backend
+   docker compose up --build -d
+   docker compose ps          # api "healthy"; postgres e redis "healthy"
+   ```
+
+3. Grave e leia um lead:
+
+   ```powershell
+   Invoke-RestMethod -Method Post -Uri http://localhost:3001/leads -ContentType "application/json" -Body '{"nome":"Ana","email":"ana@ex.com"}'
+   Invoke-RestMethod -Uri http://localhost:3001/leads
+   ```
+
+4. Mostre o evento chegando no worker:
+
+   ```powershell
+   docker compose logs notificacoes
+   ```
+
+   Procure por `[notificacoes] evento recebido` com `type: 'leads.created'`.
+
+5. Opcional, validação: um corpo inválido devolve 400 com a lista de campos.
+
+   ```powershell
+   try { Invoke-RestMethod -Method Post -Uri http://localhost:3001/leads -ContentType "application/json" -Body '{"email":"x"}' } catch { $_.ErrorDetails.Message }
+   ```
+
+Sem baixar o zip, dá para usar o exemplo pronto: `GEN_OUT=examples/backend-cafeteria npx vitest run src/lib/arch` (no Git Bash) gera o mesmo backend em `studio/examples/backend-cafeteria`.
+
+### 6. Encerrar
+
+```powershell
+docker compose down -v     # para os containers e apaga o volume do banco
+```
+
+No terminal do Studio, `Ctrl+C`.
 
 ## Como funciona
 
@@ -93,6 +179,13 @@ cd examples/backend-cafeteria && docker compose up --build
 ```
 
 Diagnóstico do Sugerir com o provedor do `.env`: `RUN_LIVE=1 npx vitest run src/lib/infer/suggest.live.test.ts`.
+
+## Limites conhecidos
+
+- O worker de notificação **recebe** o evento, mas o envio de e-mail é um `TODO` no código gerado.
+- O formulário da landing no Studio **não chama** a API gerada: a landing e o backend são gerados lado a lado, sem ligação entre eles.
+- A autenticação **Própria** não tem recuperação de senha nem confirmação de e-mail.
+- O aviso de "números e nomes novos" é uma checagem simples (sem IA): pode deixar passar fatos inventados sem número nem nome próprio, como "Wi-Fi de alta velocidade".
 
 ## Próximos passos
 
