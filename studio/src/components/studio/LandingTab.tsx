@@ -90,6 +90,22 @@ export function LandingTab() {
         <p className="border-b border-line bg-panel px-4 py-2 text-xs text-gray-600">{result.note}</p>
       ) : null}
 
+      {result.facts?.length ? (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900" data-testid="fact-warnings">
+          <p className="flex items-center gap-1.5 font-medium">
+            <AlertTriangle size={14} /> A página cita {result.facts.length} {result.facts.length > 1 ? "itens" : "item"} que não {result.facts.length > 1 ? "estavam" : "estava"} no rascunho nem no briefing. Confira antes de publicar.
+          </p>
+          <details className="mt-1">
+            <summary className="cursor-pointer">Ver números e nomes novos</summary>
+            <ul className="mt-1 list-disc pl-5">
+              {result.facts.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </details>
+        </div>
+      ) : null}
+
       <div className="relative flex-1 overflow-auto bg-canvas p-4">
         <div ref={frameRef} className="mx-auto overflow-hidden rounded-xl border border-line bg-white shadow-sm transition-[width]" style={{ width, maxWidth: "100%" }} data-testid="landing-frame">
           <SurfaceView messages={result.messages} onAction={setLastAction} />

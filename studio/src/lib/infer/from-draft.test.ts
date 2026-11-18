@@ -8,6 +8,24 @@ function navbar(links: string) {
   return n;
 }
 
+describe("expandArch: layout", () => {
+  it("o banco fica abaixo da API que grava nele, fora do caminho da Fila", async () => {
+    const { starterDraft } = await import("@/lib/draft/starter");
+    const { expandArch } = await import("./expand");
+    const g = expandArch(inferFromDraft(starterDraft()).arch);
+    const of = (k: string) => g.nodes.find((n) => n.kind === k)!;
+    const api = of("api");
+    const db = of("postgres");
+    const queue = of("queue");
+    expect(db.position.x).toBe(api.position.x);
+    expect(db.position.y).toBeGreaterThan(Math.max(...g.nodes.filter((n) => n !== db).map((n) => n.position.y)));
+    // a linha api -> banco é vertical e não cruza a coluna da Fila
+    expect(queue.position.x).toBeGreaterThan(api.position.x + 200);
+    // a sugestão nunca liga a Fila direto no banco
+    expect(g.edges.some((e) => e.source === queue.id && e.target === db.id)).toBe(false);
+  });
+});
+
 describe("inferFromDraft: login", () => {
   it('menu com "Contato" não gera auth nem users', () => {
     const s = inferFromDraft([navbar("Cardápio\nSobre\nContato")]);

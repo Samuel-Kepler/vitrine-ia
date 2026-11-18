@@ -9,6 +9,7 @@ import { resolveModel } from "@/lib/ai/providers";
 import { friendlyAIError } from "@/lib/ai/errors";
 import type { ProviderSettings } from "@/lib/ai/settings";
 import { systemPrompt, userPrompt } from "./prompt";
+import { checkFacts, factWarnings } from "./fact-check";
 
 export const MAX_ATTEMPTS = 3;
 
@@ -30,14 +31,16 @@ export interface ReimagineResult {
   /** true quando a página veio do compilador determinístico (sem IA). */
   fallback: boolean;
   warnings: string[];
+  /** Números e nomes próprios na página que não estavam no rascunho/briefing (só aviso). */
+  facts: string[];
   error?: string;
   usage?: { inputTokens?: number; outputTokens?: number };
 }
 
-function fallbackResult(input: ReimagineInput, base: Omit<ReimagineResult, "messages" | "express" | "fallback" | "ok" | "note">): ReimagineResult {
+function fallbackResult(input: ReimagineInput, base: Omit<ReimagineResult, "messages" | "express" | "fallback" | "ok" | "note" | "facts">): ReimagineResult {
   const express = draftToExpress(input.draft, { palette: input.palette });
   const { messages } = compileResponse(express);
-  return { ...base, ok: false, fallback: true, messages, express, note: "Versão automática do rascunho (sem IA)." };
+  return { ...base, ok: false, fallback: true, messages, express, facts: [], note: "Versão automática do rascunho (sem IA)." };
 }
 
 export async function reimagine(input: ReimagineInput): Promise<ReimagineResult> {
@@ -76,6 +79,7 @@ export async function reimagine(input: ReimagineInput): Promise<ReimagineResult>
         fallback: false,
         messages: compiled.messages,
         express: compiled.express,
+        facts: factWarnings(checkFacts(compiled.messages, input.draft, input.brief)),
         note: compiled.prose,
         usage: { inputTokens, outputTokens },
       };

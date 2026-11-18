@@ -60,7 +60,9 @@ Regras:
 - Ligações: from = quem chama/grava; to = quem é chamado. api->postgres "writes" ou "reads"; api->queue "event"; queue->worker "event"; chamadas "http".
 - Banco: tabelas em snake_case plural, sempre com "id" uuid pk default "uuid" e created_at timestamp default "now" quando fizer sentido. Não crie colunas de chave estrangeira: use relations (from = tabela filha).
 - Login: o bloco "auth" gera register/login/me dentro da API (não liste rotas /auth). Inclua a tabela "users" com "email" varchar unique e "password_hash" text. Rotas que exigem usuário logado terminam com " auth" (ex.: "POST /subscriptions auth").
-- Seja enxuto: nada de microsserviços sem motivo.`;
+- Seja enxuto: nada de microsserviços sem motivo.
+- Não invente funcionalidades: só proponha integrações, serviços externos, tabelas e rotas que a landing ou o briefing sugerem (formulário, planos, depoimentos, login, imagens). Nada de CRM, analytics, chat, recomendação, estoque ou pagamento se a página não pede. As notas explicam cada peça citando o bloco da landing que a justifica.
+- Ligações: quem grava no Postgres é a api/service/worker; fila e site nunca ligam direto no banco.`;
 
 // Provedores com saída estruturada estrita (Groq, OpenAI) exigem que toda
 // propriedade esteja em "required"; por isso os opcionais são nullable e os

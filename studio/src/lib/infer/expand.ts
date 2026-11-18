@@ -9,6 +9,8 @@ const id = (p: string) => `${p}${Date.now().toString(36)}${(n++).toString(36)}`;
 /** Colunas por "camada": front, API/serviços, mensageria/workers, dados/externos. */
 const LAYER: Record<ArchKind, number> = { web: 0, auth: 4, api: 1, service: 2, queue: 2, worker: 3, cache: 3, postgres: 3, storage: 3, external: 4 };
 
+const DATA = new Set<ArchKind>(["postgres", "cache", "storage"]);
+
 export function expandArch(c: CompactArch): ArchGraph {
   const keyToId = new Map<string, string>();
   const perLayer = new Map<number, number>();
@@ -28,6 +30,20 @@ export function expandArch(c: CompactArch): ArchGraph {
   const edges = c.edges
     .filter((e) => keyToId.has(e.from) && keyToId.has(e.to))
     .map((e) => ({ id: id("e"), source: keyToId.get(e.from)!, target: keyToId.get(e.to)!, kind: e.kind }));
+
+  // Banco, cache e arquivos vão para uma faixa ABAIXO de quem os usa. Na mesma
+  // linha das colunas, a ligação api → postgres atravessava a Fila e o rótulo
+  // "grava" parecia sair dela.
+  const byId = new Map(nodes.map((nd) => [nd.id, nd]));
+  const bandY = 40 + Math.max(1, ...perLayer.values()) * 150 + 40;
+  const usedX = new Map<number, number>();
+  for (const nd of nodes.filter((x) => DATA.has(x.kind))) {
+    const writer = edges.map((e) => (e.target === nd.id ? byId.get(e.source) : undefined)).find((s) => s && !DATA.has(s.kind));
+    const x = writer?.position.x ?? 40 + 3 * 260;
+    const row = usedX.get(x) ?? 0;
+    usedX.set(x, row + 1);
+    nd.position = { x: x + row * 230, y: bandY };
+  }
   return { nodes, edges };
 }
 
