@@ -1,23 +1,15 @@
 "use client";
 import { useMemo, useState } from "react";
-import { strToU8, zipSync } from "fflate";
 import { Download, FileCode2, X } from "lucide-react";
 import type { GeneratedFile } from "@/lib/db/codegen";
+import { downloadZip } from "@/components/studio/export";
 
 export function FilesPanel({ title, files, zipName, onClose }: { title: string; files: GeneratedFile[]; zipName: string; onClose: () => void }) {
   const [active, setActive] = useState(files[0]?.path);
   const current = files.find((f) => f.path === active) ?? files[0];
   const tree = useMemo(() => [...files].sort((a, b) => a.path.localeCompare(b.path)), [files]);
 
-  const downloadZip = () => {
-    const zip = zipSync(Object.fromEntries(files.map((f) => [f.path, strToU8(f.content)])));
-    const url = URL.createObjectURL(new Blob([zip as BlobPart], { type: "application/zip" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = zipName;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
+  const onDownload = () => downloadZip(zipName, files);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" onClick={onClose}>
@@ -26,7 +18,7 @@ export function FilesPanel({ title, files, zipName, onClose }: { title: string; 
           <FileCode2 size={18} className="text-brand" />
           <h2 className="font-semibold">{title}</h2>
           <span className="text-xs text-muted">{files.length} arquivos</span>
-          <button onClick={downloadZip} data-testid="download-zip" className="ml-auto flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-sm text-white hover:opacity-90">
+          <button onClick={onDownload} data-testid="download-zip" className="ml-auto flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-sm text-white hover:opacity-90">
             <Download size={15} /> Baixar .zip
           </button>
           <button onClick={onClose} className="rounded p-1 hover:bg-gray-100" aria-label="Fechar">

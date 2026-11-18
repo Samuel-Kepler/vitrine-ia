@@ -66,3 +66,15 @@ ${body}
 </body>
 </html>`;
 }
+
+export function downloadZip(name: string, files: { path: string; content: string }[]) {
+  void import("fflate").then(({ strToU8, zipSync }) => {
+    const zip = zipSync(Object.fromEntries(files.map((f) => [f.path, strToU8(f.content)])));
+    const url = URL.createObjectURL(new Blob([zip as BlobPart], { type: "application/zip" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+}

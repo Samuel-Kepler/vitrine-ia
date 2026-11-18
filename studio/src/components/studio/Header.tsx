@@ -3,6 +3,7 @@ import { useStore } from "zustand";
 import { Code2, Database, LayoutTemplate, Loader2, Network, PenTool, Redo2, Settings, Undo2, Wand2 } from "lucide-react";
 import { useStudio, type StudioMode, type StudioTab } from "@/lib/draft/store";
 import { PROVIDER_LABELS } from "@/lib/ai/settings";
+import { ExportProject } from "./ExportProject";
 
 const TABS: { id: StudioTab; label: string; icon: typeof PenTool }[] = [
   { id: "canvas", label: "Rascunho", icon: PenTool },
@@ -82,6 +83,7 @@ export function Header({ onReimagine, onOpenSettings, serverDefault }: { onReima
             </button>
           </>
         ) : null}
+        <ExportProject />
         <button
           onClick={onOpenSettings}
           className="ml-1 flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50"

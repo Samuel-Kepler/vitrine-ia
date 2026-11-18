@@ -180,6 +180,16 @@ cd examples/backend-cafeteria && docker compose up --build
 
 Diagnóstico do Sugerir com o provedor do `.env`: `RUN_LIVE=1 npx vitest run src/lib/infer/suggest.live.test.ts`.
 
+## Exportar o projeto inteiro
+
+O botão **Exportar projeto**, no topo e em qualquer modo, baixa `vitrine-projeto.zip` com:
+
+- `web/index.html`: a landing do último Reimaginar, em HTML estático;
+- o backend do canvas Arquitetura (`docker-compose.yml`, serviços, `.env.example`), com um serviço `web` (nginx) que serve a landing em http://localhost:8080;
+- `db/`: os schemas do canvas Banco.
+
+Sem Reimaginar, o zip sai sem `web/` e o README avisa. Só com o banco desenhado, saem apenas os schemas.
+
 ## Limites conhecidos
 
 - O worker de notificação **recebe** o evento, mas o envio de e-mail é um `TODO` no código gerado.
@@ -190,5 +200,4 @@ Diagnóstico do Sugerir com o provedor do `.env`: `RUN_LIVE=1 npx vitest run src
 ## Próximos passos
 
 1. Revisão com IA (score + issues) nos três modos, como o Design Review do vitrine-ia.
-2. Exportar a landing como projeto (HTML + o backend + o banco num único zip).
-3. Auto-layout (dagre) e importar DBML/SQL existente.
+2. Auto-layout (dagre) e importar DBML/SQL existente.
