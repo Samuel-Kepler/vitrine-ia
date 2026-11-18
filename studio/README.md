@@ -180,6 +180,17 @@ cd examples/backend-cafeteria && docker compose up --build
 
 Diagnóstico do Sugerir com o provedor do `.env`: `RUN_LIVE=1 npx vitest run src/lib/infer/suggest.live.test.ts`.
 
+## Revisão com IA
+
+Botão **Revisar com IA** nos três modos: na aba Landing, pelo botão **Revisão** da barra; em Arquitetura e Banco, no painel da direita, acima das regras. Devolve uma nota de 0 a 100, um resumo e até 6 problemas com sugestão. Clicar num problema seleciona o bloco ou a tabela citada.
+
+- As **regras fixas** de cada modo entram junto: as de Arquitetura e Banco, e na Landing os números e nomes que não estavam no rascunho. A IA as recebe para não repetir. Se alguma regra for erro, a nota fica em no máximo 69.
+- O prompt diz o que o código gerado já faz (validação zod, índices de FK, segredos no .env) para a IA não cobrar isso.
+- Se a IA falhar ou o provedor for mock, a revisão sai só das regras, com a nota calculada por elas e o motivo da falha.
+- Quando o conteúdo muda, a revisão fica marcada como desatualizada.
+
+Diagnóstico com o Groq do `.env`: `RUN_LIVE=1 npx vitest run src/lib/review/ai.live.test.ts`.
+
 ## Organizar e importar
 
 - **Organizar** (canto superior direito dos canvases Arquitetura e Banco): reposiciona tudo com dagre, da esquerda para a direita, seguindo as ligações (quem chama → quem é chamado; tabela pai → filha).
@@ -203,7 +214,3 @@ Sem Reimaginar, o zip sai sem `web/` e o README avisa. Só com o banco desenhado
 - O formulário da landing no Studio **não chama** a API gerada: a landing e o backend são gerados lado a lado, sem ligação entre eles.
 - A autenticação **Própria** não tem recuperação de senha nem confirmação de e-mail.
 - O aviso de "números e nomes novos" é uma checagem simples (sem IA): pode deixar passar fatos inventados sem número nem nome próprio, como "Wi-Fi de alta velocidade".
-
-## Próximos passos
-
-1. Revisão com IA (score + issues) nos três modos, como o Design Review do vitrine-ia.

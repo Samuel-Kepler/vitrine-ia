@@ -24,6 +24,7 @@ import type { ReimagineResult } from "@/lib/reimagine/reimagine";
 import type { ProviderSettings } from "@/lib/ai/settings";
 import { usesOwnAuth, type ArchGraph } from "@/lib/arch/model";
 import { ensureAuthUsers, type ErModel } from "@/lib/db/model";
+import type { AiReviewResult, ReviewMode } from "@/lib/review/ai-input";
 
 export interface SavedComponent {
   id: string;
@@ -52,6 +53,9 @@ interface StudioState {
   db: ErModel;
   flowSel: FlowSelection;
   suggestNotes: string[];
+  /** Última revisão com IA de cada modo (não vai para o localStorage). */
+  reviews: Partial<Record<ReviewMode, AiReviewResult>>;
+  setReview: (r: AiReviewResult) => void;
 
   setMode: (m: StudioMode) => void;
   setArch: (g: ArchGraph | ((g: ArchGraph) => ArchGraph)) => void;
@@ -100,6 +104,8 @@ export const useStudio = create<StudioState>()(
         db: { tables: [], relations: [] },
         flowSel: null,
         suggestNotes: [],
+        reviews: {},
+        setReview: (r) => set({ reviews: { ...get().reviews, [r.mode]: r } }),
 
         setMode: (mode) => set({ mode, flowSel: null }),
         setArch: (g) => {

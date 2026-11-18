@@ -1,7 +1,8 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
-import { AlertTriangle, Download, FileJson, Monitor, Smartphone, Tablet } from "lucide-react";
+import { AlertTriangle, Download, FileJson, Monitor, ScanSearch, Smartphone, Tablet } from "lucide-react";
+import { AiReviewPanel } from "@/components/review/AiReviewPanel";
 import { useStudio } from "@/lib/draft/store";
 import type { A2uiAction } from "@/components/preview/SurfaceView";
 import { download, exportStandaloneHtml } from "./export";
@@ -22,6 +23,8 @@ export function LandingTab() {
   const [viewport, setViewport] = useState<(typeof VIEWPORTS)[number]["id"]>("desktop");
   const [lastAction, setLastAction] = useState<A2uiAction | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
+  const [showReview, setShowReview] = useState(false);
+  const review = useStudio((s) => s.reviews.landing);
 
   if (!result) return null;
   const width = VIEWPORTS.find((v) => v.id === viewport)!.width;
@@ -54,6 +57,14 @@ export function LandingTab() {
             </button>
           ))}
           <span className="mx-1 h-5 w-px bg-line" />
+          <button
+            onClick={() => setShowReview((v) => !v)}
+            data-testid="toggle-ai-review"
+            aria-pressed={showReview}
+            className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 ${showReview ? "border-brand bg-brand-soft text-brand" : "border-line hover:bg-gray-50"}`}
+          >
+            <ScanSearch size={14} /> Revisão{review ? ` · ${review.score}` : ""}
+          </button>
           <button
             className="flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 hover:bg-gray-50"
             onClick={() => download("landing.a2ui.json", JSON.stringify(result.messages, null, 2), "application/json")}
@@ -106,6 +117,7 @@ export function LandingTab() {
         </div>
       ) : null}
 
+      <div className="flex min-h-0 flex-1">
       <div className="relative flex-1 overflow-auto bg-canvas p-4">
         <div ref={frameRef} className="mx-auto overflow-hidden rounded-xl border border-line bg-white shadow-sm transition-[width]" style={{ width, maxWidth: "100%" }} data-testid="landing-frame">
           <SurfaceView messages={result.messages} onAction={setLastAction} />
@@ -121,6 +133,13 @@ export function LandingTab() {
             </button>
           </div>
         ) : null}
+      </div>
+      {showReview ? (
+        <aside className="w-80 shrink-0 overflow-y-auto border-l border-line bg-panel p-4" aria-label="Revisão da landing">
+          <h2 className="mb-3 font-semibold">Revisão da landing</h2>
+          <AiReviewPanel mode="landing" />
+        </aside>
+      ) : null}
       </div>
     </div>
   );

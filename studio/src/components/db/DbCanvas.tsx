@@ -24,6 +24,7 @@ import { useFlowNodes } from "@/components/flow/use-flow-nodes";
 import { ReviewList } from "@/components/flow/ReviewList";
 import { FilesPanel } from "@/components/flow/FilesPanel";
 import { FlowSidebarFooter } from "@/components/flow/FlowSidebarFooter";
+import { AiReviewPanel } from "@/components/review/AiReviewPanel";
 import { LayoutButton } from "@/components/flow/LayoutButton";
 import { layoutDb } from "@/lib/layout/auto";
 import { ImportDialog } from "./ImportDialog";
@@ -208,6 +209,8 @@ function Inner() {
         ) : (
           <div className="p-4">
             <h2 className="mb-3 font-semibold">Revisão</h2>
+            <AiReviewPanel mode="db" hideRules onPick={(id) => setFlowSel({ kind: "node", id })} />
+            <h3 className="mb-2 mt-4 border-t border-line pt-3 text-xs font-semibold uppercase tracking-wide text-muted">Regras</h3>
             <ReviewList findings={findings} onPick={(id) => setFlowSel({ kind: "node", id })} />
             <FlowSidebarFooter generateLabel="Gerar schema (SQL, Prisma, Drizzle, DBML)" disabled={db.tables.length === 0} disabledHint="Crie ao menos uma tabela." onGenerate={() => setShowFiles(true)} />
           </div>
