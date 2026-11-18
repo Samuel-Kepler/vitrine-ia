@@ -15,7 +15,7 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react";
-import { ArrowLeftRight, KeyRound, Link2, Plus, Table2, Trash2 } from "lucide-react";
+import { ArrowLeftRight, FileUp, KeyRound, Link2, Plus, Table2, Trash2 } from "lucide-react";
 import { useStudio } from "@/lib/draft/store";
 import { COL_TYPES, ON_DELETE, REL_KINDS, REL_LABELS, fkColumns, snake, type Column, type ErModel, type Table } from "@/lib/db/model";
 import { dbFiles } from "@/lib/db/codegen";
@@ -24,6 +24,9 @@ import { useFlowNodes } from "@/components/flow/use-flow-nodes";
 import { ReviewList } from "@/components/flow/ReviewList";
 import { FilesPanel } from "@/components/flow/FilesPanel";
 import { FlowSidebarFooter } from "@/components/flow/FlowSidebarFooter";
+import { LayoutButton } from "@/components/flow/LayoutButton";
+import { layoutDb } from "@/lib/layout/auto";
+import { ImportDialog } from "./ImportDialog";
 
 const input = "w-full rounded-md border border-line bg-white px-2 py-1 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 let seq = 0;
@@ -150,6 +153,7 @@ function Inner() {
     setFlowSel({ kind: "node", id: t.id });
   };
 
+  const [showImport, setShowImport] = useState(false);
   const findings = useMemo(() => reviewDb(db), [db]);
   const files = useMemo(() => (showFiles ? dbFiles(db) : []), [showFiles, db]);
 
@@ -158,6 +162,9 @@ function Inner() {
       <aside className="flex w-56 shrink-0 flex-col gap-3 overflow-y-auto border-r border-line bg-panel p-3" aria-label="Ferramentas do banco">
         <button onClick={addTable} data-testid="add-table" className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white hover:brightness-110">
           <Plus size={16} /> Nova tabela
+        </button>
+        <button onClick={() => setShowImport(true)} data-testid="import-schema" className="flex items-center justify-center gap-2 rounded-lg border border-line bg-white py-2 text-sm hover:bg-gray-50">
+          <FileUp size={16} /> Importar DBML/SQL
         </button>
         <p className="text-xs text-muted">
           Para relacionar, arraste da bolinha <b>direita</b> da tabela filha (que recebe a chave estrangeira) até a bolinha <b>esquerda</b> da tabela pai.
@@ -182,6 +189,7 @@ function Inner() {
         >
           <Background gap={20} />
           <Controls position="bottom-left" />
+          <LayoutButton disabled={db.tables.length < 2} onLayout={() => setDb((m) => layoutDb(m))} />
         </ReactFlow>
         {db.tables.length === 0 ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -205,6 +213,7 @@ function Inner() {
           </div>
         )}
       </aside>
+      {showImport ? <ImportDialog onClose={() => setShowImport(false)} /> : null}
       {showFiles ? <FilesPanel title="Schema do banco" files={files} zipName="banco.zip" onClose={() => setShowFiles(false)} /> : null}
     </>
   );

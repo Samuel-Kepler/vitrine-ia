@@ -26,6 +26,8 @@ import { useFlowNodes } from "@/components/flow/use-flow-nodes";
 import { ReviewList } from "@/components/flow/ReviewList";
 import { FilesPanel } from "@/components/flow/FilesPanel";
 import { FlowSidebarFooter } from "@/components/flow/FlowSidebarFooter";
+import { LayoutButton } from "@/components/flow/LayoutButton";
+import { layoutArch } from "@/lib/layout/auto";
 
 export const ARCH_ICONS: Record<ArchKind, typeof Server> = {
   web: Globe,
@@ -203,6 +205,7 @@ function Inner() {
         >
           <Background gap={20} />
           <Controls position="bottom-left" />
+          <LayoutButton disabled={arch.nodes.length < 2} onLayout={() => setArch((g) => layoutArch(g))} />
         </ReactFlow>
         {arch.nodes.length === 0 ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">

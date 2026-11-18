@@ -180,6 +180,13 @@ cd examples/backend-cafeteria && docker compose up --build
 
 Diagnóstico do Sugerir com o provedor do `.env`: `RUN_LIVE=1 npx vitest run src/lib/infer/suggest.live.test.ts`.
 
+## Organizar e importar
+
+- **Organizar** (canto superior direito dos canvases Arquitetura e Banco): reposiciona tudo com dagre, da esquerda para a direita, seguindo as ligações (quem chama → quem é chamado; tabela pai → filha).
+- **Importar DBML/SQL** (canvas Banco): cole ou abra um `.dbml` (dbdiagram.io) ou `.sql` com `CREATE TABLE` (Postgres, MySQL, SQLite). Lê PK simples e composta, `NOT NULL`, `UNIQUE`, `DEFAULT`, auto-incremento e chaves estrangeiras (inline, `FOREIGN KEY`, `ALTER TABLE` e `Ref:`). Uma tabela com só duas FKs vira relação muitos-para-muitos. Substitui o diagrama, com botão de desfazer, e lista o que precisou ajustar: tipos sem equivalente viram `text`, e a FK é renomeada para `<pai>_id`, porque o Studio nomeia as FKs pela tabela pai.
+
+Leitor próprio (`src/lib/db/import.ts`), sem `@dbml/core`, que pesaria alguns MB. Não lê enums, FKs compostas nem UNIQUE composto: esses casos aparecem nos avisos.
+
 ## Exportar o projeto inteiro
 
 O botão **Exportar projeto**, no topo e em qualquer modo, baixa `vitrine-projeto.zip` com:
@@ -200,4 +207,3 @@ Sem Reimaginar, o zip sai sem `web/` e o README avisa. Só com o banco desenhado
 ## Próximos passos
 
 1. Revisão com IA (score + issues) nos três modos, como o Design Review do vitrine-ia.
-2. Auto-layout (dagre) e importar DBML/SQL existente.
