@@ -4,6 +4,7 @@ import { BLOCKS, GROUP_LABELS, type BlockGroup, type BlockType } from "@/lib/dra
 import { useStudio } from "@/lib/draft/store";
 import { BlockIcon } from "./icons";
 import { endDrag, startDrag } from "./dnd";
+import { GeneratePanel } from "./GeneratePanel";
 
 const ORDER: BlockGroup[] = ["secoes", "conteudo", "layout", "livre"];
 
@@ -14,7 +15,8 @@ export function Palette() {
 
   return (
     <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-line bg-panel" aria-label="Paleta de componentes">
-      <p className="px-4 pt-4 text-xs text-muted">Arraste para o canvas ou clique para adicionar.</p>
+      <GeneratePanel />
+      <p className="px-4 pt-4 text-xs text-muted">Ou arraste blocos para o canvas (ou clique para adicionar).</p>
       {ORDER.map((group) => (
         <section key={group} className="px-3 pt-4">
           <h3 className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">{GROUP_LABELS[group]}</h3>

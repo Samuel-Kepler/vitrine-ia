@@ -180,6 +180,18 @@ cd examples/backend-cafeteria && docker compose up --build
 
 Diagnóstico do Sugerir com o provedor do `.env`: `RUN_LIVE=1 npx vitest run src/lib/infer/suggest.live.test.ts`.
 
+## Gerar com IA
+
+No topo da paleta (aba Rascunho), o campo **Gerar com IA** monta a página a partir de um texto, sem arrastar nada. Exemplo: *padaria de bairro com cardápio, depoimentos e formulário de encomenda*.
+
+- A IA escolhe os blocos da paleta (menu, hero, seções com recursos, depoimentos ou preços, formulário, rodapé) e preenche os textos. O resultado aparece no canvas para ajustar; depois é só clicar em **Reimaginar**.
+- **Não inventa fatos:** preço, horário, produto, depoimento ou nome que você não escreveu vira marcador, como `[preço]`, `[produto 1]` ou `[depoimento de um cliente]`. URLs de imagem inventadas são descartadas.
+- Com blocos no canvas, você escolhe **Substituir** ou **Acrescentar** (os blocos entram antes do rodapé). Com várias páginas, substituir mantém o menu e o rodapé do site. Ctrl+Z desfaz.
+- Se o briefing estiver vazio, o texto do pedido vira o briefing usado pelo Reimaginar.
+- Sem IA (mock, ou se o provedor falhar), um modelo por palavras-chave monta a página: cardápio, depoimentos, preços, galeria, sobre, FAQ e reserva/orçamento/contato.
+
+Diagnóstico com o Groq do `.env`: `RUN_LIVE=1 npx vitest run src/lib/draft/generate.live.test.ts`.
+
 ## Várias páginas
 
 No modo UI, a barra **Páginas** (abaixo do topo) cria o site página por página:

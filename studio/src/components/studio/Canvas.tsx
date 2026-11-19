@@ -55,7 +55,7 @@ export function Canvas() {
           {tree.length === 0 ? (
             <div className="flex h-[60vh] flex-col items-center justify-center gap-3 text-center text-muted">
               <MousePointer2 />
-              <p className="max-w-xs text-sm">Arraste blocos da paleta para cá. Depois clique em <b>Reimaginar</b> para virar uma landing page.</p>
+              <p className="max-w-xs text-sm">Arraste blocos da paleta para cá, ou descreva a página em <b>Gerar com IA</b>, à esquerda. Depois clique em <b>Reimaginar</b> para virar uma landing page.</p>
             </div>
           ) : (
             <NodeList nodes={tree} direction="column" parentId={null} onDrop={onDrop} />
