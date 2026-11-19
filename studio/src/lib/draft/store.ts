@@ -20,6 +20,7 @@ import {
   type DropTarget,
 } from "./tree";
 import { starterDraft } from "./starter";
+import { addLink, commitActive, homePage, HOME_ID, newPageTree, chromeOf, removeLink, renameLink, uniqueSlug, migrateStudio, type Page } from "./pages";
 import type { ReimagineResult } from "@/lib/reimagine/reimagine";
 import type { ProviderSettings } from "@/lib/ai/settings";
 import { usesOwnAuth, type ArchGraph } from "@/lib/arch/model";
@@ -53,6 +54,16 @@ interface StudioState {
   db: ErModel;
   flowSel: FlowSelection;
   suggestNotes: string[];
+  /** Todas as páginas do site; a aberta (pageId) vive em tree/result. */
+  pages: Page[];
+  pageId: string;
+  switchPage: (id: string) => void;
+  addPage: (name: string) => void;
+  renamePage: (id: string, name: string) => void;
+  duplicatePage: (id: string) => void;
+  removePage: (id: string) => void;
+  /** Páginas com a aberta já gravada e o menu/rodapé espalhados. */
+  allPages: () => Page[];
   /** Última revisão com IA de cada modo (não vai para o localStorage). */
   reviews: Partial<Record<ReviewMode, AiReviewResult>>;
   setReview: (r: AiReviewResult) => void;
@@ -104,6 +115,68 @@ export const useStudio = create<StudioState>()(
         db: { tables: [], relations: [] },
         flowSel: null,
         suggestNotes: [],
+        pages: [homePage()],
+        pageId: HOME_ID,
+        allPages: () => {
+          const s = get();
+          return commitActive(s.pages, s.pageId, s.tree, s.result);
+        },
+        switchPage: (id) => {
+          const s = get();
+          if (id === s.pageId) return;
+          const pages = s.allPages();
+          const target = pages.find((p) => p.id === id);
+          if (!target) return;
+          set({ pages, pageId: id, tree: target.tree, result: target.result, selectedId: null, tab: !target.result && s.tab === "code" ? "canvas" : s.tab });
+          // Desfazer não atravessa páginas.
+          useStudio.temporal.getState().clear();
+        },
+        addPage: (name) => {
+          const s = get();
+          const clean = name.trim() || "Nova página";
+          const tree = addLink(s.tree, clean);
+          const pages = commitActive(s.pages, s.pageId, tree, s.result);
+          const page: Page = { id: newId("p"), name: clean, slug: uniqueSlug(clean, pages), tree: newPageTree(clean, chromeOf(tree)), result: null };
+          set({ pages: [...pages, page], pageId: page.id, tree: page.tree, result: null, selectedId: null, tab: "canvas" });
+          useStudio.temporal.getState().clear();
+        },
+        renamePage: (id, name) => {
+          const s = get();
+          const clean = name.trim();
+          const old = s.pages.find((p) => p.id === id);
+          if (!clean || !old || clean === old.name) return;
+          const tree = renameLink(s.tree, old.name, clean);
+          const pages = commitActive(s.pages, s.pageId, tree, s.result).map((p) => (p.id === id ? { ...p, name: clean, slug: uniqueSlug(clean, s.pages, id) } : p));
+          set({ pages, tree });
+        },
+        duplicatePage: (id) => {
+          const s = get();
+          const pages = s.allPages();
+          const src = pages.find((p) => p.id === id);
+          if (!src) return;
+          const name = `${src.name} (cópia)`;
+          const tree = addLink(s.tree, name);
+          const synced = commitActive(pages, s.pageId, tree, s.result);
+          const copy: Page = { ...structuredClone(src), id: newId("p"), name, slug: uniqueSlug(name, synced) };
+          copy.tree = commitActive([copy], "", tree, null)[0].tree;
+          set({ pages: [...synced, copy], pageId: copy.id, tree: copy.tree, result: copy.result, selectedId: null });
+          useStudio.temporal.getState().clear();
+        },
+        removePage: (id) => {
+          const s = get();
+          if (s.pages.length < 2) return;
+          const gone = s.pages.find((p) => p.id === id);
+          if (!gone) return;
+          const tree = removeLink(s.tree, gone.name);
+          const pages = commitActive(s.pages, s.pageId, tree, s.result).filter((p) => p.id !== id);
+          if (id !== s.pageId) {
+            set({ pages, tree });
+            return;
+          }
+          const next = pages[0];
+          set({ pages, pageId: next.id, tree: commitActive([next], "", tree, null)[0].tree, result: next.result, selectedId: null });
+          useStudio.temporal.getState().clear();
+        },
         reviews: {},
         setReview: (r) => set({ reviews: { ...get().reviews, [r.mode]: r } }),
 
@@ -172,7 +245,9 @@ export const useStudio = create<StudioState>()(
     ),
     {
       name: "vitrine-studio:v1",
-      version: 1,
+      version: 2,
+      // v1 tinha uma página só: ela vira a "Início".
+      migrate: (persisted, version) => migrateStudio(persisted, version) as never,
       partialize: (s) => ({
         tree: s.tree,
         brief: s.brief,
@@ -184,6 +259,8 @@ export const useStudio = create<StudioState>()(
         arch: s.arch,
         db: s.db,
         suggestNotes: s.suggestNotes,
+        pages: s.pages,
+        pageId: s.pageId,
       }),
     },
   ),

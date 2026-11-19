@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { X } from "lucide-react";
 import { useStudio } from "@/lib/draft/store";
 import { Header } from "./Header";
+import { PageBar } from "./PageBar";
 import { Palette } from "./Palette";
 import { Canvas } from "./Canvas";
 import { Inspector } from "./Inspector";
@@ -61,6 +62,7 @@ export default function Studio() {
   return (
     <div className="flex h-screen flex-col">
       <Header onReimagine={reimagineNow} onOpenSettings={() => setSettingsOpen(true)} serverDefault={status ? `${status.defaultKind} · ${status.defaultModel}` : undefined} />
+      {mode === "ui" ? <PageBar /> : null}
       {error ? (
         <div className="flex items-start gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800" role="alert">
           <span className="flex-1">{error}</span>

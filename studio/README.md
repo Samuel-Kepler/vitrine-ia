@@ -180,6 +180,20 @@ cd examples/backend-cafeteria && docker compose up --build
 
 Diagnóstico do Sugerir com o provedor do `.env`: `RUN_LIVE=1 npx vitest run src/lib/infer/suggest.live.test.ts`.
 
+## Várias páginas
+
+No modo UI, a barra **Páginas** (abaixo do topo) cria o site página por página:
+
+- **+ Nova página** cria a página com o menu e o rodapé do site e já põe o link dela no menu.
+- Cada página tem o próprio rascunho e o próprio resultado do Reimaginar. A bolinha amarela marca as que ainda não foram reimaginadas.
+- **Menu e rodapé são compartilhados:** editar em uma página vale para todas.
+- Renomear (lápis ou duplo clique) atualiza o link do menu. Duplicar e apagar ficam na aba aberta. A última página não pode ser apagada.
+- Na aba Landing, clicar num link do menu com o nome de uma página abre essa página.
+- O Reimaginar avisa a IA de qual página está desenhando e quais existem.
+- Desfazer vale dentro da página aberta. Rascunhos salvos antes desta versão viram a página **Início**.
+
+Ainda faltam (etapa 2): **Reimaginar todas**, exportar um HTML por página e o Sugerir lendo todas as páginas. Hoje, exportar e Sugerir usam a página aberta.
+
 ## Revisão com IA
 
 Botão **Revisar com IA** nos três modos: na aba Landing, pelo botão **Revisão** da barra; em Arquitetura e Banco, no painel da direita, acima das regras. Devolve uma nota de 0 a 100, um resumo e até 6 problemas com sugestão. Clicar num problema seleciona o bloco ou a tabela citada.

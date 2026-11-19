@@ -6,6 +6,7 @@ import { AiReviewPanel } from "@/components/review/AiReviewPanel";
 import { useStudio } from "@/lib/draft/store";
 import type { A2uiAction } from "@/components/preview/SurfaceView";
 import { download, exportStandaloneHtml } from "./export";
+import { pageForLink } from "@/lib/draft/pages";
 
 const SurfaceView = dynamic(() => import("@/components/preview/SurfaceView"), {
   ssr: false,
@@ -26,7 +27,27 @@ export function LandingTab() {
   const [showReview, setShowReview] = useState(false);
   const review = useStudio((s) => s.reviews.landing);
 
-  if (!result) return null;
+  const pageName = useStudio((s) => s.pages.find((p) => p.id === s.pageId)?.name);
+
+  // Links do menu com o nome de uma página trocam de página no preview.
+  const onFrameClick = (e: React.MouseEvent) => {
+    const a = (e.target as HTMLElement).closest("a");
+    if (!a) return;
+    const st = useStudio.getState();
+    const page = pageForLink(st.allPages(), a.textContent ?? "");
+    if (page || a.getAttribute("href") === "#") e.preventDefault();
+    if (page && page.id !== st.pageId) st.switchPage(page.id);
+  };
+
+  if (!result) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-canvas p-6" data-testid="landing-empty">
+        <p className="max-w-sm rounded-lg bg-white p-5 text-center text-sm text-muted shadow-sm">
+          A página <b className="text-ink">{pageName}</b> ainda não foi reimaginada. Monte o rascunho e clique em <b className="text-ink">Reimaginar</b>.
+        </p>
+      </div>
+    );
+  }
   const width = VIEWPORTS.find((v) => v.id === viewport)!.width;
 
   return (
@@ -119,7 +140,7 @@ export function LandingTab() {
 
       <div className="flex min-h-0 flex-1">
       <div className="relative flex-1 overflow-auto bg-canvas p-4">
-        <div ref={frameRef} className="mx-auto overflow-hidden rounded-xl border border-line bg-white shadow-sm transition-[width]" style={{ width, maxWidth: "100%" }} data-testid="landing-frame">
+        <div ref={frameRef} onClickCapture={onFrameClick} className="mx-auto overflow-hidden rounded-xl border border-line bg-white shadow-sm transition-[width]" style={{ width, maxWidth: "100%" }} data-testid="landing-frame">
           <SurfaceView messages={result.messages} onAction={setLastAction} />
         </div>
         {lastAction ? (
