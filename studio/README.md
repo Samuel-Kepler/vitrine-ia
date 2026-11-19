@@ -235,6 +235,12 @@ O botão **Exportar projeto**, no topo e em qualquer modo, baixa `vitrine-projet
 - o backend do canvas Arquitetura (`docker-compose.yml`, serviços, `.env.example`), com um serviço `web` (nginx) que serve a landing em http://localhost:8080;
 - `db/`: os schemas do canvas Banco.
 
+- `react/`: o mesmo site como **projeto React** (Vite 7 + React 19 + Tailwind 4), com uma página `.tsx` por página do site e uma entrada HTML por página, sem roteador (`index.html`, `cardapio.html`…). Rode com `cd react && npm install && npm run dev`. Os formulários enviam JSON para `VITE_LEADS_URL` (veja `react/.env.example`).
+
+O projeto React é gerado **sem IA**: um tradutor (`src/lib/export/react.ts`) converte a página A2UI em JSX usando os **mesmos componentes do preview** (`src/lib/a2ui/landing-components.tsx`, React puro) e o mesmo CSS (`src/lib/a2ui/landing.css`). Por isso o código sai idêntico ao que aparece no Studio. Se mudar um desses dois arquivos, rode `npm run gen:sources`; o teste `react.test.ts` acusa se a cópia embutida ficar desatualizada.
+
+Teste do build real: `REACT_OUT=examples/react-site npx vitest run src/lib/export/react.test.ts` e depois `cd examples/react-site && npm install && npm run build`.
+
 Sem Reimaginar, o zip sai sem `web/` e o README avisa. Só com o banco desenhado, saem apenas os schemas.
 
 ## Limites conhecidos

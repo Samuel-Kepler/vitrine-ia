@@ -24,16 +24,16 @@ describe("tamanhos de tela", () => {
   });
 
   it("a landing usa container queries, não breakpoints da janela", () => {
-    const views = readFileSync("src/lib/a2ui/views.tsx", "utf8");
+    const views = readFileSync("src/lib/a2ui/landing-components.tsx", "utf8");
     expect(views).not.toMatch(/[\s"`](sm|md|lg|xl):/);
     expect(views).toMatch(/@3xl:/);
-    expect(readFileSync("src/app/globals.css", "utf8")).toMatch(/\.lp \{[^}]*container-type: inline-size/);
+    expect(readFileSync("src/lib/a2ui/landing.css", "utf8")).toMatch(/\.lp \{[^}]*container-type: inline-size/);
   });
 });
 
 describe("landing responsiva", () => {
-  const views = readFileSync("src/lib/a2ui/views.tsx", "utf8");
-  const css = readFileSync("src/app/globals.css", "utf8");
+  const views = readFileSync("src/lib/a2ui/landing-components.tsx", "utf8");
+  const css = readFileSync("src/lib/a2ui/landing.css", "utf8");
   it("menu do celular com <details> (funciona sem JS no HTML exportado)", () => {
     expect(views).toMatch(/<details className="lp-menu @3xl:hidden">/);
     expect(views).toMatch(/aria-label="Abrir menu"/);

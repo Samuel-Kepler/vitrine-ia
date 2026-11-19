@@ -5,6 +5,7 @@ import { Loader2, PackageOpen } from "lucide-react";
 import { useStudio } from "@/lib/draft/store";
 import { linkPagesInHtml, pageFile } from "@/lib/draft/pages";
 import { hasProjectContent, projectFiles, type WebPage } from "@/lib/export/project";
+import { reactProject } from "@/lib/export/react";
 import { downloadZip, exportStandaloneHtml } from "./export";
 import { sitePalette } from "./reimagine-client";
 
@@ -101,7 +102,9 @@ export function ExportProject() {
       const s = useStudio.getState();
       const pages = s.allPages().filter((p) => p.tree.length > 0);
       const webPages = done.map((w) => ({ ...w, html: linkPagesInHtml(w.html, pages) }));
-      downloadZip("vitrine-projeto.zip", projectFiles({ webPages, arch: s.arch, db: s.db }));
+      const brand = pages[0]?.tree.find((n) => n.type === "navbar")?.props.brand;
+      const react = reactProject(job.items.map((it) => ({ name: it.name, file: it.file, messages: it.messages })), { brand });
+      downloadZip("vitrine-projeto.zip", projectFiles({ webPages, arch: s.arch, db: s.db, react }));
       setJob(null);
     })();
     return () => {

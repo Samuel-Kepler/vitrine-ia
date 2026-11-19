@@ -20,6 +20,8 @@ export interface ProjectInput {
   webPages: WebPage[];
   arch: ArchGraph;
   db: ErModel;
+  /** Projeto React (Vite) do site, já com caminhos react/… */
+  react?: GeneratedFile[];
 }
 
 export const WEB_PORT = 8080;
@@ -38,13 +40,14 @@ export function hasProjectContent({ webPages, arch, db }: ProjectInput): boolean
   return webPages.length > 0 || arch.nodes.length > 0 || db.tables.length > 0;
 }
 
-function projectReadme(parts: { pages: WebPage[]; backend: boolean; db: boolean }, backendReadme?: string): string {
+function projectReadme(parts: { pages: WebPage[]; backend: boolean; db: boolean; react: boolean }, backendReadme?: string): string {
   const web = parts.pages.length > 0;
   const lines = ["# Projeto exportado do Vitrine Studio", "", "## O que vem neste zip", ""];
   if (web) {
     lines.push(parts.pages.length > 1 ? `- \`web/\`: o site, com ${parts.pages.length} páginas em HTML estático (abrem direto no navegador):` : "- `web/index.html`: a landing page, em HTML estático (abre direto no navegador).");
     if (parts.pages.length > 1) for (const p of parts.pages) lines.push(`  - \`web/${p.file}\`: ${p.name}${p.auto ? " (versão automática: ainda não reimaginada)" : ""}`);
   }
+  if (parts.react) lines.push("- `react/`: o mesmo site como projeto React (Vite + Tailwind), para editar o código: `cd react && npm install && npm run dev`.");
   if (parts.backend) lines.push("- `docker-compose.yml`, `.env.example` e as pastas dos serviços: o backend gerado pelo canvas de Arquitetura.");
   if (parts.db) lines.push("- `db/`: o schema do canvas Banco em SQL (Postgres, MySQL, SQLite), Prisma, Drizzle e DBML.");
   if (!web) lines.push("", "_O site não foi incluído: clique em **Reimaginar** no Studio antes de exportar._");
@@ -78,8 +81,9 @@ export function projectFiles(input: ProjectInput): GeneratedFile[] {
     out.push(...dbFiles(db));
   }
   for (const p of webPages) out.push({ path: `web/${p.file}`, content: p.html });
+  if (input.react?.length) out.push(...input.react);
 
   const hasDb = out.some((f) => f.path.startsWith("db/"));
-  out.unshift({ path: "README.md", content: projectReadme({ pages: webPages, backend, db: hasDb }, backendReadme) });
+  out.unshift({ path: "README.md", content: projectReadme({ pages: webPages, backend, db: hasDb, react: !!input.react?.length }, backendReadme) });
   return out;
 }
