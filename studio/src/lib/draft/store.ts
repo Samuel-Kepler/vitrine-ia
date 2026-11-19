@@ -35,7 +35,7 @@ export interface SavedComponent {
 
 export type DragPayload = { kind: "new"; type: BlockType } | { kind: "saved"; savedId: string } | { kind: "move"; id: string };
 
-export type StudioTab = "canvas" | "landing" | "code";
+export type StudioTab = "canvas" | "landing" | "code" | "react";
 export type StudioMode = "ui" | "arch" | "db";
 export type FlowSelection = { kind: "node" | "edge"; id: string } | null;
 
@@ -62,6 +62,12 @@ interface StudioState {
   renamePage: (id: string, name: string) => void;
   duplicatePage: (id: string) => void;
   removePage: (id: string) => void;
+  /** Projeto React (aba React): caminho absoluto -> conteúdo. null = ainda não gerado. */
+  reactFiles: Record<string, string> | null;
+  /** true depois que o código foi editado na aba React (Exportar usa o código editado). */
+  reactEdited: boolean;
+  setReactFiles: (files: Record<string, string> | null) => void;
+  setReactFile: (path: string, content: string) => void;
   /** Troca o site inteiro (Gerar site); a primeira página abre. */
   replaceSite: (pages: { name: string; tree: DraftNode[] }[]) => void;
   /** Páginas com a aberta já gravada e o menu/rodapé espalhados. */
@@ -189,6 +195,10 @@ export const useStudio = create<StudioState>()(
           useStudio.temporal.getState().clear();
         },
         reviews: {},
+        reactFiles: null,
+        reactEdited: false,
+        setReactFiles: (reactFiles) => set({ reactFiles, reactEdited: false }),
+        setReactFile: (path, content) => set({ reactFiles: { ...(get().reactFiles ?? {}), [path]: content }, reactEdited: true }),
         setReview: (r) => set({ reviews: { ...get().reviews, [r.mode]: r } }),
 
         setMode: (mode) => set({ mode, flowSel: null }),
@@ -276,6 +286,8 @@ export const useStudio = create<StudioState>()(
         suggestNotes: s.suggestNotes,
         pages: s.pages,
         pageId: s.pageId,
+        reactFiles: s.reactFiles,
+        reactEdited: s.reactEdited,
       }),
     },
   ),

@@ -1,6 +1,6 @@
 "use client";
 import { useStore } from "zustand";
-import { Code2, Database, LayoutTemplate, Loader2, Network, PenTool, Redo2, Settings, Undo2, Wand2 } from "lucide-react";
+import { Braces, Code2, Database, LayoutTemplate, Loader2, Network, PenTool, Redo2, Settings, Undo2, Wand2 } from "lucide-react";
 import { useStudio, type StudioMode, type StudioTab } from "@/lib/draft/store";
 import { PROVIDER_LABELS } from "@/lib/ai/settings";
 import { ExportProject } from "./ExportProject";
@@ -9,6 +9,7 @@ const TABS: { id: StudioTab; label: string; icon: typeof PenTool }[] = [
   { id: "canvas", label: "Rascunho", icon: PenTool },
   { id: "landing", label: "Landing", icon: LayoutTemplate },
   { id: "code", label: "Código A2UI", icon: Code2 },
+  { id: "react", label: "React", icon: Braces },
 ];
 
 const MODES: { id: StudioMode; label: string; icon: typeof PenTool; hint: string }[] = [
@@ -73,7 +74,7 @@ export function Header({
             key={t.id}
             role="tab"
             aria-selected={tab === t.id}
-            disabled={t.id !== "canvas" && !hasResult}
+            disabled={t.id !== "canvas" && t.id !== "react" && !hasResult}
             onClick={() => setTab(t.id)}
             className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition disabled:opacity-40 ${
               tab === t.id ? "bg-brand-soft font-medium text-brand" : "text-gray-600 hover:bg-gray-100"

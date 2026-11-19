@@ -3,11 +3,11 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { Loader2, PackageOpen } from "lucide-react";
 import { useStudio } from "@/lib/draft/store";
-import { linkPagesInHtml, pageFile } from "@/lib/draft/pages";
+import { linkPagesInHtml } from "@/lib/draft/pages";
 import { hasProjectContent, projectFiles, type WebPage } from "@/lib/export/project";
 import { reactProject } from "@/lib/export/react";
 import { downloadZip, exportStandaloneHtml } from "./export";
-import { sitePalette } from "./reimagine-client";
+import { collectSitePages, siteBrand, type SitePage } from "./site-pages";
 
 const SurfaceView = dynamic(() => import("@/components/preview/SurfaceView"), { ssr: false });
 
@@ -24,29 +24,10 @@ function whenRendered(el: HTMLElement): Promise<void> {
   });
 }
 
-interface Item {
-  id: string;
-  name: string;
-  file: string;
-  messages: unknown[];
-  auto: boolean;
-}
 interface Job {
-  items: Item[];
+  items: SitePage[];
   index: number;
   done: WebPage[];
-}
-
-/** Página sem Reimaginar: versão automática (provedor mock, sem IA), sem gravar no Studio. */
-async function automaticMessages(draft: unknown, palette?: string): Promise<unknown[]> {
-  const res = await fetch("/api/reimagine", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ draft, palette, settings: { kind: "mock" } }),
-  });
-  const json = (await res.json()) as { messages?: unknown[]; error?: string };
-  if (!res.ok || !json.messages) throw new Error(json.error ?? `Erro ${res.status}`);
-  return json.messages;
 }
 
 /** Baixa um zip com o site (web/, um HTML por página), o backend e o banco. */
@@ -72,12 +53,7 @@ export function ExportProject() {
     }
     setPreparing(true);
     try {
-      const palette = s.palette !== "auto" ? s.palette : sitePalette(pages);
-      const items: Item[] = [];
-      for (const p of pages) {
-        const messages = p.result?.messages ?? (await automaticMessages(p.tree, palette));
-        items.push({ id: p.id, name: p.name, file: pageFile(pages, p.id), messages, auto: !p.result });
-      }
+      const items = await collectSitePages();
       setJob({ items, index: 0, done: [] });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -102,8 +78,9 @@ export function ExportProject() {
       const s = useStudio.getState();
       const pages = s.allPages().filter((p) => p.tree.length > 0);
       const webPages = done.map((w) => ({ ...w, html: linkPagesInHtml(w.html, pages) }));
-      const brand = pages[0]?.tree.find((n) => n.type === "navbar")?.props.brand;
-      const react = reactProject(job.items.map((it) => ({ name: it.name, file: it.file, messages: it.messages })), { brand });
+      const react = s.reactEdited && s.reactFiles
+        ? Object.entries(s.reactFiles).map(([path, content]) => ({ path: `react${path}`, content }))
+        : reactProject(job.items, { brand: siteBrand() });
       downloadZip("vitrine-projeto.zip", projectFiles({ webPages, arch: s.arch, db: s.db, react }));
       setJob(null);
     })();

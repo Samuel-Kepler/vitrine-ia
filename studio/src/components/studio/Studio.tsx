@@ -16,6 +16,8 @@ import { runReimagine, runReimagineAll } from "./reimagine-client";
 // React Flow só no navegador e só quando o modo é aberto.
 const ArchCanvas = dynamic(() => import("@/components/arch/ArchCanvas"), { ssr: false });
 const DbCanvas = dynamic(() => import("@/components/db/DbCanvas"), { ssr: false });
+// Monaco + Babel: só carregam quando a aba React abre.
+const ReactTab = dynamic(() => import("./ReactTab"), { ssr: false });
 
 export default function Studio() {
   const tab = useStudio((s) => s.tab);
@@ -90,6 +92,8 @@ export default function Studio() {
             <Canvas />
             <Inspector />
           </>
+        ) : tab === "react" ? (
+          <ReactTab />
         ) : tab === "landing" ? (
           <LandingTab />
         ) : (

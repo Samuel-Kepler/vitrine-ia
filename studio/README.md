@@ -227,6 +227,19 @@ Diagnóstico com o Groq do `.env`: `RUN_LIVE=1 npx vitest run src/lib/review/ai.
 
 Leitor próprio (`src/lib/db/import.ts`), sem `@dbml/core`, que pesaria alguns MB. Não lê enums, FKs compostas nem UNIQUE composto: esses casos aparecem nos avisos.
 
+## Aba React
+
+No modo UI, a aba **React** mostra o site como projeto React (o mesmo que vai em `react/` no zip) com:
+
+- **lista de arquivos** e **editor Monaco** (o mesmo do vitrine-ia);
+- **preview ao vivo**: recompila 0,4 s depois de cada edição, com seletor de página, e os links do menu trocam de página;
+- **erros** de sintaxe ou de execução aparecem no preview, com arquivo e linha, sem derrubar o Studio;
+- **Regerar do Studio** (depois de Reimaginar) e **Baixar projeto React**.
+
+Quando o código é editado, a aba mostra **editado à mão**, o **Exportar projeto** passa a usar o código editado, e Regerar pede confirmação (apaga as edições).
+
+Como o preview funciona: Babel no navegador transforma o TSX; os imports locais viram módulos `data:` num import map (`@app/src/…`) e os pacotes vêm do esm.sh, com um React só para todos; o CSS da landing passa pelo Tailwind v4 de navegador. O iframe roda **isolado** (`sandbox="allow-scripts allow-forms"`, sem a origem do Studio) e conversa com o Studio só por `postMessage`. O preview precisa de internet (esm.sh e jsdelivr).
+
 ## Exportar o projeto inteiro
 
 O botão **Exportar projeto**, no topo e em qualquer modo, baixa `vitrine-projeto.zip` com:
