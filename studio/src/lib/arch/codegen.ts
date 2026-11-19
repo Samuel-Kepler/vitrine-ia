@@ -4,7 +4,7 @@
 import { ARCH, authMode, routeLines, type ArchGraph, type ArchNode, type RouteLine } from "./model";
 import { ensureAuthUsers, fkColumns, pascal, PASSWORD_COL, pkOf, snake, USERS_TABLE, type ColType, type ErModel, type Table } from "@/lib/db/model";
 import { toSql, type GeneratedFile } from "@/lib/db/codegen";
-import { authFile, JWT_SECRET_DEFAULT, type OwnAuthSpec } from "./codegen-auth";
+import { authFile, type OwnAuthSpec } from "./codegen-auth";
 
 export const TEMPLATE_VERSIONS = {
   hono: "4.13.19",
@@ -473,6 +473,38 @@ function openapi(p: ServicePlan): string {
   return lines.join("\n") + "\n";
 }
 
+/**
+ * Segredos do backend gerado. Cada export recebe valores aleatórios num `.env`
+ * (lido pelo docker compose), em vez de senhas fixas iguais para todo mundo.
+ * Hex: seguro dentro de URL (DATABASE_URL) e em YAML sem aspas.
+ */
+export interface BackendSecrets {
+  postgresPassword: string;
+  jwtSecret: string;
+  minioPassword: string;
+}
+
+function randomHex(bytes: number): string {
+  const buf = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(buf);
+  return Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export function randomSecrets(): BackendSecrets {
+  return { postgresPassword: randomHex(16), jwtSecret: randomHex(32), minioPassword: randomHex(16) };
+}
+
+/** Valores do .env.example: deixam claro que precisam ser trocados. */
+const PLACEHOLDER_SECRETS: BackendSecrets = {
+  postgresPassword: "troque-esta-senha",
+  jwtSecret: "troque-este-segredo",
+  minioPassword: "troque-esta-senha",
+};
+
+/** Infra (banco, Redis, MinIO) só escuta no localhost da máquina, não na rede. */
+const localPort = (port: number | string, inner = port) => `      - "127.0.0.1:${port}:${inner}"`;
+const required = (name: string) => `\${${name}:?defina ${name} no .env}`;
+
 function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): string {
   const lines = ["# Gerado pelo Vitrine Studio", "services:"];
   const pg = graph.nodes.find((n) => n.kind === "postgres");
@@ -482,10 +514,10 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
     lines.push(`  ${p.slug}:`, `    build: ./services/${p.slug}`);
     if (p.node.kind !== "worker") lines.push("    ports:", `      - "${p.port}:${p.port}"`);
     const env = p.node.kind === "worker" ? [] : [`PORT: "${p.port}"`];
-    if (p.db) env.push(`DATABASE_URL: postgres://app:app@postgres:5432/${dbName(p.db)}`);
+    if (p.db) env.push(`DATABASE_URL: postgres://app:${required("POSTGRES_PASSWORD")}@postgres:5432/${dbName(p.db)}`);
     if (p.cache) env.push("REDIS_URL: redis://redis:6379");
     if (p.publishes.length || p.consumes.length) env.push("QUEUE_URL: redis://redis:6379");
-    if (p.jwt) env.push(`JWT_SECRET: \${JWT_SECRET:-${JWT_SECRET_DEFAULT}}`);
+    if (p.jwt) env.push(`JWT_SECRET: ${required("JWT_SECRET")}`);
     for (const t of p.httpTargets) {
       const target = plans.find((x) => x.node.id === t.id);
       env.push(`${envName(t)}_URL: ${target ? `http://${target.slug}:${target.port}` : `\${${envName(t)}_URL:-${t.props.url || t.props.issuer || ""}}`}`);
@@ -510,10 +542,10 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
       "    image: postgres:17-alpine",
       "    environment:",
       "      POSTGRES_USER: app",
-      "      POSTGRES_PASSWORD: app",
+      `      POSTGRES_PASSWORD: ${required("POSTGRES_PASSWORD")}`,
       `      POSTGRES_DB: ${dbName(pg)}`,
       "    ports:",
-      '      - "5432:5432"',
+      localPort(5432),
       "    volumes:",
       "      - pgdata:/var/lib/postgresql/data",
       ...(hasSchema ? ["      - ./db/schema.postgres.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro"] : []),
@@ -529,7 +561,7 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
       "  redis:",
       "    image: redis:7-alpine",
       "    ports:",
-      '      - "6379:6379"',
+      localPort(6379),
       "    healthcheck:",
       '      test: ["CMD", "redis-cli", "ping"]',
       "      interval: 5s",
@@ -544,10 +576,10 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
       "    command: server /data --console-address :9001",
       "    environment:",
       "      MINIO_ROOT_USER: minio",
-      "      MINIO_ROOT_PASSWORD: minio12345",
+      `      MINIO_ROOT_PASSWORD: ${required("MINIO_ROOT_PASSWORD")}`,
       "    ports:",
-      '      - "9000:9000"',
-      '      - "9001:9001"',
+      localPort(9000),
+      localPort(9001),
     );
   }
   if (pg) lines.push("volumes:", "  pgdata:");
@@ -591,6 +623,10 @@ Molde inicial: compila, sobe com Docker e tem TODOs onde entra a regra de negóc
 docker compose up --build
 \`\`\`
 
+O \`.env\` já vem com senhas e segredos **aleatórios, gerados neste export**: não
+commite esse arquivo (ele está no \`.gitignore\`). Banco, Redis e MinIO só ficam
+acessíveis pelo \`localhost\` desta máquina, não pela rede.
+
 ## Serviços
 
 | Serviço | Tipo | Porta | Depende de |
@@ -617,10 +653,21 @@ Variáveis de ambiente: veja \`.env.example\`.
 `;
 }
 
-function envExample(graph: ArchGraph, plans: ServicePlan[]): string {
-  const lines = ["# Variáveis usadas pelos serviços (valores para rodar fora do Docker)"];
+function envFile(graph: ArchGraph, plans: ServicePlan[], s: BackendSecrets, real: boolean): string {
+  const lines = real
+    ? [
+        "# Segredos gerados aleatoriamente neste export. NÃO commite este arquivo (está no .gitignore).",
+        "# O docker compose lê este .env; os valores também servem para rodar os serviços fora do Docker.",
+      ]
+    : ["# Modelo do .env: copie para .env e troque os valores marcados com 'troque'."];
   const pgNode = graph.nodes.find((n) => n.kind === "postgres");
-  if (pgNode) lines.push(`DATABASE_URL=postgres://app:app@localhost:5432/${dbName(pgNode)}`);
+  const hasStorage = graph.nodes.some((n) => n.kind === "storage");
+  const jwt = plans.some((p) => p.jwt);
+  if (pgNode) lines.push(`POSTGRES_PASSWORD=${s.postgresPassword}`);
+  if (jwt) lines.push("# Segredo do JWT (HS256). Para gerar outro: openssl rand -hex 32", `JWT_SECRET=${s.jwtSecret}`);
+  if (hasStorage) lines.push(`MINIO_ROOT_PASSWORD=${s.minioPassword}`);
+  lines.push("", "# Para rodar um serviço fora do Docker (npm run dev)");
+  if (pgNode) lines.push(`DATABASE_URL=postgres://app:${s.postgresPassword}@localhost:5432/${dbName(pgNode)}`);
   if (graph.nodes.some((n) => n.kind === "cache")) lines.push("REDIS_URL=redis://localhost:6379");
   if (graph.nodes.some((n) => n.kind === "queue")) lines.push("QUEUE_URL=redis://localhost:6379");
   const targets = new Map<string, string>();
@@ -629,10 +676,11 @@ function envExample(graph: ArchGraph, plans: ServicePlan[]): string {
     targets.set(`${envName(t)}_URL`, tp ? `http://localhost:${tp.port}` : t.props.url || t.props.issuer || "");
   }
   for (const [k, v] of targets) lines.push(`${k}=${v}`);
-  if (graph.nodes.some((n) => n.kind === "storage")) lines.push("S3_ENDPOINT=http://localhost:9000", "S3_BUCKET=uploads");
-  if (plans.some((p) => p.jwt)) lines.push("# Segredo do JWT (HS256). Troque em produção: openssl rand -base64 32", `JWT_SECRET=${JWT_SECRET_DEFAULT}`);
+  if (hasStorage) lines.push("S3_ENDPOINT=http://localhost:9000", "S3_BUCKET=uploads");
   return lines.join("\n") + "\n";
 }
+
+const GITIGNORE = "# segredos gerados pelo Vitrine Studio\n.env\nnode_modules/\ndist/\n";
 
 function readmeAuth(plans: ServicePlan[]): string {
   const own = plans.find((p) => p.ownAuth);
@@ -658,11 +706,11 @@ curl ${base}/auth/me -H "Authorization: Bearer <token>"
     : "As rotas protegidas validam um JWT HS256 assinado com `JWT_SECRET` (o mesmo segredo do emissor dos tokens).\n"
 }
 ${guarded.length ? `Rotas que exigem \`Authorization: Bearer <token>\`: ${guarded.join(", ")}. Numa rota protegida que grava em tabela com chave para \`users\`, o dono vem do token.\n` : ""}
-\`JWT_SECRET\` vem do ambiente (veja \`.env.example\`; no compose há um valor de desenvolvimento). Troque em produção.
+\`JWT_SECRET\` vem do \`.env\`, gerado com um valor aleatório neste export.
 `;
 }
 
-export function archFiles(graph: ArchGraph, erIn: ErModel): GeneratedFile[] {
+export function archFiles(graph: ArchGraph, erIn: ErModel, secrets: BackendSecrets = randomSecrets()): GeneratedFile[] {
   const plans = plan(graph);
   // Auth própria garante users(email único, password_hash) no schema gerado,
   // mesmo que o canvas Banco ainda não tenha a tabela.
@@ -671,7 +719,9 @@ export function archFiles(graph: ArchGraph, erIn: ErModel): GeneratedFile[] {
   const files: GeneratedFile[] = [
     { path: "README.md", content: readme(graph, plans, hasSchema) },
     { path: "docker-compose.yml", content: compose(graph, plans, hasSchema && graph.nodes.some((n) => n.kind === "postgres")) },
-    { path: ".env.example", content: envExample(graph, plans) },
+    { path: ".env", content: envFile(graph, plans, secrets, true) },
+    { path: ".env.example", content: envFile(graph, plans, PLACEHOLDER_SECRETS, false) },
+    { path: ".gitignore", content: GITIGNORE },
     ...plans.flatMap((p) => serviceFiles(p, er)),
   ];
   if (hasSchema && graph.nodes.some((n) => n.kind === "postgres")) files.push({ path: "db/schema.postgres.sql", content: toSql(er, "postgres") });

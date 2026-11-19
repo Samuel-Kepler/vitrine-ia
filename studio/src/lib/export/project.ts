@@ -53,7 +53,8 @@ function projectReadme(parts: { pages: WebPage[]; backend: boolean; db: boolean;
   if (!web) lines.push("", "_O site não foi incluído: clique em **Reimaginar** no Studio antes de exportar._");
   lines.push("", "## Como rodar", "");
   if (parts.backend) {
-    lines.push("```bash", "cp .env.example .env", "docker compose up --build", "```", "");
+    // O .env já vem com segredos aleatórios: copiar o .env.example por cima os trocaria pelos de exemplo.
+    lines.push("```bash", "docker compose up --build", "```", "", "O `.env` já vem com senhas aleatórias geradas neste export. Não commite esse arquivo.", "");
     if (web) lines.push(`O site fica em http://localhost:${WEB_PORT} (serviço \`web\`, nginx) e a API nas portas listadas abaixo.`, "");
   } else if (web) {
     lines.push("Abra `web/index.html` no navegador, ou sirva a pasta com `npx serve web`.", "");

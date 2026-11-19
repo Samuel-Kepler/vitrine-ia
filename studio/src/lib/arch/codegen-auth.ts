@@ -13,7 +13,6 @@ export interface OwnAuthSpec {
   extraFields: { name: string; zod: string }[];
 }
 
-export const JWT_SECRET_DEFAULT = "troque-este-segredo-em-producao";
 
 export function authFile(own?: OwnAuthSpec): string {
   const head = `// Autenticação com JWT (HS256) — gerado pelo Vitrine Studio.

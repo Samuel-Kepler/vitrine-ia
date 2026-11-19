@@ -91,8 +91,10 @@ describe("codegen: Autenticação Própria", () => {
   });
 
   it("JWT_SECRET no compose e no .env.example; sem cliente HTTP para o Login", () => {
-    expect(file(files, "docker-compose.yml")).toContain("JWT_SECRET: ${JWT_SECRET:-");
-    expect(file(files, ".env.example")).toContain("JWT_SECRET=");
+    // Sem valor padrão no compose: vem do .env gerado com segredo aleatório.
+    expect(file(files, "docker-compose.yml")).toContain("JWT_SECRET: ${JWT_SECRET:?");
+    expect(file(files, ".env")).toMatch(/^JWT_SECRET=[0-9a-f]{64}$/m);
+    expect(file(files, ".env.example")).toContain("JWT_SECRET=troque-este-segredo");
     expect(file(files, "services/api/src/clients.ts") ?? "").not.toContain("callLogin");
     expect(file(files, "db/schema.postgres.sql")).toMatch(/"password_hash" text NOT NULL/);
     expect(file(files, "services/api/openapi.yaml")).toContain("bearerAuth");

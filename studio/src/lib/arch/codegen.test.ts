@@ -85,6 +85,48 @@ describe("inferência + codegen", () => {
     expect(files.find((f) => f.path === ".env.example")!.content).toContain("localhost:5432/loja_cafe");
   });
 
+  it("segredos: aleatórios no .env, nada de senha fixa no compose", () => {
+    const { graph, er } = sample();
+    graph.nodes.push({ id: "s3", kind: "storage", name: "Arquivos", props: {}, position: { x: 0, y: 0 } } as never);
+    const a = archFiles(graph, er);
+    const b = archFiles(graph, er);
+    const get = (fs: typeof a, p: string) => fs.find((f) => f.path === p)!.content;
+    const compose = get(a, "docker-compose.yml");
+    const env = get(a, ".env");
+
+    // compose exige as variáveis (falha com mensagem clara se faltar o .env)
+    expect(compose).toContain("POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}");
+    expect(compose).toContain("DATABASE_URL: postgres://app:${POSTGRES_PASSWORD:?");
+    expect(compose).not.toMatch(/POSTGRES_PASSWORD: app\b|app:app@|minio12345|troque-este-segredo-em-producao/);
+
+    // .env com valores hex aleatórios, diferentes a cada export
+    const pw = /^POSTGRES_PASSWORD=([0-9a-f]{32})$/m.exec(env)?.[1];
+    expect(pw).toBeTruthy();
+    expect(env).toContain(`DATABASE_URL=postgres://app:${pw}@localhost:5432/app`);
+    expect(get(b, ".env")).not.toContain(pw!);
+
+    // .env.example só tem marcadores; .gitignore protege o .env
+    expect(get(a, ".env.example")).toContain("POSTGRES_PASSWORD=troque-esta-senha");
+    expect(get(a, ".env.example")).not.toContain(pw!);
+    expect(get(a, ".gitignore")).toMatch(/^\.env$/m);
+  });
+
+  it("segredos fixos podem ser injetados (export reproduzível)", () => {
+    const { graph, er } = sample();
+    const s = { postgresPassword: "a".repeat(32), jwtSecret: "b".repeat(64), minioPassword: "c".repeat(32) };
+    expect(archFiles(graph, er, s)).toEqual(archFiles(graph, er, s));
+  });
+
+  it("banco, Redis e MinIO só escutam no localhost; APIs continuam acessíveis", () => {
+    const { graph, er } = sample();
+    graph.nodes.push({ id: "s3", kind: "storage", name: "Arquivos", props: {}, position: { x: 0, y: 0 } } as never);
+    const compose = archFiles(graph, er).find((f) => f.path === "docker-compose.yml")!.content;
+    for (const port of [5432, 6379, 9000, 9001]) {
+      expect(compose).toContain(`"127.0.0.1:${port}:${port}"`);
+      expect(compose).not.toContain(`- "${port}:${port}"`);
+    }
+  });
+
   it("SQL respeita a ordem pai -> filho e cria FK", () => {
     const { er } = sample();
     const sql = toSql(er, "postgres");
