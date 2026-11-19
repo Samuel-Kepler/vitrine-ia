@@ -19,7 +19,7 @@ export function Palette() {
       <p className="px-4 pt-4 text-xs text-muted">Ou arraste blocos para o canvas (ou clique para adicionar).</p>
       {ORDER.map((group) => (
         <section key={group} className="px-3 pt-4">
-          <h3 className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">{GROUP_LABELS[group]}</h3>
+          <h3 className="px-1 pb-2 label-mono">{GROUP_LABELS[group]}</h3>
           <div className="grid grid-cols-2 gap-1.5">
             {Object.values(BLOCKS)
               .filter((b) => b.group === group)
@@ -42,7 +42,7 @@ export function Palette() {
         </section>
       ))}
       <section className="px-3 pb-6 pt-4">
-        <h3 className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">Meus componentes</h3>
+        <h3 className="px-1 pb-2 label-mono">Meus componentes</h3>
         {saved.length === 0 ? (
           <p className="px-1 text-xs text-muted">Selecione um bloco e use “Salvar como componente” para reutilizá-lo aqui.</p>
         ) : (

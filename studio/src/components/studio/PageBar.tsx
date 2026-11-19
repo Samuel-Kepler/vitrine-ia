@@ -45,7 +45,7 @@ export function PageBar() {
 
   return (
     <div className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto border-b border-line bg-canvas px-3 text-xs" role="tablist" aria-label="Páginas" data-testid="page-bar">
-      <span className="mr-1 font-semibold uppercase tracking-wide text-muted">Páginas</span>
+      <span className="mr-1 label-mono">Páginas</span>
       {pages.map((p, i) => {
         const active = p.id === pageId;
         if (active && renaming) {

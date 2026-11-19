@@ -33,11 +33,9 @@ export function Header({ onReimagine, onOpenSettings, serverDefault }: { onReima
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-panel px-4">
-      <div className="flex items-center gap-2 pr-2">
-        <div className="flex size-7 items-center justify-center rounded-lg bg-brand text-white">
-          <Wand2 size={16} />
-        </div>
-        <span className="font-bold tracking-tight">Vitrine Studio</span>
+      <div className="flex items-baseline gap-1.5 pr-3">
+        <span className="text-[15px] font-semibold tracking-tight">vitrine</span>
+        <span className="label-mono">studio</span>
       </div>
 
       <nav className="flex items-center gap-1 rounded-lg bg-canvas p-1" aria-label="Modos">

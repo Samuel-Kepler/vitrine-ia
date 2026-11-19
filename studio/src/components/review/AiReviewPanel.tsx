@@ -108,7 +108,7 @@ export function AiReviewPanel({ mode, onPick, hideRules }: { mode: ReviewMode; o
                         <span className="font-medium">{i.title}</span>
                         {i.target && !i.targetId ? <span className="text-muted"> · {i.target}</span> : null}
                         {i.suggestion ? <span className="mt-0.5 block text-gray-600">{i.suggestion}</span> : null}
-                        <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted">
+                        <span className="mt-0.5 inline-flex items-center gap-1 label-mono">
                           {i.source === "ia" ? <Bot size={10} /> : null}
                           {i.source === "ia" ? "IA" : `regra ${i.code ?? ""}`}
                         </span>

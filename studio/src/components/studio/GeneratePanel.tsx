@@ -53,8 +53,8 @@ export function GeneratePanel() {
   };
 
   return (
-    <section className="mx-3 mt-4 rounded-lg border border-brand/30 bg-brand-soft/40 p-2.5" data-testid="generate-panel">
-      <h3 className="flex items-center gap-1.5 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-brand">
+    <section className="mx-3 mt-3 rounded-lg border border-line bg-canvas/60 p-2.5" data-testid="generate-panel">
+      <h3 className="flex items-center gap-1.5 pb-1.5 label-mono !text-brand">
         <Sparkles size={13} /> Gerar com IA
       </h3>
       <textarea
@@ -70,17 +70,28 @@ export function GeneratePanel() {
         className="w-full resize-y rounded-md border border-line bg-white p-2 text-xs outline-none focus:border-brand"
       />
       {hasBlocks ? (
-        <div className="mt-1.5 flex gap-3 text-[11px] text-gray-700" role="radiogroup" aria-label="O que fazer com a página atual">
-          {(
-            [
-              ["replace", multiPage ? "Substituir (mantém menu e rodapé)" : "Substituir página"],
-              ["append", "Acrescentar"],
-            ] as const
-          ).map(([v, label]) => (
-            <label key={v} className="flex items-center gap-1">
-              <input type="radio" name="gen-mode" checked={mode === v} onChange={() => setMode(v)} /> {label}
-            </label>
-          ))}
+        <div className="mt-1.5">
+          <div className="grid grid-cols-2 rounded-md border border-line bg-white p-0.5 text-[11px]" role="radiogroup" aria-label="O que fazer com a página atual">
+            {(
+              [
+                ["replace", "Substituir"],
+                ["append", "Acrescentar"],
+              ] as const
+            ).map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                role="radio"
+                aria-checked={mode === v}
+                onClick={() => setMode(v)}
+                className={`rounded-[3px] py-1 transition-colors ${mode === v ? "bg-ink font-medium text-white" : "text-gray-600 hover:text-ink"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {mode === "replace" && multiPage ? <p className="mt-1 text-[10.5px] text-muted">Mantém o menu e o rodapé do site.</p> : null}
+          {mode === "append" ? <p className="mt-1 text-[10.5px] text-muted">Os blocos entram antes do rodapé.</p> : null}
         </div>
       ) : null}
       <button

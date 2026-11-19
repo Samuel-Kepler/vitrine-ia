@@ -53,14 +53,14 @@ function ArchNodeView({ data, selected }: NodeProps) {
   const Icon = ARCH_ICONS[node.kind];
   const routes = (node.props.routes ?? "").split("\n").filter((r) => r.trim() && r.trim() !== "GET /health");
   return (
-    <div className={`w-52 rounded-xl border bg-white shadow-sm ${selected ? "ring-2 ring-brand" : ""}`} style={{ borderColor: def.color }}>
-      <Handle type="target" position={Position.Left} className="!size-3 !border-2 !border-white" style={{ background: def.color }} />
-      <div className="flex items-center gap-2 rounded-t-xl px-3 py-2 text-white" style={{ background: def.color }}>
-        <Icon size={15} />
-        <span className="truncate text-sm font-semibold">{node.name}</span>
+    <div className={`w-52 overflow-hidden rounded-lg border border-line bg-white shadow-sm ${selected ? "ring-2 ring-brand" : ""}`} style={{ borderTop: `3px solid ${def.color}` }}>
+      <Handle type="target" position={Position.Left} className="!size-2.5 !border-2 !border-white !bg-ink" />
+      <div className="flex items-center gap-2 border-b border-line px-3 py-2">
+        <Icon size={14} style={{ color: def.color }} />
+        <span className="truncate text-[13px] font-semibold text-ink">{node.name}</span>
       </div>
       <div className="px-3 py-2 text-[11px] text-gray-600">
-        <p className="text-muted">{def.label}</p>
+        <p className="label-mono">{def.label}</p>
         {routes.slice(0, 4).map((r) => (
           <p key={r} className="truncate font-mono">
             {r}
@@ -68,7 +68,7 @@ function ArchNodeView({ data, selected }: NodeProps) {
         ))}
         {routes.length > 4 ? <p className="text-muted">+{routes.length - 4} rotas</p> : null}
       </div>
-      <Handle type="source" position={Position.Right} className="!size-3 !border-2 !border-white" style={{ background: def.color }} />
+      <Handle type="source" position={Position.Right} className="!size-2.5 !border-2 !border-white !bg-ink" />
     </div>
   );
 }
@@ -226,7 +226,7 @@ function Inner() {
           <div className="p-4">
             <h2 className="mb-3 font-semibold">Revisão</h2>
             <AiReviewPanel mode="arch" hideRules onPick={(id) => setFlowSel({ kind: "node", id })} />
-            <h3 className="mb-2 mt-4 border-t border-line pt-3 text-xs font-semibold uppercase tracking-wide text-muted">Regras</h3>
+            <h3 className="mb-2 mt-4 border-t border-line pt-3 label-mono">Regras</h3>
             <ReviewList findings={findings} onPick={(id) => setFlowSel({ kind: arch.edges.some((e) => e.id === id) ? "edge" : "node", id })} />
             <FlowSidebarFooter
               generateLabel="Gerar moldes do backend"

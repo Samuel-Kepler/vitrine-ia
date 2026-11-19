@@ -38,11 +38,11 @@ type TableData = { table: Table; fks: { name: string; type: string; ref: string 
 function TableNodeView({ data, selected }: NodeProps) {
   const { table, fks } = data as TableData;
   return (
-    <div className={`w-60 overflow-hidden rounded-xl border border-emerald-600/40 bg-white text-xs shadow-sm ${selected ? "ring-2 ring-brand" : ""}`}>
-      <Handle type="target" position={Position.Left} className="!size-3 !border-2 !border-white !bg-emerald-600" />
-      <div className="flex items-center gap-2 bg-emerald-600 px-3 py-2 text-white">
-        <Table2 size={14} />
-        <span className="font-semibold">{snake(table.name)}</span>
+    <div className={`w-60 overflow-hidden rounded-lg border border-line bg-white text-xs shadow-sm ${selected ? "ring-2 ring-brand" : ""}`} style={{ borderTop: "3px solid #059669" }}>
+      <Handle type="target" position={Position.Left} className="!size-2.5 !border-2 !border-white !bg-ink" />
+      <div className="flex items-center gap-2 border-b border-line px-3 py-2">
+        <Table2 size={14} className="text-emerald-700" />
+        <span className="font-mono text-[12.5px] font-semibold text-ink">{snake(table.name)}</span>
       </div>
       <ul className="divide-y divide-gray-100">
         {table.columns.map((c) => (
@@ -63,7 +63,7 @@ function TableNodeView({ data, selected }: NodeProps) {
           </li>
         ))}
       </ul>
-      <Handle type="source" position={Position.Right} className="!size-3 !border-2 !border-white !bg-emerald-600" />
+      <Handle type="source" position={Position.Right} className="!size-2.5 !border-2 !border-white !bg-ink" />
     </div>
   );
 }
@@ -161,7 +161,7 @@ function Inner() {
   return (
     <>
       <aside className="flex w-56 shrink-0 flex-col gap-3 overflow-y-auto border-r border-line bg-panel p-3" aria-label="Ferramentas do banco">
-        <button onClick={addTable} data-testid="add-table" className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white hover:brightness-110">
+        <button onClick={addTable} data-testid="add-table" className="flex items-center justify-center gap-2 rounded-lg bg-ink py-2 text-sm font-medium text-white hover:opacity-90">
           <Plus size={16} /> Nova tabela
         </button>
         <button onClick={() => setShowImport(true)} data-testid="import-schema" className="flex items-center justify-center gap-2 rounded-lg border border-line bg-white py-2 text-sm hover:bg-gray-50">
@@ -210,7 +210,7 @@ function Inner() {
           <div className="p-4">
             <h2 className="mb-3 font-semibold">Revisão</h2>
             <AiReviewPanel mode="db" hideRules onPick={(id) => setFlowSel({ kind: "node", id })} />
-            <h3 className="mb-2 mt-4 border-t border-line pt-3 text-xs font-semibold uppercase tracking-wide text-muted">Regras</h3>
+            <h3 className="mb-2 mt-4 border-t border-line pt-3 label-mono">Regras</h3>
             <ReviewList findings={findings} onPick={(id) => setFlowSel({ kind: "node", id })} />
             <FlowSidebarFooter generateLabel="Gerar schema (SQL, Prisma, Drizzle, DBML)" disabled={db.tables.length === 0} disabledHint="Crie ao menos uma tabela." onGenerate={() => setShowFiles(true)} />
           </div>
