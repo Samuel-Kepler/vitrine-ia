@@ -1,6 +1,7 @@
 "use client";
 import { DEFAULT_THEME, fontLinks, isTheme } from "@/lib/a2ui/themes";
 import { EXPORT_CSP, escapeHtml, sanitizeBodyHtml, sanitizeCss } from "@/lib/export/sanitize";
+import { isSafeZipPath } from "@/lib/security/paths";
 
 export function download(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
@@ -77,6 +78,9 @@ ${body}
 }
 
 export function downloadZip(name: string, files: { path: string; content: string }[]) {
+  // Nomes podem vir da IA (tabelas, serviços, arquivos do chat): nada de ../ no zip.
+  const bad = files.find((f) => !isSafeZipPath(f.path));
+  if (bad) throw new Error(`Caminho inválido no zip: ${bad.path}`);
   void import("fflate").then(({ strToU8, zipSync }) => {
     const zip = zipSync(Object.fromEntries(files.map((f) => [f.path, strToU8(f.content)])));
     const url = URL.createObjectURL(new Blob([zip as BlobPart], { type: "application/zip" }));

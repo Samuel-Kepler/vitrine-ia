@@ -9,6 +9,7 @@ import * as Babel from "@babel/standalone";
 import { resolveModel } from "@/lib/ai/providers";
 import { friendlyAIError } from "@/lib/ai/errors";
 import type { ProviderSettings } from "@/lib/ai/settings";
+import { AI_PATH_ERROR, isAiEditablePath } from "@/lib/security/paths";
 
 export const MAX_STEPS = 12;
 // Groq free tier: 8 mil tokens por minuto. O contexto inicial leva só as páginas
@@ -106,6 +107,7 @@ export function buildTools(files: Map<string, string>, touched: Set<string>, del
         new_str: z.string().describe("Novo trecho"),
       }),
       execute: async ({ path, old_str, new_str }) => {
+        if (!isAiEditablePath(path)) return AI_PATH_ERROR;
         const c = files.get(path);
         if (c === undefined) return `Erro: ${path} não existe. Use list_files ou write_file.`;
         const n = old_str ? c.split(old_str).length - 1 : 0;
@@ -120,6 +122,7 @@ export function buildTools(files: Map<string, string>, touched: Set<string>, del
       inputSchema: z.object({ path: z.string().describe("Caminho absoluto, ex.: /src/components/Galeria.tsx"), content: z.string() }),
       execute: async ({ path, content }) => {
         if (!path.startsWith("/")) return "Erro: use caminho absoluto começando com /.";
+        if (!isAiEditablePath(path)) return AI_PATH_ERROR;
         files.set(path, content);
         touched.add(path);
         deleted.delete(path);
@@ -131,6 +134,7 @@ export function buildTools(files: Map<string, string>, touched: Set<string>, del
       inputSchema: z.object({ path: z.string() }),
       execute: async ({ path }) => {
         if (!files.has(path)) return `Erro: ${path} não existe.`;
+        if (!isAiEditablePath(path)) return AI_PATH_ERROR;
         if (/^\/src\/entries\/|\.html$|^\/src\/components\/landing\.tsx$/.test(path)) return `Erro: ${path} é necessário para o site funcionar.`;
         files.delete(path);
         touched.delete(path);

@@ -2,13 +2,14 @@ import { z } from "zod";
 import { ProviderSettingsSchema } from "@/lib/ai/settings";
 import { ProviderConfigError } from "@/lib/ai/providers";
 import { runReactChat } from "@/lib/react-chat/agent";
+import { isCleanAbsolutePath } from "@/lib/security/paths";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;
 
 const BodySchema = z.object({
   message: z.string().trim().min(2, "Escreva o que quer mudar.").max(4000),
-  files: z.record(z.string().regex(/^\/[\w./-]+$/), z.string().max(200_000)).refine((f) => Object.keys(f).length <= 200, "Arquivos demais."),
+  files: z.record(z.string().refine(isCleanAbsolutePath, "Caminho de arquivo inválido."), z.string().max(200_000)).refine((f) => Object.keys(f).length <= 200, "Arquivos demais."),
   history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(8000) })).max(20).optional(),
   settings: ProviderSettingsSchema.optional(),
 });

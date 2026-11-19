@@ -3,6 +3,7 @@ import { starterDraft } from "@/lib/draft/starter";
 import { inferFromDraft } from "@/lib/infer/from-draft";
 import { expandArch, expandDb } from "@/lib/infer/expand";
 import { hasProjectContent, projectFiles, WEB_PORT } from "./project";
+import { isSafeZipPath } from "@/lib/security/paths";
 
 const HTML = "<!doctype html><html><body><h1>Café Aurora</h1></body></html>";
 
@@ -31,6 +32,8 @@ describe("projectFiles", () => {
     expect(readme).toContain(`http://localhost:${WEB_PORT}`);
     expect(readme).toMatch(/## Backend: /);
     expect(files.find((f) => f.path === "web/index.html")!.content).toBe(HTML);
+    // downloadZip recusa caminhos inseguros: o zip completo precisa passar.
+    for (const f of p) expect(isSafeZipPath(f), f).toBe(true);
   });
 
   it("sem Reimaginar: exporta backend sem web e avisa no README", () => {
