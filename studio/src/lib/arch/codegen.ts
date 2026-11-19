@@ -277,19 +277,25 @@ function serviceIndex(p: ServicePlan, er: ErModel): string {
       );
     }
     parts.push(
-      `const port = Number(process.env.PORT ?? ${p.port});`,
-      `serve({ fetch: app.fetch, port }, () => console.log(\`${p.slug} ouvindo em http://localhost:\${port}\`));`,
+      "// Os testes (test/app.test.ts) importam o app sem abrir a porta.",
+      "export default app;",
+      "",
+      'if (process.env.NODE_ENV !== "test") {',
+      `  const port = Number(process.env.PORT ?? ${p.port});`,
+      `  serve({ fetch: app.fetch, port }, () => console.log(\`${p.slug} ouvindo em http://localhost:\${port}\`));`,
     );
   }
+  const ind = isHttp ? "  " : "";
   for (const q of p.consumes) {
     parts.push(
       "",
-      `await consume("${streamName(q)}", "${p.slug}", async (event) => {`,
-      `  console.log("[${p.slug}] evento recebido", event);`,
-      `  // TODO: processe o evento (ex.: enviar e-mail, atualizar CRM)`,
-      `});`,
+      `${ind}await consume("${streamName(q)}", "${p.slug}", async (event) => {`,
+      `${ind}  console.log("[${p.slug}] evento recebido", event);`,
+      `${ind}  // TODO: processe o evento (ex.: enviar e-mail, atualizar CRM)`,
+      `${ind}});`,
     );
   }
+  if (isHttp) parts.push("}");
   if (!isHttp && !p.consumes.length) {
     parts.push("// Worker sem fila ligada: ligue uma Fila -> este worker no canvas.", 'setInterval(() => console.log("worker vivo"), 60_000);');
   }
@@ -358,8 +364,92 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 CMD wget 
 
 const clientFn = (t: ArchNode) => `call${snake(t.name).split("_").map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join("")}`;
 
+// Testes de fumaça de cada API (node:test + app.request do Hono). Rodam sem
+// Postgres nem Redis: cobrem só o que acontece antes do banco (validação,
+// autenticação, cabeçalhos), então não quebram quando a regra de negócio mudar.
+function testsFile(p: ServicePlan, er: ErModel): string {
+  const own = (r: RouteLine) => !!p.ownAuth && /^\/auth(\/|$)/.test(r.path);
+  const routes = routeLines(p.node.props.routes).filter((r) => !(r.method === "GET" && r.path === "/health") && !own(r));
+  const url = (path: string) => path.replace(/:\w+|\{\w+\}/g, "1");
+  const jwt = !!p.jwt;
+  const cases: string[] = [];
+
+  for (const r of routes.filter((r) => r.protected)) {
+    cases.push(`  it("${r.method} ${r.path} sem token: 401", async () => {
+    const res = await app.request("${url(r.path)}", { method: "${r.method}" });
+    assert.equal(res.status, 401);
+  });`);
+  }
+  const hasId = (path: string) => /\/:\w+|\{\w+\}/.test(path);
+  for (const r of routes.filter((r) => r.method === "POST" && !hasId(r.path))) {
+    const t = p.db && p.dbWrites ? tableForPath(r.path, er) : undefined;
+    if (!t || !bodyFields(t, er).length) continue;
+    cases.push(`  it("POST ${r.path} rejeita corpo inválido com 400", async () => {
+    const res = await app.request("${r.path}", { method: "POST", body: "[]", headers: { "content-type": "application/json"${r.protected ? ", authorization: `Bearer ${await token()}`" : ""} } });
+    assert.equal(res.status, 400);
+    assert.ok(Array.isArray((await res.json()).issues));
+  });`);
+  }
+  if (p.ownAuth) {
+    cases.push(`  it("POST /auth/register e /auth/login validam o corpo", async () => {
+    for (const path of ["/auth/register", "/auth/login"]) {
+      const res = await app.request(path, { method: "POST", body: JSON.stringify({ email: "não-é-email", password: "x" }), headers: { "content-type": "application/json" } });
+      assert.equal(res.status, 400, path);
+    }
+  });`, `  it("GET /auth/me sem token: 401; token com outro segredo: 401", async () => {
+    assert.equal((await app.request("/auth/me")).status, 401);
+    const forged = await sign({ sub: "1", email: "a@b.c", exp: Math.floor(Date.now() / 1000) + 60 }, "outro-segredo-".repeat(4), "HS256");
+    assert.equal((await app.request("/auth/me", { headers: { authorization: \`Bearer \${forged}\` } })).status, 401);
+  });`);
+  }
+
+  return `// Testes de fumaça de ${p.node.name} — gerado pelo Vitrine Studio.
+// Rodam sem Postgres nem Redis (só o que acontece antes do banco): npm test
+// Para testar SQL de verdade, suba o compose e use DATABASE_URL apontando para ele.
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+${jwt ? 'import { sign } from "hono/jwt";\n' : ""}
+process.env.NODE_ENV = "test"; // o app não abre a porta
+process.env.CORS_ORIGINS = "http://localhost:${WEB_PORT}";
+${jwt ? 'process.env.JWT_SECRET = "segredo-de-teste-".repeat(4);\n' : ""}const { default: app } = await import("../src/index.js");
+${jwt ? `
+/** Token válido para as rotas com auth (o "sub" é o id do usuário). */
+function token(sub = "00000000-0000-0000-0000-000000000001") {
+  return sign({ sub, email: "teste@exemplo.com", exp: Math.floor(Date.now() / 1000) + 60 }, process.env.JWT_SECRET!, "HS256");
+}
+` : ""}
+describe("${p.node.name}: base", () => {
+  it("GET /health responde 200", async () => {
+    const res = await app.request("/health");
+    assert.equal(res.status, 200);
+    assert.equal((await res.json()).ok, true);
+  });
+
+  it("cabeçalhos seguros", async () => {
+    const res = await app.request("/health");
+    assert.equal(res.headers.get("x-content-type-options"), "nosniff");
+    assert.ok(res.headers.get("x-frame-options"));
+  });
+
+  it("CORS libera só as origens de CORS_ORIGINS", async () => {
+    const ok = await app.request("/health", { headers: { origin: "http://localhost:${WEB_PORT}" } });
+    assert.equal(ok.headers.get("access-control-allow-origin"), "http://localhost:${WEB_PORT}");
+    const evil = await app.request("/health", { headers: { origin: "https://evil.example" } });
+    assert.equal(evil.headers.get("access-control-allow-origin"), null);
+  });
+
+  it("corpo acima de ${BODY_LIMIT_KB} KB: 413", async () => {
+    const body = "x".repeat(${BODY_LIMIT_KB + 1} * 1024);
+    const res = await app.request("/health", { method: "POST", body, headers: { "content-type": "application/json", "content-length": String(body.length) } });
+    assert.equal(res.status, 413);
+  });
+});
+${cases.length ? `\ndescribe("${p.node.name}: rotas", () => {\n${cases.join("\n\n")}\n});\n` : ""}`;
+}
+
 function serviceFiles(p: ServicePlan, er: ErModel): GeneratedFile[] {
   const base = `services/${p.slug}`;
+  const isHttp = p.node.kind !== "worker";
   const deps: Record<string, string> = {};
   const devDeps: Record<string, string> = { tsx: TEMPLATE_VERSIONS.tsx, typescript: TEMPLATE_VERSIONS.typescript, "@types/node": TEMPLATE_VERSIONS["@types/node"] };
   if (p.node.kind !== "worker") Object.assign(deps, { hono: TEMPLATE_VERSIONS.hono, "@hono/node-server": TEMPLATE_VERSIONS["@hono/node-server"] });
@@ -380,7 +470,7 @@ function serviceFiles(p: ServicePlan, er: ErModel): GeneratedFile[] {
             name: p.slug,
             private: true,
             type: "module",
-            scripts: { dev: "tsx watch src/index.ts", build: "tsc", start: "node dist/index.js", typecheck: "tsc --noEmit" },
+            scripts: { dev: "tsx watch src/index.ts", build: "tsc", start: "node dist/index.js", typecheck: "tsc --noEmit", ...(isHttp ? { test: "tsx --test test/*.test.ts" } : {}) },
             dependencies: deps,
             devDependencies: devDeps,
           },
@@ -401,6 +491,7 @@ function serviceFiles(p: ServicePlan, er: ErModel): GeneratedFile[] {
     { path: `${base}/.dockerignore`, content: "node_modules\ndist\nnpm-debug.log\n.env\n" },
     { path: `${base}/src/index.ts`, content: serviceIndex(p, er) },
   ];
+  if (isHttp) files.push({ path: `${base}/test/app.test.ts`, content: testsFile(p, er) });
   if (posts.length) files.push({ path: `${base}/src/schemas.ts`, content: schemasFile(posts, er) });
   if (p.jwt && p.node.kind !== "worker") files.push({ path: `${base}/src/auth.ts`, content: authFile(p.ownAuth ? ownAuthSpec(er) : undefined) });
   if (p.db) {
@@ -428,7 +519,8 @@ db.on("error", (err) => console.error("[db] conexão perdida:", err.message));
       path: `${base}/src/cache.ts`,
       content: `import { Redis } from "ioredis";
 
-export const cache = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379");
+// lazyConnect: conecta no primeiro comando (importar o módulo nos testes não abre conexão).
+export const cache = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", { lazyConnect: true });
 `,
     });
   }
@@ -438,7 +530,7 @@ export const cache = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"
       content: `// Fila com Redis Streams. Molde simples: sem retry nem dead-letter.
 import { Redis } from "ioredis";
 
-const redis = new Redis(process.env.QUEUE_URL ?? "redis://localhost:6379");
+const redis = new Redis(process.env.QUEUE_URL ?? "redis://localhost:6379", { lazyConnect: true });
 
 export async function publish(stream: string, event: unknown): Promise<void> {
   await redis.xadd(stream, "*", "data", JSON.stringify(event));
@@ -679,6 +771,7 @@ ${readmeAuth(plans)}
 cd services/<nome>
 npm install
 npm run dev
+npm test   # testes de fumaça das APIs (test/), sem precisar de banco
 \`\`\`
 
 Variáveis de ambiente: veja \`.env.example\`.

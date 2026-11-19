@@ -159,6 +159,27 @@ describe("inferência + codegen", () => {
     expect(api).not.toContain("password_hash");
   });
 
+  it("cada API ganha testes de fumaça (npm test) e o app é importável sem subir a porta", () => {
+    const { graph, er } = sample();
+    const files = archFiles(graph, er);
+    const get = (p: string) => files.find((f) => f.path === p)?.content;
+    const api = get("services/api/src/index.ts")!;
+    expect(api).toContain("export default app;");
+    expect(api).toMatch(/if \(process\.env\.NODE_ENV !== "test"\) \{\n  const port/);
+    expect(JSON.parse(get("services/api/package.json")!).scripts.test).toBe("tsx --test test/*.test.ts");
+    const t = get("services/api/test/app.test.ts")!;
+    expect(t).toContain('await import("../src/index.js")');
+    expect(t).toContain('it("POST /leads rejeita corpo inválido com 400"');
+    expect(t).toContain('it("POST /subscriptions sem token: 401"');
+    expect(t).toContain("GET /auth/me sem token");
+    expect(t).toContain("assert.equal(res.status, 413)");
+    // worker não tem HTTP: sem testes nem script
+    expect(get("services/notificacoes/test/app.test.ts")).toBeUndefined();
+    expect(JSON.parse(get("services/notificacoes/package.json")!).scripts.test).toBeUndefined();
+    expect(get("services/notificacoes/src/index.ts")).not.toContain("NODE_ENV");
+    expect(get("services/api/src/queue.ts")).toContain("lazyConnect: true");
+  });
+
   it("SQL respeita a ordem pai -> filho e cria FK", () => {
     const { er } = sample();
     const sql = toSql(er, "postgres");
