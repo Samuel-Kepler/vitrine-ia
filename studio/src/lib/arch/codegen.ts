@@ -91,6 +91,9 @@ const GENERATED_DEFAULTS = new Set(["now", "uuid", "autoincrement"]);
 interface BodyField {
   name: string;
   zod: string;
+  /** JSON Schema do campo (para o openapi.yaml). */
+  json: Record<string, unknown>;
+  required: boolean;
 }
 
 /** Campos que o cliente pode mandar no POST: colunas sem default gerado + FKs. */
@@ -103,12 +106,34 @@ function bodyFields(t: Table, er: ErModel): BodyField[] {
     let z = zodFor(c.type, c.name, !c.nullable && !c.default);
     if (c.nullable) z += ".nullish()";
     else if (c.default) z += ".optional()";
-    out.push({ name: snake(c.name), zod: z });
+    out.push({ name: snake(c.name), zod: z, json: jsonSchemaFor(c.type, c.name, !!c.nullable), required: !c.nullable && !c.default });
   }
   for (const f of fkColumns(er).filter((f) => f.table.id === t.id)) {
-    out.push({ name: f.name, zod: zodFor(f.type, f.name, !f.nullable) + (f.nullable ? ".nullish()" : "") });
+    out.push({ name: f.name, zod: zodFor(f.type, f.name, !f.nullable) + (f.nullable ? ".nullish()" : ""), json: jsonSchemaFor(f.type, f.name, !!f.nullable), required: !f.nullable });
   }
   return out;
+}
+
+function jsonSchemaFor(type: ColType, name: string, nullable: boolean): Record<string, unknown> {
+  const base: Record<string, unknown> = {
+    uuid: { type: "string", format: "uuid" },
+    varchar: /e_?mail/i.test(name) ? { type: "string", format: "email", maxLength: 255 } : { type: "string", maxLength: 255 },
+    text: { type: "string" },
+    int: { type: "integer", format: "int32" },
+    bigint: { type: "integer" },
+    decimal: { type: "number" },
+    boolean: { type: "boolean" },
+    timestamp: { type: "string", format: "date-time" },
+    date: { type: "string", format: "date" },
+    json: {},
+  }[type] as Record<string, unknown>;
+  return nullable && typeof base.type === "string" ? { ...base, type: [base.type, "null"] } : base;
+}
+
+/** Schema do corpo aceito por um POST (o mesmo que o zod de src/schemas.ts valida). */
+function bodyJsonSchema(fields: BodyField[]): Record<string, unknown> {
+  const req = fields.filter((f) => f.required).map((f) => f.name);
+  return { type: "object", properties: Object.fromEntries(fields.map((f) => [f.name, f.json])), ...(req.length ? { required: req } : {}) };
 }
 
 function zodFor(type: ColType, name: string, required: boolean): string {
@@ -717,11 +742,27 @@ export function consume(stream: string, group: string, handle: Handler): Promise
         "\n",
     });
   }
-  if (p.node.kind === "api") files.push({ path: `${base}/openapi.yaml`, content: openapi(p) });
+  if (p.node.kind === "api") files.push({ path: `${base}/openapi.yaml`, content: openapi(p, er) });
   return files;
 }
 
-function openapi(p: ServicePlan): string {
+// Corpo de cada POST que grava numa tabela (mesma regra do routeHandler).
+function postBody(p: ServicePlan, r: RouteLine, er: ErModel): Record<string, unknown> | undefined {
+  if (r.method !== "POST" || !p.db || !p.dbWrites || /\/:\w+|\{\w+\}/.test(r.path)) return undefined;
+  const t = tableForPath(r.path, er);
+  if (!t) return undefined;
+  const owner = r.protected ? userFk(t, er) : undefined; // vem do token, não do corpo
+  const fields = bodyFields(t, er).filter((f) => f.name !== owner);
+  return fields.length ? bodyJsonSchema(fields) : undefined;
+}
+
+const AUTH_BODY = {
+  type: "object",
+  properties: { email: { type: "string", format: "email", maxLength: 255 }, password: { type: "string", minLength: 8, maxLength: 200 } },
+  required: ["email", "password"],
+};
+
+function openapi(p: ServicePlan, er: ErModel): string {
   const routes: RouteLine[] = routeLines(p.node.props.routes).filter((r) => !(p.ownAuth && /^\/auth(\/|$)/.test(r.path)));
   if (p.ownAuth) {
     routes.push({ method: "POST", path: "/auth/register", protected: false }, { method: "POST", path: "/auth/login", protected: false }, { method: "GET", path: "/auth/me", protected: true });
@@ -737,8 +778,14 @@ function openapi(p: ServicePlan): string {
       const ok = r.method === "POST" && path !== "/auth/login" ? "201" : "200";
       lines.push(`    ${r.method.toLowerCase()}:`, `      summary: ${r.method} ${path}`);
       if (r.protected) lines.push("      security:", "        - bearerAuth: []");
+      const body = path === "/auth/register" || path === "/auth/login" ? AUTH_BODY : postBody(p, r, er);
+      // JSON é YAML válido: o schema vai numa linha só.
+      if (body) lines.push("      requestBody:", "        required: true", "        content:", "          application/json:", `            schema: ${JSON.stringify(body)}`);
       lines.push("      responses:", `        "${ok}":`, "          description: OK");
+      if (body) lines.push('        "400":', "          description: Corpo inválido (lista em issues)");
+      if (body && path !== "/auth/login") lines.push('        "409":', "          description: Registro duplicado ou referência inexistente");
       if (r.protected) lines.push('        "401":', "          description: Token ausente ou inválido");
+      if (path === "/ready") lines.push('        "503":', "          description: Alguma dependência não respondeu, ou o serviço está desligando");
     }
   }
   if (routes.some((r) => r.protected)) lines.push("components:", "  securitySchemes:", "    bearerAuth:", "      type: http", "      scheme: bearer", "      bearerFormat: JWT");
@@ -799,6 +846,7 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
     // Banco e Redis precisam estar prontos (healthcheck), não só "iniciados".
     const deps = new Map<string, string>();
     if (p.db) deps.set("postgres", "service_healthy");
+    if (p.db && hasSchema) deps.set("migrate", "service_completed_successfully");
     if (needsRedis && (p.cache || p.publishes.length || p.consumes.length)) deps.set("redis", "service_healthy");
     if (p.storage) deps.set("minio", "service_started");
     for (const t of p.httpTargets) {
@@ -820,13 +868,32 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
       localPort(5432),
       "    volumes:",
       "      - pgdata:/var/lib/postgresql/data",
-      ...(hasSchema ? ["      - ./db/schema.postgres.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro"] : []),
       "    healthcheck:",
       `      test: ["CMD-SHELL", "pg_isready -U app -d ${dbName(pg)}"]`,
       "      interval: 5s",
       "      timeout: 3s",
       "      retries: 10",
     );
+    if (hasSchema) {
+      lines.push(
+        "  migrate:",
+        "    # Aplica db/migrations e sai; as APIs esperam ele terminar com sucesso.",
+        "    image: postgres:17-alpine",
+        '    command: ["sh", "/db/migrate.sh"]',
+        "    environment:",
+        "      PGHOST: postgres",
+        "      PGUSER: app",
+        `      PGPASSWORD: ${required("POSTGRES_PASSWORD")}`,
+        `      PGDATABASE: ${dbName(pg)}`,
+        '      PGOPTIONS: "-c client_min_messages=warning"',
+        "    volumes:",
+        "      - ./db:/db:ro",
+        "    depends_on:",
+        "      postgres:",
+        "        condition: service_healthy",
+        '    restart: "no"',
+      );
+    }
   }
   if (needsRedis) {
     lines.push(
@@ -858,20 +925,59 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
   return lines.join("\n") + "\n";
 }
 
-const README_DB = `## Banco
+// Runner de migrations em sh + psql: roda na própria imagem do Postgres (serviço
+// "migrate" do compose), sem dependência nova. Cada arquivo de db/migrations roda
+// uma vez, em ordem, numa transação; schema_migrations guarda versão e checksum.
+const MIGRATE_SH = `#!/bin/sh
+# Aplica db/migrations/*.sql em ordem, uma vez cada — gerado pelo Vitrine Studio.
+# Conexão pelas variáveis PGHOST, PGUSER, PGPASSWORD e PGDATABASE.
+set -eu
+DIR="$(dirname "$0")/migrations"
+psql -v ON_ERROR_STOP=1 -q -c "create table if not exists schema_migrations (version text primary key, checksum text not null, applied_at timestamptz not null default now())"
+applied=0
+for f in "$DIR"/*.sql; do
+  [ -e "$f" ] || continue
+  v=$(basename "$f" .sql)
+  case "$v" in *[!0-9A-Za-z_-]*) echo "ERRO: nome inválido: $f (use só letras, números, _ e -)"; exit 1 ;; esac
+  sum=$(sha256sum "$f" | cut -d' ' -f1)
+  done_sum=$(psql -tA -c "select checksum from schema_migrations where version = '$v'")
+  if [ -z "$done_sum" ]; then
+    echo "aplicando $v"
+    psql -v ON_ERROR_STOP=1 -q --single-transaction -f "$f" -c "insert into schema_migrations (version, checksum) values ('$v', '$sum')"
+    applied=$((applied + 1))
+  elif [ "$done_sum" != "$sum" ]; then
+    echo "ERRO: $v foi alterada depois de aplicada. Não edite migrations antigas: crie uma nova (ex.: 0002_nova_coluna.sql)."
+    exit 1
+  fi
+done
+echo "migrations em dia ($applied aplicada(s) agora)"
+`;
+
+// Windows com core.autocrlf trocaria LF por CRLF e quebraria o sh.
+const GITATTRIBUTES = "*.sh text eol=lf\n";
+
+const README_DB = `## Banco e migrations
 
 \`db/\` traz o schema em SQL (Postgres, MySQL, SQLite), Prisma, Drizzle e DBML.
+\`db/schema.postgres.sql\` é a foto do schema atual; quem altera o banco são as
+**migrations** em \`db/migrations/\`.
 
-**O schema só é aplicado quando o volume do Postgres é criado.** O compose monta
-\`db/schema.postgres.sql\` em \`/docker-entrypoint-initdb.d/\`, e a imagem do Postgres
-só roda esses scripts com o diretório de dados vazio. Se você mudar o schema depois
-da primeira subida, ele **não** é reaplicado. Para recriar o banco do zero
-(apaga todos os dados):
+A cada \`docker compose up\`, o serviço \`migrate\` roda \`db/migrate.sh\`: aplica, em
+ordem, os arquivos de \`db/migrations/\` que ainda não foram aplicados (cada um numa
+transação) e registra versão e checksum na tabela \`schema_migrations\`. As APIs só
+sobem depois que ele termina com sucesso.
 
-\`\`\`bash
-docker compose down -v   # remove os containers e o volume pgdata
-docker compose up --build
+Para mudar o schema com dados já no banco, crie um arquivo novo, por exemplo
+\`db/migrations/0002_telefone_em_leads.sql\`:
+
+\`\`\`sql
+alter table "leads" add column "telefone" varchar(30);
 \`\`\`
+
+e rode \`docker compose up migrate\` (ou suba tudo de novo). **Não edite uma
+migration já aplicada**: o checksum muda e o \`migrate\` para com erro.
+
+Para recriar o banco do zero (apaga todos os dados): \`docker compose down -v\`.
 
 Os serviços só sobem depois que o Postgres e o Redis passam no healthcheck
 (\`depends_on: condition: service_healthy\`).
@@ -1009,6 +1115,16 @@ export function archFiles(graph: ArchGraph, erIn: ErModel, secrets: BackendSecre
     { path: ".gitignore", content: GITIGNORE },
     ...plans.flatMap((p) => serviceFiles(p, er)),
   ];
-  if (hasSchema && graph.nodes.some((n) => n.kind === "postgres")) files.push({ path: "db/schema.postgres.sql", content: toSql(er, "postgres") });
+  if (hasSchema && graph.nodes.some((n) => n.kind === "postgres")) {
+    const sql = toSql(er, "postgres");
+    files.push(
+      { path: "db/schema.postgres.sql", content: sql },
+      { path: "db/migrations/0001_init.sql", content: `-- Migration inicial (gerada pelo Vitrine Studio). Não edite depois de aplicada:
+-- crie db/migrations/0002_*.sql com as mudanças.
+${sql}` },
+      { path: "db/migrate.sh", content: MIGRATE_SH },
+      { path: ".gitattributes", content: GITATTRIBUTES },
+    );
+  }
   return files;
 }

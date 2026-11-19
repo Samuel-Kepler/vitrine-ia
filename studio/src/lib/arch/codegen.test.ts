@@ -211,6 +211,39 @@ describe("inferência + codegen", () => {
     expect(queue).toContain("BUSYGROUP");
   });
 
+  it("migrations: 0001_init + migrate.sh num serviço de execução única que as APIs esperam", () => {
+    const { graph, er } = sample();
+    const files = archFiles(graph, er);
+    const get = (p: string) => files.find((f) => f.path === p)?.content ?? "";
+    expect(get("db/migrations/0001_init.sql")).toContain(get("db/schema.postgres.sql"));
+    const sh = get("db/migrate.sh");
+    expect(sh).toContain("schema_migrations");
+    expect(sh).toContain("--single-transaction");
+    expect(sh).toContain("sha256sum");
+    expect(sh).toMatch(/case "\$v" in \*\[!0-9A-Za-z_-\]\*\)/); // nome vai num literal SQL
+    expect(get(".gitattributes")).toContain("*.sh text eol=lf");
+    const compose = get("docker-compose.yml");
+    expect(compose).not.toContain("docker-entrypoint-initdb.d");
+    expect(compose).toMatch(/ {2}migrate:\n[\s\S]*?command: \["sh", "\/db\/migrate\.sh"\]/);
+    expect(compose).toMatch(/ {2}api:[\s\S]*?migrate:\n\s+condition: service_completed_successfully/);
+    expect(get("README.md")).toContain("0002_telefone_em_leads.sql");
+  });
+
+  it("openapi descreve o corpo dos POSTs com as colunas e as respostas de erro", () => {
+    const { graph, er } = sample();
+    const yaml = archFiles(graph, er).find((f) => f.path === "services/api/openapi.yaml")!.content;
+    const leads = yaml.slice(yaml.indexOf("  /leads:"));
+    const schema = JSON.parse(/schema: (\{.*\})/.exec(leads)![1]);
+    expect(schema.properties.email).toEqual({ type: "string", format: "email", maxLength: 255 });
+    expect(schema.required).toEqual(expect.arrayContaining(["nome", "email"]));
+    expect(schema.properties).not.toHaveProperty("id");
+    expect(leads).toContain('"400":');
+    // POST protegido: o dono vem do token, não do corpo
+    const subs = yaml.slice(yaml.indexOf("  /subscriptions:"));
+    expect(JSON.parse(/schema: (\{.*\})/.exec(subs)![1]).properties).not.toHaveProperty("user_id");
+    expect(yaml).toMatch(/\/auth\/register:[\s\S]*?"password"/);
+  });
+
   it("SQL respeita a ordem pai -> filho e cria FK", () => {
     const { er } = sample();
     const sql = toSql(er, "postgres");
