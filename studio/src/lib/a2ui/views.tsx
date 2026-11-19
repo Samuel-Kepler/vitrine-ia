@@ -36,7 +36,7 @@ function children(list: unknown, build: Build): ReactNode[] {
   );
 }
 
-const PageView = createComponentImplementation(PageApi as Any, ({ props, buildChild }: Any) => <Page palette={props.palette} theme={props.theme}>{props.child ? buildChild(props.child) : null}</Page>);
+const PageView = createComponentImplementation(PageApi as Any, ({ props, buildChild }: Any) => <Page palette={props.palette} theme={props.theme} motion={props.motion}>{props.child ? buildChild(props.child) : null}</Page>);
 
 const NavbarView = createComponentImplementation(NavbarApi as Any, ({ props }: Any) => <Navbar brand={props.brand} links={props.links} cta={props.cta} onCta={props.onCta} />);
 
@@ -67,7 +67,7 @@ const TeamMemberView = createComponentImplementation(TeamMemberApi as Any, ({ pr
 const ContactInfoView = createComponentImplementation(ContactInfoApi as Any, ({ props }: Any) => (
   <ContactInfo hours={props.hours} address={props.address} phone={props.phone} email={props.email} whatsapp={props.whatsapp} />
 ));
-const LogoStripView = createComponentImplementation(LogoStripApi as Any, ({ props }: Any) => <LogoStrip title={props.title} names={props.names} />);
+const LogoStripView = createComponentImplementation(LogoStripApi as Any, ({ props }: Any) => <LogoStrip title={props.title} names={props.names} variant={props.variant} />);
 const GalleryView = createComponentImplementation(GalleryApi as Any, ({ props }: Any) => <Gallery images={props.images} captions={props.captions} />);
 
 export const landingCatalog = buildCatalog(

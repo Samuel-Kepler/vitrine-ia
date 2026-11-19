@@ -18,6 +18,7 @@ export interface ReimagineInput {
   brief?: string;
   palette?: string;
   theme?: string;
+  motion?: string;
   settings?: ProviderSettings;
 }
 
@@ -39,7 +40,7 @@ export interface ReimagineResult {
 }
 
 function fallbackResult(input: ReimagineInput, base: Omit<ReimagineResult, "messages" | "express" | "fallback" | "ok" | "note" | "facts">): ReimagineResult {
-  const express = draftToExpress(input.draft, { palette: input.palette, theme: input.theme });
+  const express = draftToExpress(input.draft, { palette: input.palette, theme: input.theme, motion: input.motion });
   const { messages } = compileResponse(express);
   return { ...base, ok: false, fallback: true, messages, express, facts: [], note: "Versão automática do rascunho (sem IA)." };
 }

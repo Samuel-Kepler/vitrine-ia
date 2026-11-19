@@ -73,3 +73,10 @@ export const HERO_VARIANTS = ["centered", "split", "image-bg", "gradient", "mini
 export const FEATURE_VARIANTS = ["card", "icon-left", "minimal"] as const;
 export const GRID_VARIANTS = ["even", "bento"] as const;
 export const TESTIMONIAL_VARIANTS = ["card", "quote"] as const;
+export const LOGO_VARIANTS = ["static", "marquee"] as const;
+
+/** Movimento da página: none (parado), calm (seções surgem ao rolar), lively (+ sequência, flutuação, faixa rolando). */
+export const MOTIONS = ["none", "calm", "lively"] as const;
+export type Motion = (typeof MOTIONS)[number];
+export const DEFAULT_MOTION: Motion = "calm";
+export const MOTION_LABELS: Record<Motion, string> = { none: "Nenhum", calm: "Calmo", lively: "Animado" };

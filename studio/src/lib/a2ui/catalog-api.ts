@@ -3,7 +3,7 @@
 // via @a2ui/agent) e pelo navegador (renderer em ./views.tsx).
 import { z } from "zod";
 import { Catalog, CommonSchemas, basicCatalog } from "@a2ui/web_core/v1_0";
-import { FEATURE_VARIANTS, GRID_VARIANTS, HERO_VARIANTS, TESTIMONIAL_VARIANTS, THEMES } from "./themes";
+import { FEATURE_VARIANTS, GRID_VARIANTS, HERO_VARIANTS, LOGO_VARIANTS, MOTIONS, TESTIMONIAL_VARIANTS, THEMES } from "./themes";
 
 export const CATALOG_ID = "https://vitrine.studio/catalogs/landing/v1/catalog.json";
 export const SURFACE_ID = "landing";
@@ -24,6 +24,10 @@ export const PageApi = {
       .enum(THEMES)
       .optional()
       .describe("Visual theme (typography, corners, shadows): moderno (general), elegante (serif; food, beauty, hospitality), editorial (big sober type; fashion, art, consulting), suave (rounded; kids, pets, health), tech (geometric; tech, startups)."),
+    motion: z
+      .enum(MOTIONS)
+      .optional()
+      .describe("Motion: calm (default; sections fade in on scroll), lively (also staggered grids, floating shapes, scrolling logo strip; kids, events, tech), none (formal, legal, health)."),
   }),
 };
 
@@ -164,7 +168,11 @@ export const ContactInfoApi = {
 export const LogoStripApi = {
   name: "LogoStrip",
   description: "Strip of client/partner names as text logos. Only names the user gave; never invent companies.",
-  schema: z.object({ title: S.DynamicString.optional(), names: z.array(z.string()) }),
+  schema: z.object({
+    title: S.DynamicString.optional(),
+    names: z.array(z.string()),
+    variant: z.enum(LOGO_VARIANTS).optional().describe("static (default) or marquee (endless scrolling strip; good with 5+ names)."),
+  }),
 };
 
 export const GalleryApi = {

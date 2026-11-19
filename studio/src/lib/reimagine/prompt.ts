@@ -2,7 +2,7 @@ import type { DraftNode } from "@/lib/draft/tree";
 import { draftOutline, draftToExpress } from "@/lib/draft/to-express";
 import { SKELETON_CLOSE, SKELETON_OPEN } from "@/lib/ai/mock-model";
 import { PALETTES } from "@/lib/a2ui/catalog-api";
-import { THEMES, THEME_DEFS } from "@/lib/a2ui/themes";
+import { MOTIONS, THEMES, THEME_DEFS } from "@/lib/a2ui/themes";
 import { NO_INVENTED_FACTS } from "@/lib/ai/rules";
 
 /** Direção de arte: quando usar cada tema e variação, para as páginas não saírem todas iguais. */
@@ -13,14 +13,15 @@ export const ART_DIRECTION = `Direção de arte (é isso que deixa a página bon
 - Depoimentos: um só depoimento fica melhor como Testimonial(variant="quote"); vários, em Grid com "card".
 - Ritmo: alterne os tons das seções (nunca o mesmo tom duas vezes seguidas) e use tone="gradient" no máximo uma vez, de preferência numa faixa de chamada para ação perto do fim.
 - Seções prontas para quando o rascunho ou o briefing pedirem: Stat (2 a 4 em Grid, só números reais), FaqItem (vários numa Column), Step (3 a 4 em Grid, index "1", "2"…), TeamMember (em Grid), ContactInfo (horários, endereço, telefone, WhatsApp), LogoStrip (só nomes reais de clientes) e Gallery (só URLs dadas). Sem os dados, mantenha os marcadores entre colchetes.
-- Se o rascunho já define um estilo (variant) ou o pedido indica tema, respeite.`;
+- Movimento (motion): "calm" na maioria; "lively" para negócios alegres e jovens (infantil, eventos, tecnologia, academia); "none" para assuntos sérios (saúde, jurídico, contabilidade). LogoStrip com 5 nomes ou mais pode usar variant="marquee".
+- Se o rascunho já define um estilo (variant) ou o pedido indica tema ou movimento, respeite.`;
 
 export function systemPrompt(catalogSnippet: string): string {
   return `Você é um designer de landing pages. Transforme o rascunho do usuário numa landing page bonita e persuasiva, descrita em A2UI.
 
 Regras do resultado:
 - Responda com UMA frase curta em português e depois UM único bloco <a2ui> ... </a2ui> com a página inteira.
-- root = Page(child=<coluna com as seções>, palette="<${PALETTES.join("|")}>", theme="<${THEMES.join("|")}>").
+- root = Page(child=<coluna com as seções>, palette="<${PALETTES.join("|")}>", theme="<${THEMES.join("|")}>", motion="<${MOTIONS.join("|")}>").
 - Cada parte da página fica dentro de Section(child=Column(...), tone=...). Alterne os tons (default, muted, accent, dark) para dar ritmo. Navbar, Hero e Footer podem ficar direto na coluna da página.
 - Use Heading para títulos (Text não tem tamanho de título). Use Grid para benefícios, planos e depoimentos.
 ${ART_DIRECTION}
@@ -36,14 +37,15 @@ ${NO_INVENTED_FACTS}
 ${catalogSnippet}`;
 }
 
-export function userPrompt(draft: DraftNode[], opts: { brief?: string; palette?: string; theme?: string }): string {
-  const skeleton = draftToExpress(draft, { palette: opts.palette, theme: opts.theme })
+export function userPrompt(draft: DraftNode[], opts: { brief?: string; palette?: string; theme?: string; motion?: string }): string {
+  const skeleton = draftToExpress(draft, { palette: opts.palette, theme: opts.theme, motion: opts.motion })
     .replace(/^<a2ui>\n/, "")
     .replace(/\n<\/a2ui>$/, "");
   return [
     opts.brief?.trim() ? `Briefing do negócio: ${opts.brief.trim()}` : "Briefing do negócio: (não informado; deduza pelo rascunho)",
     opts.palette ? `Paleta preferida: ${opts.palette}` : "Paleta: escolha a que combina com o negócio.",
     opts.theme ? `Tema obrigatório: ${opts.theme}` : "Tema: escolha o que combina com o negócio (veja a direção de arte).",
+    opts.motion ? `Movimento obrigatório: ${opts.motion}` : "",
     "",
     "Rascunho (de cima para baixo):",
     draftOutline(draft) || "(vazio)",

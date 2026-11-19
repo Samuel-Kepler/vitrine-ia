@@ -195,6 +195,8 @@ A landing continua 100% A2UI, mas o catálogo ficou mais rico. A IA (ou você, n
 - **Depoimentos:** cartão ou citação grande.
 - **Seção com tom gradiente**, para faixas de chamada para ação.
 
+**Movimento** (seletor *Movimento* da página, ou a IA escolhe): *calmo* (padrão: as seções surgem ao rolar e os cards sobem um pouco com o mouse), *animado* (também os itens das grades entram em sequência, o painel decorativo flutua e a faixa de logos pode rolar sem parar, estilo *Rolando* no bloco Logos) ou *nenhum*. É só CSS, ligado à rolagem (`animation-timeline: view()`), então funciona no HTML exportado sem JavaScript; em navegadores sem suporte, a página aparece parada. Quem liga "reduzir movimento" no sistema vê a página sem animação, de propósito.
+
 **Seções prontas** (blocos novos na paleta, também usados pela IA e pelo Gerar com IA):
 
 - **Número** (`Stat`): números de destaque; vários seguidos viram grade. Só números reais.

@@ -4,7 +4,7 @@
 // versão automática do servidor (provedor mock), sem gravar nada no Studio.
 import { useStudio } from "@/lib/draft/store";
 import { pageFile } from "@/lib/draft/pages";
-import { sitePalette, siteTheme } from "./reimagine-client";
+import { siteMotion, sitePalette, siteTheme } from "./reimagine-client";
 
 export interface SitePage {
   id: string;
@@ -15,11 +15,11 @@ export interface SitePage {
   auto: boolean;
 }
 
-async function automaticMessages(draft: unknown, palette?: string, theme?: string): Promise<unknown[]> {
+async function automaticMessages(draft: unknown, palette?: string, theme?: string, motion?: string): Promise<unknown[]> {
   const res = await fetch("/api/reimagine", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ draft, palette, theme, settings: { kind: "mock" } }),
+    body: JSON.stringify({ draft, palette, theme, motion, settings: { kind: "mock" } }),
   });
   const json = (await res.json()) as { messages?: unknown[]; error?: string };
   if (!res.ok || !json.messages) throw new Error(json.error ?? `Erro ${res.status}`);
@@ -31,9 +31,10 @@ export async function collectSitePages(): Promise<SitePage[]> {
   const pages = s.allPages().filter((p) => p.tree.length > 0);
   const palette = s.palette !== "auto" ? s.palette : sitePalette(pages);
   const theme = s.theme && s.theme !== "auto" ? s.theme : siteTheme(pages);
+  const motion = s.motion && s.motion !== "auto" ? s.motion : siteMotion(pages);
   const out: SitePage[] = [];
   for (const p of pages) {
-    const messages = p.result?.messages ?? (await automaticMessages(p.tree, palette, theme));
+    const messages = p.result?.messages ?? (await automaticMessages(p.tree, palette, theme, motion));
     out.push({ id: p.id, name: p.name, file: pageFile(pages, p.id), messages, auto: !p.result });
   }
   return out;

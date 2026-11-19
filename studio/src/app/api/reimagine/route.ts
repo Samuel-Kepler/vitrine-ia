@@ -12,6 +12,7 @@ const BodySchema = z.object({
   brief: z.string().max(2000).optional(),
   palette: z.string().max(20).optional(),
   theme: z.string().max(20).optional(),
+  motion: z.string().max(20).optional(),
   settings: ProviderSettingsSchema.optional(),
 });
 

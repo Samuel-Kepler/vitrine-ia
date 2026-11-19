@@ -95,7 +95,7 @@ function emit(ctx: Ctx, id: string, depth: number, inForm = false): string {
   switch (c.component) {
     case "Page":
       ctx.rootColumn = str(c.child);
-      return tag("Page", { palette: str(c.palette), theme: str(c.theme) }, child(c.child));
+      return tag("Page", { palette: str(c.palette), theme: str(c.theme), motion: str(c.motion) }, child(c.child));
     case "Navbar": {
       const links = strList(c.links);
       return tag("Navbar", { brand: str(c.brand), links, hrefs: links.map(ctx.href), cta: str(c.cta) });
@@ -133,7 +133,7 @@ function emit(ctx: Ctx, id: string, depth: number, inForm = false): string {
     case "ContactInfo":
       return tag("ContactInfo", { hours: strList(c.hours), address: str(c.address), phone: str(c.phone), email: str(c.email), whatsapp: str(c.whatsapp) });
     case "LogoStrip":
-      return tag("LogoStrip", { title: str(c.title), names: strList(c.names) });
+      return tag("LogoStrip", { title: str(c.title), names: strList(c.names), variant: str(c.variant) });
     case "Gallery":
       return tag("Gallery", { images: strList(c.images), captions: strList(c.captions) });
     case "Card": {

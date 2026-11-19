@@ -4,7 +4,7 @@ import { BLOCKS, type FieldDef } from "@/lib/draft/blocks";
 import { findNode } from "@/lib/draft/tree";
 import { useStudio } from "@/lib/draft/store";
 import { PALETTES } from "@/lib/a2ui/catalog-api";
-import { THEMES, THEME_DEFS } from "@/lib/a2ui/themes";
+import { MOTIONS, MOTION_LABELS, THEMES, THEME_DEFS } from "@/lib/a2ui/themes";
 import { BlockIcon } from "./icons";
 
 const input =
@@ -117,7 +117,8 @@ function PageSettings() {
   const brief = useStudio((s) => s.brief);
   const palette = useStudio((s) => s.palette);
   const theme = useStudio((s) => s.theme);
-  const { setBrief, setPalette, setTheme } = useStudio.getState();
+  const motion = useStudio((s) => s.motion);
+  const { setBrief, setPalette, setTheme, setMotion } = useStudio.getState();
   return (
     <div className="p-4">
       <h2 className="mb-1 font-semibold">Página</h2>
@@ -149,6 +150,17 @@ function PageSettings() {
           {THEMES.map((t) => (
             <option key={t} value={t}>
               {THEME_DEFS[t].label}: {THEME_DEFS[t].heading}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="mt-3 block">
+        <span className="mb-1 block text-xs font-medium text-gray-700">Movimento</span>
+        <select className={input} value={motion ?? "auto"} onChange={(e) => setMotion(e.target.value)} data-testid="motion-select">
+          <option value="auto">A IA escolhe</option>
+          {MOTIONS.map((m) => (
+            <option key={m} value={m}>
+              {MOTION_LABELS[m]}
             </option>
           ))}
         </select>

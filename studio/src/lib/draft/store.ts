@@ -45,6 +45,7 @@ interface StudioState {
   brief: string;
   palette: string; // "auto" ou um nome de paleta
   theme: string; // "auto" ou um tema (moderno, elegante…)
+  motion: string; // "auto" ou none | calm | lively
   saved: SavedComponent[];
   result: ReimagineResult | null;
   busy: boolean;
@@ -95,6 +96,7 @@ interface StudioState {
   setBrief: (brief: string) => void;
   setPalette: (palette: string) => void;
   setTheme: (theme: string) => void;
+  setMotion: (motion: string) => void;
   setResult: (r: ReimagineResult | null) => void;
   /** Resultado do Reimaginar de qualquer página (a aberta vai para result). */
   setPageResult: (id: string, r: ReimagineResult | null) => void;
@@ -118,6 +120,7 @@ export const useStudio = create<StudioState>()(
         brief: "",
         palette: "auto",
         theme: "auto",
+        motion: "auto",
         saved: [],
         result: null,
         busy: false,
@@ -256,6 +259,7 @@ export const useStudio = create<StudioState>()(
         setBrief: (brief) => set({ brief }),
         setPalette: (palette) => set({ palette }),
         setTheme: (theme) => set({ theme }),
+        setMotion: (motion) => set({ motion }),
         setResult: (result) => set({ result }),
         setPageResult: (id, result) => {
           if (id === get().pageId) set({ result });
@@ -282,6 +286,7 @@ export const useStudio = create<StudioState>()(
         brief: s.brief,
         palette: s.palette,
         theme: s.theme,
+        motion: s.motion,
         saved: s.saved,
         result: s.result,
         settings: s.settings,

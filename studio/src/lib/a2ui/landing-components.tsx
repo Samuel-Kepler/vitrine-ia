@@ -9,9 +9,9 @@ export const ICONS: Record<string, typeof Sparkles> = { sparkles: Sparkles, zap:
 
 type Children = { children?: ReactNode };
 
-/** Raiz: paleta (cores) + tema (tipografia, cantos, sombras). */
-export function Page({ palette = "ocean", theme = "moderno", children }: { palette?: string; theme?: string } & Children) {
-  return <div className={`lp lp-${palette} lp-theme-${theme}`}>{children}</div>;
+/** Raiz: paleta (cores) + tema (tipografia, cantos, sombras) + movimento. */
+export function Page({ palette = "ocean", theme = "moderno", motion = "calm", children }: { palette?: string; theme?: string; motion?: string } & Children) {
+  return <div className={`lp lp-${palette} lp-theme-${theme} lp-motion-${motion}`}>{children}</div>;
 }
 
 // Fecha o menu do celular ao escolher um link.
@@ -152,7 +152,7 @@ export function Heading({ text, level = "2", align }: { text?: string; level?: s
 export function Section({ tone = "default", children }: { tone?: string } & Children) {
   return (
     <section className={`tone-${tone} px-5 py-14 @3xl:px-6 @3xl:py-20`}>
-      <div className="lp-rise mx-auto max-w-6xl">{children}</div>
+      <div className="lp-reveal mx-auto max-w-6xl">{children}</div>
     </section>
   );
 }
@@ -160,8 +160,8 @@ export function Section({ tone = "default", children }: { tone?: string } & Chil
 const COLS: Record<string, string> = { "2": "@xl:grid-cols-2", "3": "@xl:grid-cols-2 @3xl:grid-cols-3", "4": "@xl:grid-cols-2 @5xl:grid-cols-4" };
 /** Grade de colunas iguais, ou bento (o primeiro item ocupa 2x2 a partir de 768px). */
 export function Grid({ columns = "3", variant, children }: { columns?: string; variant?: string } & Children) {
-  if (variant === "bento") return <div className="lp-bento grid gap-4 @3xl:gap-6">{children}</div>;
-  return <div className={`grid gap-4 @3xl:gap-6 ${COLS[columns] ?? COLS["3"]}`}>{children}</div>;
+  if (variant === "bento") return <div className="lp-bento lp-stagger grid gap-4 @3xl:gap-6">{children}</div>;
+  return <div className={`lp-stagger grid gap-4 @3xl:gap-6 ${COLS[columns] ?? COLS["3"]}`}>{children}</div>;
 }
 
 /** Benefício: card (padrão), icon-left (ícone ao lado, sem caixa) ou minimal (só um traço em cima). */
@@ -481,7 +481,12 @@ export function ContactInfo({ hours = [], address, phone, email, whatsapp }: { h
 }
 
 /** Faixa de clientes ou parceiros (nomes em texto, sem imagens). Só com nomes reais. */
-export function LogoStrip({ title, names = [] }: { title?: string; names?: string[] }) {
+export function LogoStrip({ title, names = [], variant = "static" }: { title?: string; names?: string[]; variant?: string }) {
+  const item = (n: string, key: string, hidden?: boolean) => (
+    <span key={key} aria-hidden={hidden} className="lp-hf shrink-0 text-xl font-semibold opacity-60 @3xl:text-2xl">
+      {n}
+    </span>
+  );
   return (
     <div className="text-center">
       {title ? (
@@ -489,13 +494,17 @@ export function LogoStrip({ title, names = [] }: { title?: string; names?: strin
           {title}
         </p>
       ) : null}
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
-        {names.map((n) => (
-          <span key={n} className="lp-hf text-xl font-semibold opacity-60 @3xl:text-2xl">
-            {n}
-          </span>
-        ))}
-      </div>
+      {variant === "marquee" ? (
+        // Faixa rolando: a lista vai duas vezes (a cópia é decorativa) e anda até a metade.
+        <div className="lp-marquee mt-6 overflow-hidden">
+          <div className="lp-marquee-track flex w-max items-center gap-x-12">
+            {names.map((n, i) => item(n, `a${i}`))}
+            {names.map((n, i) => item(n, `b${i}`, true))}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">{names.map((n, i) => item(n, `a${i}`))}</div>
+      )}
     </div>
   );
 }

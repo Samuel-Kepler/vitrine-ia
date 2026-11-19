@@ -389,3 +389,88 @@
 .lp-faq[open] .lp-faq-icon {
   transform: rotate(45deg);
 }
+
+/* ---------- Movimento (lp-motion-calm | lively | none) ----------
+   Sem JavaScript: animações ligadas à rolagem (animation-timeline: view()),
+   então funcionam também no HTML exportado. Navegador sem suporte ou pessoa
+   que pede menos movimento: a página aparece parada, inteira. */
+@media (prefers-reduced-motion: no-preference) {
+  .lp:not(.lp-motion-none) .lp-card {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .lp:not(.lp-motion-none) .lp-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px -24px rgb(0 0 0 / 0.35);
+  }
+  .lp-motion-lively .lp-deco {
+    animation: lp-float 7s ease-in-out infinite;
+  }
+  .lp-motion-lively .lp-marquee-track,
+  .lp-marquee-track {
+    animation: lp-marquee 32s linear infinite;
+  }
+  .lp-marquee:hover .lp-marquee-track {
+    animation-play-state: paused;
+  }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .lp:not(.lp-motion-none) .lp-reveal {
+      animation: lp-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+    .lp-motion-lively .lp-stagger > * {
+      animation: lp-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 60%;
+    }
+    .lp-motion-lively .lp-stagger > :nth-child(2) {
+      animation-range: entry 8% entry 68%;
+    }
+    .lp-motion-lively .lp-stagger > :nth-child(3) {
+      animation-range: entry 16% entry 76%;
+    }
+    .lp-motion-lively .lp-stagger > :nth-child(n + 4) {
+      animation-range: entry 24% entry 84%;
+    }
+  }
+}
+.lp-motion-none .lp-rise,
+.lp-motion-none .lp-hero-gradient,
+.lp-motion-none .lp-marquee-track {
+  animation: none;
+}
+/* Faixa parada (sem movimento): mostra a lista uma vez, quebrando linha. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-marquee-track {
+    flex-wrap: wrap;
+    width: auto;
+    justify-content: center;
+  }
+  .lp-marquee-track > [aria-hidden="true"] {
+    display: none;
+  }
+}
+.lp-motion-none .lp-marquee-track {
+  flex-wrap: wrap;
+  width: auto;
+  justify-content: center;
+}
+.lp-motion-none .lp-marquee-track > [aria-hidden="true"] {
+  display: none;
+}
+@keyframes lp-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes lp-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}

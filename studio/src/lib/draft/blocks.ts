@@ -316,10 +316,11 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
     label: "Logos",
     group: "secoes",
     hint: "Faixa com nomes de clientes ou parceiros",
-    defaults: { title: "Quem confia na gente", names: "[cliente 1]\n[cliente 2]\n[cliente 3]" },
+    defaults: { title: "Quem confia na gente", names: "[cliente 1]\n[cliente 2]\n[cliente 3]", variant: "auto" },
     fields: [
       { key: "title", label: "Título", kind: "text" },
       { key: "names", label: "Nomes (um por linha)", kind: "lines" },
+      { key: "variant", label: "Estilo", kind: "select", options: [AUTO, { value: "static", label: "Parada" }, { value: "marquee", label: "Rolando" }] },
     ],
   },
   gallery: {

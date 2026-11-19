@@ -9,6 +9,8 @@ export interface ExpressOptions {
   palette?: string;
   /** Tema visual (moderno, elegante…). Sem tema: Page fica sem theme (= moderno). */
   theme?: string;
+  /** Movimento (none, calm, lively). Sem: Page fica sem motion (= calm). */
+  motion?: string;
 }
 
 const str = (s: string | undefined) => JSON.stringify(s ?? "");
@@ -178,7 +180,8 @@ class Emitter {
       }
       case "logos": {
         const opt = (k: string, val?: string) => (val?.trim() ? `, ${k}=${str(val.trim())}` : "");
-        return this.line(v, `LogoStrip(names=[${lines(p.names).map(str).join(", ")}]${opt("title", p.title)})`);
+        const variant = p.variant && p.variant !== "auto" ? `, variant=${str(p.variant)}` : "";
+        return this.line(v, `LogoStrip(names=[${lines(p.names).map(str).join(", ")}]${opt("title", p.title)}${variant})`);
       }
       case "gallery": {
         const images = lines(p.images).map((u) => safeUrl(u)).filter((u): u is string => !!u).map(str).join(", ");
@@ -237,7 +240,7 @@ export function draftToExpress(tree: DraftNode[], opts: ExpressOptions = {}): st
     "<a2ui>",
     ...dataLines,
     ...e.out,
-    `root = Page(child=${pageCol}, palette=${str(palette)}${opts.theme ? `, theme=${str(opts.theme)}` : ""})`,
+    `root = Page(child=${pageCol}, palette=${str(palette)}${opts.theme ? `, theme=${str(opts.theme)}` : ""}${opts.motion ? `, motion=${str(opts.motion)}` : ""})`,
     "</a2ui>",
   ].join("\n");
 }
