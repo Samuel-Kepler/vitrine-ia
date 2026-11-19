@@ -49,15 +49,22 @@ describe("store.applySketch", () => {
     useStudio.setState({ tree: [n("navbar"), custom, sec, n("footer")], pages: [{ id: HOME_ID, name: "Início", slug: "inicio", tree: [], result: null }], pageId: HOME_ID, sketches: { livre: "data:image/png;base64,AAAA" } });
     useStudio.temporal.getState().clear();
   });
-  it("no topo: troca o Bloco livre pela seção, apaga o desenho e o Ctrl+Z desfaz", () => {
+  it("no topo: troca o Bloco livre pela seção e o Ctrl+Z traz o bloco de volta com o desenho", () => {
     useStudio.getState().applySketch("livre", mergeHeadingOnly(generated()));
     const s = useStudio.getState();
     expect(s.tree.map((x) => x.type)).toEqual(["navbar", "section", "section", "footer"]);
     expect(findNode(s.tree, "livre")).toBeUndefined();
-    expect(s.sketches.livre).toBeUndefined();
+    expect(s.sketches.livre).toBe("data:image/png;base64,AAAA");
     expect(s.selectedId).toBe(s.tree[1].id);
     useStudio.temporal.getState().undo();
     expect(findNode(useStudio.getState().tree, "livre")).toBeDefined();
+    expect(useStudio.getState().sketches.livre).toBeDefined();
+  });
+  it("salvar um desenho limpa os de blocos que não existem mais", () => {
+    useStudio.setState({ sketches: { livre: "a", sumiu: "b" }, sketchDocs: { sumiu: [] } });
+    useStudio.getState().setSketch("livre2", "c", []);
+    expect(Object.keys(useStudio.getState().sketches).sort()).toEqual(["livre", "livre2"]);
+    expect(useStudio.getState().sketchDocs).toEqual({});
   });
   it("dentro de uma seção: entra só o conteúdo", () => {
     useStudio.getState().applySketch("livre2", mergeHeadingOnly(generated()));

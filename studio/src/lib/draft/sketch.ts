@@ -30,7 +30,9 @@ export async function runSketch(input: { image?: string; name?: string; descript
   if (resolved.kind === "mock") return { ...template(), error: undefined };
 
   const text = sketchPrompt([input.name, input.description].filter(Boolean).join(": "), input.brief, !!input.image);
-  try {
+  // O modelo de visão às vezes devolve JSON fora do schema: uma segunda tentativa costuma resolver.
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 2; attempt++) try {
     const res = await generateText({
       model: resolved.model,
       system: sketchSystem(),
@@ -51,6 +53,7 @@ export async function runSketch(input: { image?: string; name?: string; descript
     if (!draft.length) return template("a IA devolveu um bloco vazio");
     return { ...base, draft, notes: g.notes, fallback: false };
   } catch (err) {
-    return template(friendlyAIError(err, resolved.kind, resolved.baseURL));
+    lastError = err;
   }
+  return template(friendlyAIError(lastError, resolved.kind, resolved.baseURL));
 }

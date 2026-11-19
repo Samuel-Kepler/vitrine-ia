@@ -228,12 +228,14 @@ Diagnóstico com o Groq do `.env`: `RUN_LIVE=1 npx vitest run src/lib/draft/gene
 
 ## Desenhar no Bloco livre
 
-Selecione um **Bloco livre** e clique em **Desenhar e transformar com IA**: abre um quadro (caneta, retângulo, borracha, desfazer, limpar) para rabiscar a ideia como um wireframe, com uma descrição opcional. **Transformar com IA** manda o desenho para um modelo que enxerga imagens, que monta a seção **com os blocos do catálogo** (título, benefícios, números, passos, equipe, galeria…). Você vê o que vai entrar ("Seção: Título, Benefício ×3") e só então **Aplica no canvas**: o Bloco livre é trocado pelos blocos, editáveis como os outros, e o Ctrl+Z desfaz. Dentro de uma seção, entra só o conteúdo.
+Selecione um **Bloco livre** e clique em **Desenhar e transformar com IA**: abre um quadro de desenho leve (sem biblioteca pesada: só o `perfect-freehand`, ~2 KB, para o traço suave da caneta) com selecionar e mover (V), caneta (P), retângulo (R), círculo (O), linha (L), seta (A), texto (T) e borracha (E), 5 cores e 3 espessuras, alças para redimensionar, Delete para apagar, Ctrl+Z/Ctrl+Y (só dentro do quadro; não mexe no canvas do Studio) e duplo clique para editar um texto. O desenho é guardado como objetos, então dá para reabrir e continuar editando. Use-o para rabiscar a ideia como um wireframe, com uma descrição opcional. **Transformar com IA** manda o desenho para um modelo que enxerga imagens, que monta a seção **com os blocos do catálogo** (título, benefícios, números, passos, equipe, galeria…). Você vê o que vai entrar ("Seção: Título, Benefício ×3") e só então **Aplica no canvas**: o Bloco livre é trocado pelos blocos, editáveis como os outros, e o Ctrl+Z desfaz. Dentro de uma seção, entra só o conteúdo.
 
 - Continua **100% A2UI**: o resultado herda temas, movimento, exportação React e a regra de não inventar fatos (o que não está legível vira marcador).
 - **Modelo com visão:** no Groq, `qwen/qwen3.8-27b` (o `gpt-oss-120b` não lê imagens), escolhido sozinho; Google e Anthropic usam o modelo padrão deles; no Ollama, escolha um modelo com visão na engrenagem. `AI_VISION_MODEL` no `.env` sobrescreve.
 - Sem visão (mock ou erro), monta pela descrição e avisa.
-- O desenho fica salvo no navegador, à parte do rascunho (não vai nas outras chamadas de IA).
+- O desenho fica salvo no navegador, à parte do rascunho (não vai nas outras chamadas de IA). Aplicar não apaga o desenho: se o Ctrl+Z trouxer o Bloco livre de volta, ele volta desenhado. Desenhos de blocos que sumiram são limpos ao salvar outro desenho.
+- Se o modelo devolver um JSON fora do schema, tenta de novo uma vez antes de montar pela descrição.
+- Funciona também com o Ollama do Colab (`qwen3.6:27b` tem visão; ~30 s por desenho).
 
 Diagnóstico com o Groq do `.env`: `RUN_LIVE=1 npx vitest run src/lib/draft/sketch.live.test.ts` (gera um wireframe de 3 caixas).
 

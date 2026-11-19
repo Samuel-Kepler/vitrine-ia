@@ -36,7 +36,8 @@ function wireframe(): string {
 const show = (n: DraftNode, d = 0): string => `${"  ".repeat(d)}- ${n.type} ${JSON.stringify(Object.fromEntries(Object.entries(n.props).filter(([, v]) => v && v !== "auto")))}\n` + (n.children ?? []).map((c) => show(c, d + 1)).join("");
 
 it.skipIf(!process.env.RUN_LIVE)("desenho -> blocos ao vivo", { timeout: 180_000 }, async () => {
-  const r = await runSketch({ image: wireframe(), name: "Diferenciais", description: "por que escolher a barbearia", brief: "barbearia de bairro em BH", settings: { kind: "groq" } });
+  const kind = (process.env.SKETCH_KIND as "groq" | "ollama" | undefined) ?? "groq";
+  const r = await runSketch({ image: wireframe(), name: "Diferenciais", description: "por que escolher a barbearia", brief: "barbearia de bairro em BH", settings: { kind } });
   console.log(`${r.provider}/${r.modelId} fallback=${r.fallback} ${r.error ?? ""}\n${r.draft.map((n) => show(n)).join("")}notas: ${r.notes.join(" | ")}`);
   expect(r.fallback, r.error).toBe(false);
 });

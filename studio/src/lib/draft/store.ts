@@ -23,6 +23,7 @@ import {
 } from "./tree";
 import { starterDraft } from "./starter";
 import { fitSketch } from "./sketch-shared";
+import type { Shape } from "@/lib/sketch/shapes";
 import { addLink, commitActive, homePage, HOME_ID, newPageTree, chromeOf, removeLink, renameLink, uniqueSlug, migrateStudio, type Page } from "./pages";
 import type { ReimagineResult } from "@/lib/reimagine/reimagine";
 import type { ProviderSettings } from "@/lib/ai/settings";
@@ -69,7 +70,9 @@ interface StudioState {
   removePage: (id: string) => void;
   /** Desenhos dos Blocos livres (id do bloco -> PNG em data URL). Fora do rascunho para não pesar nas chamadas de IA. */
   sketches: Record<string, string>;
-  setSketch: (id: string, dataUrl: string | null) => void;
+  /** Mesmo desenho como objetos editáveis (formas), para reabrir e continuar. */
+  sketchDocs: Record<string, Shape[]>;
+  setSketch: (id: string, dataUrl: string | null, shapes?: Shape[]) => void;
   /** Troca o Bloco livre pelos blocos montados a partir do desenho (entra no histórico: Ctrl+Z desfaz). */
   applySketch: (id: string, nodes: DraftNode[]) => void;
   /** Projeto React (aba React): caminho absoluto -> conteúdo. null = ainda não gerado. */
@@ -211,19 +214,28 @@ export const useStudio = create<StudioState>()(
         reviews: {},
         reactFiles: null,
         sketches: {},
-        setSketch: (id, dataUrl) => {
-          const next = { ...get().sketches };
+        sketchDocs: {},
+        setSketch: (id, dataUrl, shapes) => {
+          // Limpa desenhos de blocos que não existem mais em nenhuma página.
+          const alive = new Set<string>();
+          const visit = (ns: DraftNode[]) => ns.forEach((n) => (alive.add(n.id), visit(n.children ?? [])));
+          get().allPages().forEach((p) => visit(p.tree));
+          alive.add(id);
+          const keep = <T,>(m: Record<string, T>) => Object.fromEntries(Object.entries(m).filter(([k]) => alive.has(k)));
+          const next = keep(get().sketches);
+          const docs = keep(get().sketchDocs);
           if (dataUrl) next[id] = dataUrl;
           else delete next[id];
-          set({ sketches: next });
+          if (shapes?.length) docs[id] = shapes;
+          else delete docs[id];
+          set({ sketches: next, sketchDocs: docs });
         },
         applySketch: (id, nodes) => {
           const s = get();
           const fitted = fitSketch(nodes, isNested(s.tree, id));
           if (!fitted.length) return;
-          const sketches = { ...s.sketches };
-          delete sketches[id];
-          set({ tree: replaceNode(s.tree, id, fitted), selectedId: fitted[0].id, sketches });
+          // O desenho fica guardado: se o Ctrl+Z trouxer o Bloco livre de volta, ele vem com o desenho.
+          set({ tree: replaceNode(s.tree, id, fitted), selectedId: fitted[0].id });
         },
         reactEdited: false,
         setReactFiles: (reactFiles) => set({ reactFiles, reactEdited: false }),
@@ -321,6 +333,7 @@ export const useStudio = create<StudioState>()(
         pageId: s.pageId,
         reactFiles: s.reactFiles,
         sketches: s.sketches,
+        sketchDocs: s.sketchDocs,
         reactEdited: s.reactEdited,
       }),
     },
