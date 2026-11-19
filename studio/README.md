@@ -250,6 +250,7 @@ Botão **Revisar com IA** nos três modos: na aba Landing, pelo botão **Revisã
 - O prompt diz o que o código gerado já faz (validação zod, índices de FK, segredos no .env) para a IA não cobrar isso.
 - Se a IA falhar ou o provedor for mock, a revisão sai só das regras, com a nota calculada por elas e o motivo da falha.
 - Quando o conteúdo muda, a revisão fica marcada como desatualizada.
+- **Melhorar com esta revisão** (aba Landing): manda a página atual e os problemas apontados para o Reimaginar, que melhora a página a partir dela (em vez de recomeçar do rascunho), e roda a revisão de novo, mostrando a nota antes → depois. A revisão não sugere fatos concretos (horários, preços, nomes): usa marcadores, para o "melhorar" não inventar dados. No Groq gratuito, o ciclo faz 2 chamadas grandes seguidas e a segunda revisão pode cair no limite por minuto (aí ela sai só com as regras).
 
 Diagnóstico com o Groq do `.env`: `RUN_LIVE=1 npx vitest run src/lib/review/ai.live.test.ts`.
 

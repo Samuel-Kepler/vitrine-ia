@@ -59,3 +59,12 @@ describe("prompts", () => {
     expect(suggestSrc).toContain("Não invente funcionalidades");
   });
 });
+
+describe("hífens tipográficos", () => {
+  it('"Wi‑Fi" com hífen especial (U+2011) não vira o nome "Fi"', async () => {
+    const { compileResponse } = await import("@/lib/a2ui/agent");
+    const draft = cafeteria();
+    const express = draftToExpress(draft, { palette: "sunset" }).replace(/(page_col = Column\(children=\[)/, 'w = Text(text="Wi‑Fi rápido e tomadas.")\n$1w, ');
+    expect(checkFacts(compileResponse(express).messages, draft, BRIEF).map((f) => f.value)).not.toContain("Fi");
+  });
+});

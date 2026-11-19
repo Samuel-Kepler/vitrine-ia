@@ -26,6 +26,9 @@ function norm(s: string): string {
   return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
+/** Hífens e travessões tipográficos (‐ ‑ ‒ – — −) viram "-": "Wi‑Fi" não pode virar o nome "Fi". */
+const dash = (s: string) => s.replace(/[‐-―−]/g, "-");
+
 /** Todas as strings visíveis das mensagens A2UI (props de texto dos componentes). */
 export function a2uiTexts(messages: unknown): string[] {
   const out: string[] = [];
@@ -34,7 +37,7 @@ export function a2uiTexts(messages: unknown): string[] {
     if (typeof v === "string") {
       // ids/identificadores e caminhos de binding não são texto visível
       if (/^[a-z0-9_]+$/.test(v) || v.startsWith("/") || /^https?:/.test(v)) return;
-      out.push(v);
+      out.push(dash(v));
     } else if (Array.isArray(v)) v.forEach((x) => walk(x));
     else if (v && typeof v === "object") {
       const o = v as Record<string, unknown>;
@@ -50,7 +53,7 @@ function inputText(draft: DraftNode[], brief = ""): string {
   const all: string[] = [brief];
   const visit = (ns: DraftNode[]) => ns.forEach((n) => (all.push(...Object.values(n.props)), visit(n.children ?? [])));
   visit(draft);
-  return all.join("\n");
+  return dash(all.join("\n"));
 }
 
 // Número com contexto: R$, %, horário (8h, 08:00), telefone, decimal.

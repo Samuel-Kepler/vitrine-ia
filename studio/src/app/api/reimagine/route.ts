@@ -13,6 +13,8 @@ const BodySchema = z.object({
   palette: z.string().max(20).optional(),
   theme: z.string().max(20).optional(),
   motion: z.string().max(20).optional(),
+  previous: z.string().max(60_000).optional(),
+  feedback: z.array(z.string().max(500)).max(12).optional(),
   settings: ProviderSettingsSchema.optional(),
 });
 

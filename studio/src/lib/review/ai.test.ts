@@ -120,3 +120,10 @@ describe("POST /api/review", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("sugestões da revisão", () => {
+  it("proíbe sugerir fatos concretos (viram texto do site no 'melhorar')", async () => {
+    const { reviewSystem } = await import("./ai-input");
+    for (const mode of ["landing", "arch", "db"] as const) expect(reviewSystem(mode)).toMatch(/NUNCA proponha fatos concretos/);
+  });
+});

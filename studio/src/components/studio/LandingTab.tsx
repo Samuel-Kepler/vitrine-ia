@@ -10,6 +10,7 @@ import { useStudio } from "@/lib/draft/store";
 import type { A2uiAction } from "@/components/preview/SurfaceView";
 import { download, exportStandaloneHtml } from "./export";
 import { pageForLink } from "@/lib/draft/pages";
+import { runReimagine } from "./reimagine-client";
 
 const SurfaceView = dynamic(() => import("@/components/preview/SurfaceView"), {
   ssr: false,
@@ -153,7 +154,7 @@ export function LandingTab() {
       {showReview ? (
         <aside className="w-80 shrink-0 overflow-y-auto border-l border-line bg-panel p-4" aria-label="Revisão da landing">
           <h2 className="mb-3 font-semibold">Revisão da landing</h2>
-          <AiReviewPanel mode="landing" />
+          <AiReviewPanel mode="landing" onImprove={(feedback) => runReimagine(undefined, { feedback })} />
         </aside>
       ) : null}
       </div>

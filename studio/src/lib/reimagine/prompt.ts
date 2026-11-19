@@ -37,10 +37,23 @@ ${NO_INVENTED_FACTS}
 ${catalogSnippet}`;
 }
 
-export function userPrompt(draft: DraftNode[], opts: { brief?: string; palette?: string; theme?: string; motion?: string }): string {
-  const skeleton = draftToExpress(draft, { palette: opts.palette, theme: opts.theme, motion: opts.motion })
-    .replace(/^<a2ui>\n/, "")
-    .replace(/\n<\/a2ui>$/, "");
+export interface UserPromptOptions {
+  brief?: string;
+  palette?: string;
+  theme?: string;
+  motion?: string;
+  /** Página atual (A2UI Express) para melhorar, em vez de partir do rascunho. */
+  previous?: string;
+  /** Correções pedidas pela revisão. */
+  feedback?: string[];
+}
+
+export function userPrompt(draft: DraftNode[], opts: UserPromptOptions): string {
+  const base = opts.previous?.trim()
+    ? opts.previous.trim()
+    : draftToExpress(draft, { palette: opts.palette, theme: opts.theme, motion: opts.motion });
+  const skeleton = base.replace(/^<a2ui>\n/, "").replace(/\n<\/a2ui>$/, "");
+  const fixes = (opts.feedback ?? []).filter((f) => f.trim()).slice(0, 8);
   return [
     opts.brief?.trim() ? `Briefing do negócio: ${opts.brief.trim()}` : "Briefing do negócio: (não informado; deduza pelo rascunho)",
     opts.palette ? `Paleta preferida: ${opts.palette}` : "Paleta: escolha a que combina com o negócio.",
@@ -50,7 +63,14 @@ export function userPrompt(draft: DraftNode[], opts: { brief?: string; palette?:
     "Rascunho (de cima para baixo):",
     draftOutline(draft) || "(vazio)",
     "",
-    "Esqueleto A2UI Express que já compila. Use como ponto de partida e melhore:",
+    ...(fixes.length
+      ? [
+          "Correções pedidas pela revisão (aplique todas; mantenha o que já está bom, os textos que vieram do usuário e a regra de não inventar fatos):",
+          ...fixes.map((f) => `- ${f}`),
+          "",
+        ]
+      : []),
+    opts.previous?.trim() ? "Página atual em A2UI Express (já compila). Melhore esta página aplicando as correções:" : "Esqueleto A2UI Express que já compila. Use como ponto de partida e melhore:",
     SKELETON_OPEN,
     skeleton,
     SKELETON_CLOSE,

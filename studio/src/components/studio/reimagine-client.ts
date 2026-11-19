@@ -36,7 +36,7 @@ export const siteTheme = (pages: { result: ReimagineResult | null }[]) => siteCh
 /** Movimento já usado no site. */
 export const siteMotion = (pages: { result: ReimagineResult | null }[]) => siteChoice(pages, "motion");
 
-async function requestReimagine(body: { draft: unknown; brief?: string; palette?: string; theme?: string; motion?: string; settings?: ProviderSettings }): Promise<ReimagineJson> {
+async function requestReimagine(body: { draft: unknown; brief?: string; palette?: string; theme?: string; motion?: string; previous?: string; feedback?: string[]; settings?: ProviderSettings }): Promise<ReimagineJson> {
   const res = await fetch("/api/reimagine", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   const json = (await res.json()) as ReimagineJson;
   if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`);
@@ -59,7 +59,8 @@ function motionFor(s: ReturnType<typeof useStudio.getState>, exceptId?: string):
 }
 
 /** Chama /api/reimagine com o rascunho atual. `override` força um provedor (ex.: mock). */
-export async function runReimagine(override?: ProviderSettings): Promise<{ error?: string }> {
+/** improve: melhora a página atual com as correções da revisão (em vez de partir do rascunho). */
+export async function runReimagine(override?: ProviderSettings, improve?: { feedback: string[] }): Promise<{ error?: string }> {
   const s = useStudio.getState();
   s.setBusy(true);
   try {
@@ -69,6 +70,8 @@ export async function runReimagine(override?: ProviderSettings): Promise<{ error
       palette: paletteFor(s, s.pageId),
       theme: themeFor(s, s.pageId),
       motion: motionFor(s, s.pageId),
+      previous: improve && s.result && !s.result.fallback ? s.result.express : undefined,
+      feedback: improve?.feedback,
       settings: cleanSettings({ ...s.settings, ...override }),
     });
     s.setResult(json);

@@ -19,6 +19,8 @@ export interface ReimagineInput {
   palette?: string;
   theme?: string;
   motion?: string;
+  previous?: string;
+  feedback?: string[];
   settings?: ProviderSettings;
 }
 

@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { AlertCircle, AlertTriangle, Bot, Info, Loader2, ScanSearch } from "lucide-react";
+import { AlertCircle, AlertTriangle, Bot, Info, Loader2, ScanSearch, Wand2 } from "lucide-react";
 import { useStudio } from "@/lib/draft/store";
 import { inputKey, type AiReviewResult, type ReviewMode, type ReviewState } from "@/lib/review/ai-input";
 
@@ -29,6 +29,19 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
+/** Estado lido na hora (não o do último render): depois do "melhorar", a revisão vê a página nova. */
+function currentState(): ReviewState {
+  const s = useStudio.getState();
+  return { draft: s.tree, brief: s.brief || undefined, messages: s.result?.messages ?? null, arch: s.arch, db: s.db };
+}
+
+/** Problemas da revisão como correções para o Reimaginar (sem o aviso "sem Reimaginar"). */
+export function feedbackFrom(review: AiReviewResult): string[] {
+  return review.issues
+    .filter((i) => i.code !== "L1")
+    .map((i) => (i.code === "L2" ? `${i.title}: troque por um marcador entre colchetes ou remova, se não veio do usuário.` : `${i.title}${i.suggestion ? `: ${i.suggestion}` : ""}`));
+}
+
 function useReviewState(): ReviewState {
   const draft = useStudio((s) => s.tree);
   const brief = useStudio((s) => s.brief);
@@ -45,13 +58,26 @@ function sourceText(r: AiReviewResult) {
 }
 
 /** Botão "Revisar com IA" + nota, resumo e problemas (regras e IA) do modo. */
-export function AiReviewPanel({ mode, onPick, hideRules }: { mode: ReviewMode; onPick?: (id: string) => void; hideRules?: boolean }) {
+export function AiReviewPanel({
+  mode,
+  onPick,
+  hideRules,
+  onImprove,
+}: {
+  mode: ReviewMode;
+  onPick?: (id: string) => void;
+  hideRules?: boolean;
+  /** Landing: reimagina a página atual com as correções da revisão. */
+  onImprove?: (feedback: string[]) => Promise<{ error?: string }>;
+}) {
   const state = useReviewState();
   const review = useStudio((s) => s.reviews[mode]);
   const setReview = useStudio((s) => s.setReview);
   const settings = useStudio((s) => s.settings);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [improving, setImproving] = useState(false);
+  const [before, setBefore] = useState<number | null>(null);
   const stale = !!review && review.inputKey !== inputKey(mode, state);
 
   const run = async () => {
@@ -62,7 +88,7 @@ export function AiReviewPanel({ mode, onPick, hideRules }: { mode: ReviewMode; o
       const res = await fetch("/api/review", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mode, ...state, settings: clean.kind ? clean : undefined }),
+        body: JSON.stringify({ mode, ...currentState(), settings: clean.kind ? clean : undefined }),
       });
       const json = (await res.json()) as AiReviewResult & { error?: string };
       if (!res.ok) setError(json.error ?? `Erro ${res.status}`);
@@ -71,6 +97,20 @@ export function AiReviewPanel({ mode, onPick, hideRules }: { mode: ReviewMode; o
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const improve = async () => {
+    if (!review || !onImprove) return;
+    setImproving(true);
+    setError(null);
+    setBefore(review.score);
+    try {
+      const r = await onImprove(feedbackFrom(review));
+      if (r.error) setError(r.error);
+      else await run();
+    } finally {
+      setImproving(false);
     }
   };
 
@@ -94,8 +134,27 @@ export function AiReviewPanel({ mode, onPick, hideRules }: { mode: ReviewMode; o
           {stale ? <p className="rounded-md bg-amber-50 p-2 text-xs text-amber-900">O conteúdo mudou desde esta revisão.</p> : null}
           <div className="flex items-center gap-3">
             <ScoreRing score={review.score} />
-            <p className="text-sm text-gray-700">{review.summary}</p>
+            <div>
+              {before !== null && !improving ? (
+                <p className="text-xs font-medium text-gray-600" data-testid="ai-review-delta">
+                  Nota: {before} → {review.score}
+                </p>
+              ) : null}
+              <p className="text-sm text-gray-700">{review.summary}</p>
+            </div>
           </div>
+          {onImprove && !stale && feedbackFrom(review).length ? (
+            <button
+              onClick={improve}
+              disabled={improving || loading}
+              data-testid="ai-review-improve"
+              title="Reimagina a página atual aplicando estas correções e revisa de novo"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-brand py-2 text-sm font-medium text-brand hover:bg-brand-soft disabled:opacity-60"
+            >
+              {improving ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
+              {improving ? "Melhorando e revisando…" : "Melhorar com esta revisão"}
+            </button>
+          ) : null}
           {issues.length ? (
             <ul className="space-y-2" data-testid="ai-review-issues">
               {issues.map((i, k) => {
