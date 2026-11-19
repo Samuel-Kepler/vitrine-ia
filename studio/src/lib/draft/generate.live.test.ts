@@ -13,3 +13,12 @@ it.skipIf(!process.env.RUN_LIVE)("gerar página ao vivo", { timeout: 120_000 }, 
   console.log(`${r.provider}/${r.modelId} fallback=${r.fallback} ${r.error ?? ""}\n${r.draft.map((n) => show(n)).join("")}notas: ${r.notes.join(" | ")}`);
   expect(r.fallback, r.error).toBe(false);
 });
+
+it.skipIf(!process.env.RUN_LIVE)("gerar site ao vivo", { timeout: 180_000 }, async () => {
+  const { generateSite } = await import("./generate");
+  const r = await generateSite({ prompt: "estúdio de pilates em Pinheiros, aulas em grupo e particulares, planos mensais, equipe de instrutoras e agendamento de aula experimental", settings: { kind: "groq" } });
+  console.log(`${r.provider}/${r.modelId} fallback=${r.fallback} ${r.error ?? ""}`);
+  for (const p of r.site.pages) console.log(`## ${p.name}\n${p.tree.map((n) => show(n)).join("")}`);
+  console.log(`notas: ${r.site.notes.join(" | ")}`);
+  expect(r.fallback, r.error).toBe(false);
+});

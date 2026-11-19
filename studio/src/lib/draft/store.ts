@@ -62,6 +62,8 @@ interface StudioState {
   renamePage: (id: string, name: string) => void;
   duplicatePage: (id: string) => void;
   removePage: (id: string) => void;
+  /** Troca o site inteiro (Gerar site); a primeira página abre. */
+  replaceSite: (pages: { name: string; tree: DraftNode[] }[]) => void;
   /** Páginas com a aberta já gravada e o menu/rodapé espalhados. */
   allPages: () => Page[];
   /** Última revisão com IA de cada modo (não vai para o localStorage). */
@@ -122,6 +124,13 @@ export const useStudio = create<StudioState>()(
         allPages: () => {
           const s = get();
           return commitActive(s.pages, s.pageId, s.tree, s.result);
+        },
+        replaceSite: (list) => {
+          if (!list.length) return;
+          const pages: Page[] = [];
+          list.forEach((x, i) => pages.push({ id: i === 0 ? HOME_ID : newId("p"), name: x.name, slug: uniqueSlug(x.name, pages), tree: x.tree, result: null }));
+          set({ pages, pageId: pages[0].id, tree: pages[0].tree, result: null, selectedId: null, tab: "canvas", reviews: {} });
+          useStudio.temporal.getState().clear();
         },
         switchPage: (id) => {
           const s = get();

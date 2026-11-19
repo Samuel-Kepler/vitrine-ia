@@ -188,6 +188,7 @@ No topo da paleta (aba Rascunho), o campo **Gerar com IA** monta a página a par
 - **Não inventa fatos:** preço, horário, produto, depoimento ou nome que você não escreveu vira marcador, como `[preço]`, `[produto 1]` ou `[depoimento de um cliente]`. URLs de imagem inventadas são descartadas.
 - Com blocos no canvas, você escolhe **Substituir** ou **Acrescentar** (os blocos entram antes do rodapé). Com várias páginas, substituir mantém o menu e o rodapé do site. Ctrl+Z desfaz.
 - Se o briefing estiver vazio, o texto do pedido vira o briefing usado pelo Reimaginar.
+- **Site inteiro:** a opção *Site inteiro* cria de 2 a 6 páginas (Início + uma por assunto do pedido, como Planos, Equipe ou Contato), com menu (links = nomes das páginas) e rodapé compartilhados, e substitui as páginas atuais. O botão **Desfazer site gerado** volta ao site anterior. Depois, **Reimaginar → Todas**. Se o JSON vier fora do schema, tenta de novo uma vez; sem IA, o modelo por palavras-chave cria Início, as páginas dos assuntos encontrados e Contato.
 - Sem IA (mock, ou se o provedor falhar), um modelo por palavras-chave monta a página: cardápio, depoimentos, preços, galeria, sobre, FAQ e reserva/orçamento/contato.
 
 Diagnóstico com o Groq do `.env`: `RUN_LIVE=1 npx vitest run src/lib/draft/generate.live.test.ts`.
@@ -241,4 +242,5 @@ Sem Reimaginar, o zip sai sem `web/` e o README avisa. Só com o banco desenhado
 - O worker de notificação **recebe** o evento, mas o envio de e-mail é um `TODO` no código gerado.
 - O formulário da landing no Studio **não chama** a API gerada: a landing e o backend são gerados lado a lado, sem ligação entre eles.
 - A autenticação **Própria** não tem recuperação de senha nem confirmação de e-mail.
+- O Gerar com IA segue a regra de não inventar fatos, mas pode deixar passar detalhes plausíveis, como "aula grátis" ou nomes de planos ("Básico", "Premium"). Revise antes de publicar.
 - O aviso de "números e nomes novos" é uma checagem simples (sem IA): pode deixar passar fatos inventados sem número nem nome próprio, como "Wi-Fi de alta velocidade".

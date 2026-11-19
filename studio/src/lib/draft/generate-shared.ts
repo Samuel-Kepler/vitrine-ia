@@ -53,9 +53,15 @@ ${blockCatalog()}
 Regras:
 - Ordem típica: navbar, hero, 3 a 6 seções (cada uma começa com um heading), form se houver contato/reserva/cadastro, footer.
 - props é uma lista de {key, value}; use só as chaves dos campos de cada bloco. "children" só em section; nos outros, [].
+- Os blocos dentro de children têm SÓ type e props: nunca coloque children dentro de um filho (não há aninhamento além de section → filhos).
 - Agrupe: features (2 a 4), testimonials (2 a 3) e pricing (2 a 3) ficam dentro de uma section com heading.
 - Os links do navbar são os nomes das seções principais (curtos).
-- Textos curtos, diretos, em português do Brasil, no tom do negócio.
+${contentRules(year)}`;
+}
+
+/** Regras de conteúdo comuns a "gerar página" e "gerar site". */
+function contentRules(year: number): string {
+  return `- Textos curtos, diretos, em português do Brasil, no tom do negócio.
 - NÃO INVENTE FATOS: nada de preço, horário, endereço, telefone, número, nome de cliente, depoimento ou marca que o usuário não escreveu. Quando faltar, use um marcador entre colchetes, como "[preço]", "[horário]", "[depoimento de um cliente]", "[nome do cliente]".
 - Itens de cardápio, produtos, serviços, diferenciais, história, tempo de mercado e prêmios: só os que o usuário citou. Se ele só disse "cardápio", use "[produto 1]", "[produto 2]" com texto "[descrição curta]". Nunca escreva nomes de produtos que ele não escreveu.
 - Imagens: deixe url/image vazios (o usuário põe depois); nunca invente endereço de imagem.
@@ -213,3 +219,85 @@ export function mergeGenerated(current: DraftNode[], generated: DraftNode[], mod
   return i < 0 ? [...current, ...body] : [...current.slice(0, i), ...body, ...current.slice(i)];
 }
 
+
+// ---------------- site inteiro ----------------
+
+const Block = z.object({
+  type: z.enum(TOP_TYPES),
+  props: z.array(Prop).max(12),
+  children: z
+    .array(z.object({ type: z.enum(CHILD_TYPES), props: z.array(Prop).max(12) }))
+    .max(12)
+    .describe('only for type "section"; [] otherwise'),
+});
+
+export const GeneratedSiteSchema = z.object({
+  navbar: z.object({ props: z.array(Prop).max(6) }).describe("shared menu: brand and cta (links are filled with the page names)"),
+  footer: z.object({ props: z.array(Prop).max(4) }).describe("shared footer: text and links"),
+  pages: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(30).describe("short page name in Portuguese, used as the menu link"),
+        blocks: z.array(Block).min(1).max(10).describe("page body only: no navbar, no footer"),
+      }),
+    )
+    .min(2)
+    .max(6),
+  notes: z.array(z.string().max(200)).max(4).describe("short notes in Portuguese about what to fill in"),
+});
+export type GeneratedSite = z.infer<typeof GeneratedSiteSchema>;
+
+export const MAX_SITE_PAGES = 6;
+
+export function generateSiteSystem(year = new Date().getFullYear()): string {
+  return `Ano atual: ${year}.
+Você monta o RASCUNHO de um SITE pequeno (2 a ${MAX_SITE_PAGES} páginas) com blocos prontos. Responda só com a estrutura pedida.
+${blockCatalog()}
+
+Regras:
+- A primeira página é a inicial ("Início"): hero + 2 a 4 seções que resumem o negócio e levam às outras páginas.
+- Crie uma página para cada assunto que o pedido pede (ex.: Cardápio, Sobre, Galeria, Planos, Contato). Nada de páginas que o pedido não sugere.
+- Cada página: um bloco de abertura (hero curto ou section com heading de nível 1) e 1 a 4 seções. Contato/reserva/orçamento vira um bloco form na página Contato.
+- navbar: só brand e cta (os links são os nomes das páginas, preenchidos depois). footer: text e links curtos.
+- props é uma lista de {key, value}; use só as chaves dos campos de cada bloco. "children" só em section; nos outros, [].
+- Os blocos dentro de children têm SÓ type e props: nunca coloque children dentro de um filho (não há aninhamento além de section → filhos).
+- Agrupe: features (2 a 4), testimonials (2 a 3) e pricing (2 a 3) ficam dentro de uma section com heading.
+${contentRules(year)}`;
+}
+
+export interface SiteDraft {
+  pages: { name: string; tree: DraftNode[] }[];
+  notes: string[];
+}
+
+/** Resposta da IA -> páginas com menu (links = nomes das páginas) e rodapé compartilhados. */
+export function toSite(g: GeneratedSite): SiteDraft {
+  const seen = new Set<string>();
+  const pages = g.pages
+    .map((p) => ({ name: p.name.trim(), body: toDraft({ blocks: p.blocks.filter((b) => b.type !== "navbar" && b.type !== "footer"), notes: [] }) }))
+    .filter((p) => p.name && p.body.length && !seen.has(p.name.toLowerCase()) && seen.add(p.name.toLowerCase()))
+    .slice(0, MAX_SITE_PAGES);
+  const navbar = makeNode("navbar", g.navbar.props.filter((x) => x.key !== "links"));
+  navbar.props.links = pages.map((p) => p.name).join("\n");
+  const footer = makeNode("footer", g.footer.props);
+  return { pages: pages.map((p) => ({ name: p.name, tree: [navbar, ...p.body, footer] })), notes: g.notes };
+}
+
+/** Sem IA: Início + uma página por assunto encontrado no pedido. */
+export function templateSite(prompt: string): SiteDraft {
+  const p = prompt.normalize("NFC").toLowerCase();
+  const hits = RULES.filter((r) => r.re.test(p) && r.link !== "Diferenciais").slice(0, MAX_SITE_PAGES - 2);
+  const form = formFor(p) ?? child("form", { title: "Fale com a gente", fields: "Nome\nE-mail\nMensagem", cta: "Enviar" });
+  const opening = (title: string) => section(title, [child("text", { text: "[uma frase de apresentação desta página]" })]);
+  const pages = [
+    { name: "Início", body: [child("hero", { title: heroTitle(prompt), subtitle: "[uma frase com o principal benefício]", cta: "Fale com a gente" }), RULES.find((r) => r.link === "Diferenciais")!.build()] },
+    ...hits.map((r) => ({ name: r.link!, body: [r.build()] })),
+    { name: "Contato", body: [opening("Contato"), form] },
+  ];
+  const navbar = child("navbar", { brand: "[sua marca]", links: pages.map((x) => x.name).join("\n"), cta: "" });
+  const footer = child("footer", { text: "© [ano] [sua marca]", links: "" });
+  return {
+    pages: pages.map((x) => ({ name: x.name, tree: [navbar, ...x.body, footer] })),
+    notes: ["Modelo automático por palavras-chave: troque os textos entre colchetes pelos dados do seu negócio."],
+  };
+}
