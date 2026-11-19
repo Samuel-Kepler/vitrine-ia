@@ -39,12 +39,13 @@ export const DeviceStage = forwardRef<HTMLDivElement, Props>(function DeviceStag
 
   const frameClass = "overflow-hidden rounded-lg border border-line bg-white shadow-sm";
   return (
-    <div className="relative min-h-0 flex-1 overflow-auto bg-canvas p-4">
+    <div className="relative min-h-0 flex-1 overflow-auto bg-canvas p-4 [scrollbar-gutter:stable]">
       <div ref={areaRef} className="pointer-events-none absolute inset-4" aria-hidden />
       {size ? (
         <div className="mx-auto" style={{ width: size.width * scale, height: (size.height ?? content.height) * scale }}>
           <div
-            className={frameClass}
+            // ring em vez de border e sem barra de rolagem: a landing tem a largura exata do aparelho.
+            className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-line [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             style={{ width: size.width, height: size.height ?? undefined, transform: `scale(${scale})`, transformOrigin: "top left", overflowY: size.height ? "auto" : "hidden" }}
             data-testid="landing-frame"
             data-device-width={size.width}

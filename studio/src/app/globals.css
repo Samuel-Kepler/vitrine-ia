@@ -189,6 +189,8 @@ body {
   --lp-dark-fg: #f4f4f4;
 }
 
+/* Em @layer components: utilidades do Tailwind (hidden, @md:hidden, w-full) vencem. */
+@layer components {
 .lp-btn {
   display: inline-flex;
   align-items: center;
@@ -200,6 +202,44 @@ body {
   background: var(--lp-accent);
   color: var(--lp-accent-fg);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+/* ---------- Responsividade da landing (mobile-first) ---------- */
+/* Sem rolagem lateral: palavras longas quebram, nada estoura a largura. */
+.lp {
+  overflow-x: clip;
+  overflow-wrap: break-word;
+}
+.lp img {
+  max-width: 100%;
+}
+/* Alvo de toque de pelo menos 44px. */
+.lp-btn {
+  min-height: 44px;
+}
+/* Menu do celular: <details>/<summary> abre sem JavaScript (HTML exportado). */
+.lp-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.lp-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.lp-menu > summary:hover {
+  background: color-mix(in srgb, var(--lp-fg) 6%, transparent);
+}
+.lp-menu .lp-menu-close,
+.lp-menu[open] .lp-menu-open {
+  display: none;
+}
+.lp-menu[open] .lp-menu-close {
+  display: block;
+}
+/* Formulário (card do A2UI) com respiro menor em telas estreitas. */
+@container (max-width: 480px) {
+  .lp a2ui-card {
+    --a2ui-card-padding: 20px;
+    --a2ui-border-radius: 12px;
+  }
 }
 .lp-btn:hover {
   transform: translateY(-1px);
@@ -215,6 +255,8 @@ body {
   border: 1px solid color-mix(in srgb, var(--lp-fg) 10%, transparent);
   border-radius: var(--lp-radius);
 }
+}
+
 .tone-default {
   background: var(--lp-bg);
 }

@@ -30,3 +30,22 @@ describe("tamanhos de tela", () => {
     expect(readFileSync("src/app/globals.css", "utf8")).toMatch(/\.lp \{[^}]*container-type: inline-size/);
   });
 });
+
+describe("landing responsiva", () => {
+  const views = readFileSync("src/lib/a2ui/views.tsx", "utf8");
+  const css = readFileSync("src/app/globals.css", "utf8");
+  it("menu do celular com <details> (funciona sem JS no HTML exportado)", () => {
+    expect(views).toMatch(/<details className="lp-menu @3xl:hidden">/);
+    expect(views).toMatch(/aria-label="Abrir menu"/);
+    expect(css).toMatch(/\.lp-menu\[open\] \.lp-menu-close/);
+  });
+  it("espaçamentos e títulos crescem por etapa; botões com 44px; sem rolagem lateral", () => {
+    expect(views).toMatch(/px-5 py-14 @3xl:px-6 @3xl:py-20/);
+    expect(views).toMatch(/text-\[2rem\][^"]*@md:text-4xl[^"]*@3xl:text-5xl[^"]*@5xl:text-6xl/);
+    // botões/cards em @layer components: "hidden"/"@md:hidden" do Tailwind precisam vencer
+    expect(css).toMatch(/@layer components \{\s*\.lp-btn \{/);
+    expect(views).toMatch(/"3": "@xl:grid-cols-2 @3xl:grid-cols-3"/);
+    expect(css).toMatch(/\.lp-btn \{\s*min-height: 44px/);
+    expect(css).toMatch(/overflow-x: clip/);
+  });
+});
