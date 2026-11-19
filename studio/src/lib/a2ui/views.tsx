@@ -15,9 +15,16 @@ import {
   PricingCardApi,
   SectionApi,
   TestimonialApi,
+  StatApi,
+  FaqItemApi,
+  StepApi,
+  TeamMemberApi,
+  ContactInfoApi,
+  LogoStripApi,
+  GalleryApi,
   buildCatalog,
 } from "./catalog-api";
-import { Feature, Footer, Grid, Heading, Hero, Navbar, Page, PricingCard, Section, Testimonial } from "./landing-components";
+import { ContactInfo, FaqItem, Feature, Footer, Gallery, Grid, Heading, Hero, LogoStrip, Navbar, Page, PricingCard, Section, Stat, Step, TeamMember, Testimonial } from "./landing-components";
 
 type Any = any; // tipos do renderer são v0_9; o runtime v1.0 é compatível.
 type Build = (id: string, basePath?: string) => ReactNode;
@@ -53,4 +60,16 @@ const PricingCardView = createComponentImplementation(PricingCardApi as Any, ({ 
 
 const FooterView = createComponentImplementation(FooterApi as Any, ({ props }: Any) => <Footer text={props.text} links={props.links} />);
 
-export const landingCatalog = buildCatalog([PageView, NavbarView, HeroView, HeadingView, SectionView, GridView, FeatureView, TestimonialView, PricingCardView, FooterView] as Any);
+const StatView = createComponentImplementation(StatApi as Any, ({ props }: Any) => <Stat value={props.value} label={props.label} />);
+const FaqItemView = createComponentImplementation(FaqItemApi as Any, ({ props }: Any) => <FaqItem question={props.question} answer={props.answer} />);
+const StepView = createComponentImplementation(StepApi as Any, ({ props }: Any) => <Step index={props.index} title={props.title} text={props.text} />);
+const TeamMemberView = createComponentImplementation(TeamMemberApi as Any, ({ props }: Any) => <TeamMember name={props.name} role={props.role} bio={props.bio} photo={props.photo} />);
+const ContactInfoView = createComponentImplementation(ContactInfoApi as Any, ({ props }: Any) => (
+  <ContactInfo hours={props.hours} address={props.address} phone={props.phone} email={props.email} whatsapp={props.whatsapp} />
+));
+const LogoStripView = createComponentImplementation(LogoStripApi as Any, ({ props }: Any) => <LogoStrip title={props.title} names={props.names} />);
+const GalleryView = createComponentImplementation(GalleryApi as Any, ({ props }: Any) => <Gallery images={props.images} captions={props.captions} />);
+
+export const landingCatalog = buildCatalog(
+  [PageView, NavbarView, HeroView, HeadingView, SectionView, GridView, FeatureView, TestimonialView, PricingCardView, StatView, FaqItemView, StepView, TeamMemberView, ContactInfoView, LogoStripView, GalleryView, FooterView] as Any,
+);

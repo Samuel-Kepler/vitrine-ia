@@ -120,6 +120,59 @@ export const PricingCardApi = {
   }),
 };
 
+export const StatApi = {
+  name: "Stat",
+  description: "Highlighted number with a short label (put 2-4 in a Grid). Only with real data from the user/brief; otherwise use bracket placeholders like [número].",
+  schema: z.object({ value: S.DynamicString.describe('e.g. "12 anos", "+500"'), label: S.DynamicString }),
+};
+
+export const FaqItemApi = {
+  name: "FaqItem",
+  description: "Frequently asked question that expands on click. Stack several in a Column inside a Section.",
+  schema: z.object({ question: S.DynamicString, answer: S.DynamicString }),
+};
+
+export const StepApi = {
+  name: "Step",
+  description: "Numbered step of a 'how it works' (put 3-4 in a Grid, index 1, 2, 3…).",
+  schema: z.object({ index: z.string().optional().describe('Step number, e.g. "1"'), title: S.DynamicString, text: S.DynamicString }),
+};
+
+export const TeamMemberApi = {
+  name: "TeamMember",
+  description: "Team member with photo (or initials), name, role and short bio (put several in a Grid). Only with real data from the user/brief; otherwise use bracket placeholders like [número].",
+  schema: z.object({
+    name: S.DynamicString,
+    role: S.DynamicString.optional(),
+    bio: S.DynamicString.optional(),
+    photo: S.DynamicString.optional().describe("Photo URL (https) given by the user. Omit if unknown."),
+  }),
+};
+
+export const ContactInfoApi = {
+  name: "ContactInfo",
+  description: "Opening hours, address, phone, e-mail and WhatsApp with clickable links. Only with real data from the user/brief; otherwise use bracket placeholders like [número].",
+  schema: z.object({
+    hours: z.array(z.string()).optional().describe('e.g. ["Seg a sex: 9h às 18h"]'),
+    address: S.DynamicString.optional(),
+    phone: S.DynamicString.optional(),
+    email: S.DynamicString.optional(),
+    whatsapp: S.DynamicString.optional(),
+  }),
+};
+
+export const LogoStripApi = {
+  name: "LogoStrip",
+  description: "Strip of client/partner names as text logos. Only names the user gave; never invent companies.",
+  schema: z.object({ title: S.DynamicString.optional(), names: z.array(z.string()) }),
+};
+
+export const GalleryApi = {
+  name: "Gallery",
+  description: "Photo grid. Only image URLs the user gave; without URLs it shows placeholders with the captions.",
+  schema: z.object({ images: z.array(z.string()).describe("Image URLs (https)"), captions: z.array(z.string()).optional() }),
+};
+
 export const FooterApi = {
   name: "Footer",
   description: "Page footer with a line of text and link labels.",
@@ -139,6 +192,13 @@ export const CUSTOM_APIS = [
   FeatureApi,
   TestimonialApi,
   PricingCardApi,
+  StatApi,
+  FaqItemApi,
+  StepApi,
+  TeamMemberApi,
+  ContactInfoApi,
+  LogoStripApi,
+  GalleryApi,
   FooterApi,
 ] as const;
 

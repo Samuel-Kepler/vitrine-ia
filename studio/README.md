@@ -195,6 +195,18 @@ A landing continua 100% A2UI, mas o catálogo ficou mais rico. A IA (ou você, n
 - **Depoimentos:** cartão ou citação grande.
 - **Seção com tom gradiente**, para faixas de chamada para ação.
 
+**Seções prontas** (blocos novos na paleta, também usados pela IA e pelo Gerar com IA):
+
+- **Número** (`Stat`): números de destaque; vários seguidos viram grade. Só números reais.
+- **Pergunta** (`FaqItem`): perguntas frequentes em acordeão (`<details>`, funciona sem JavaScript no HTML exportado).
+- **Passo** (`Step`): "como funciona"; numerados sozinhos pela ordem.
+- **Pessoa** (`TeamMember`): equipe com foto ou iniciais.
+- **Contato** (`ContactInfo`): horários, endereço, telefone, e-mail e WhatsApp com links (`tel:`, `mailto:`, `wa.me/55…`).
+- **Logos** (`LogoStrip`): faixa de clientes ou parceiros em texto. Só nomes reais.
+- **Galeria** (`Gallery`): grade de fotos; sem URL, mostra um espaço reservado com a legenda.
+
+Os padrões desses blocos vêm com marcadores (`[número]`, `[nome]`, `[endereço]`): a regra de não inventar fatos vale para eles também.
+
 No rascunho, o seletor **Estilo** de cada Hero, Benefício e Depoimento vem como *A IA escolhe*; o **Tema** fica em Página (clique fora dos blocos). O Reimaginar recebe uma direção de arte (qual tema e qual variação combinam com cada tipo de negócio, e como dar ritmo à página). Com várias páginas, o tema da primeira vale para as outras, como a paleta.
 
 As fontes vêm do Google Fonts: o Studio carrega todas para o preview; o HTML e o projeto React exportados levam só as do tema usado. Os componentes ficam em `src/lib/a2ui/landing-components.tsx` e os temas em `src/lib/a2ui/themes.ts` + `landing.css` (depois de mudar, `npm run gen:sources`).

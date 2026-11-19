@@ -216,6 +216,59 @@ function Wireframe({ node }: { node: DraftNode }) {
           <p className="text-xs text-muted">{lines(p.features).join(" · ")}</p>
         </div>
       );
+    case "stat":
+      return (
+        <p className="text-sm">
+          <b className="text-base">{p.value}</b> <span className="text-muted">{p.label}</span>
+        </p>
+      );
+    case "faq":
+      return (
+        <div className="text-sm">
+          <b>{p.question}</b>
+          <p className="line-clamp-2 text-xs text-muted">{p.answer}</p>
+        </div>
+      );
+    case "step":
+      return (
+        <div className="text-sm">
+          <b>{p.title}</b>
+          <p className="line-clamp-2 text-xs text-muted">{p.text}</p>
+        </div>
+      );
+    case "team":
+      return (
+        <p className="text-sm">
+          <b>{p.name}</b> <span className="text-muted">{p.role}</span>
+        </p>
+      );
+    case "contact":
+      return (
+        <div className="space-y-0.5 text-xs text-muted">
+          {lines(p.hours).map((h) => (
+            <p key={h}>{h}</p>
+          ))}
+          {p.address ? <p>{p.address}</p> : null}
+          {[p.phone, p.whatsapp, p.email].filter(Boolean).join(" · ")}
+        </div>
+      );
+    case "logos":
+      return (
+        <div className="text-sm">
+          <p className="text-xs text-muted">{p.title}</p>
+          <p className="font-semibold">{lines(p.names).join(" · ")}</p>
+        </div>
+      );
+    case "gallery":
+      return (
+        <div className="grid grid-cols-3 gap-1">
+          {(lines(p.captions).length ? lines(p.captions) : ["foto", "foto", "foto"]).slice(0, 6).map((c, i) => (
+            <div key={i} className="flex h-12 items-center justify-center rounded bg-gray-100 text-[10px] text-muted">
+              {lines(p.images)[i] ? "imagem" : c}
+            </div>
+          ))}
+        </div>
+      );
     case "form":
       return (
         <div className="space-y-1">

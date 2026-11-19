@@ -10,7 +10,7 @@ import { chromeOf } from "./pages";
 /** Blocos que podem ficar direto na página. */
 export const TOP_TYPES = ["navbar", "hero", "section", "form", "footer", "custom"] as const satisfies readonly BlockType[];
 /** Blocos que vão dentro de uma seção. */
-export const CHILD_TYPES = ["heading", "text", "button", "image", "feature", "testimonial", "pricing", "form", "custom"] as const satisfies readonly BlockType[];
+export const CHILD_TYPES = ["heading", "text", "button", "image", "feature", "testimonial", "pricing", "stat", "faq", "step", "team", "contact", "logos", "gallery", "form", "custom"] as const satisfies readonly BlockType[];
 
 const Prop = z.object({ key: z.string().max(40), value: z.string().max(600) });
 
@@ -142,14 +142,14 @@ const RULES: Rule[] = [
     build: () => section("[Produtos ou serviços]", ["check", "check", "check"].map((icon, i) => child("feature", { icon, title: `[item ${i + 1}]`, text: "[descrição curta]" }))),
   },
   {
-    re: /sobre|hist[oó]ria|quem somos|equipe/,
+    re: /sobre|hist[oó]ria|quem somos/,
     link: "Sobre",
     build: () => section("Sobre nós", [child("text", { text: "[conte a história do negócio em 2 ou 3 frases]" })]),
   },
   {
     re: /galeria|foto|imagem|portf[oó]lio/,
     link: "Galeria",
-    build: () => section("Galeria", [1, 2, 3].map((i) => child("image", { url: "", alt: `[foto ${i}]` }))),
+    build: () => section("Galeria", [child("gallery", { images: "", captions: ["[foto 1]", "[foto 2]", "[foto 3]"].join("\n") })]),
   },
   {
     re: /depoimento|avalia[cç]|opini[aã]o|o que (os )?clientes/,
@@ -164,7 +164,27 @@ const RULES: Rule[] = [
   {
     re: /faq|perguntas|d[uú]vidas/,
     link: "Dúvidas",
-    build: () => section("Perguntas frequentes", [child("text", { text: "[pergunta 1] — [resposta]" }), child("text", { text: "[pergunta 2] — [resposta]" })]),
+    build: () => section("Perguntas frequentes", [1, 2, 3].map((i) => child("faq", { question: `[pergunta ${i}]`, answer: "[resposta curta]" }))),
+  },
+  {
+    re: /equipe|profissionais|instrutor|nosso time|time/,
+    link: "Equipe",
+    build: () => section("Equipe", [1, 2, 3].map((i) => child("team", { name: `[nome ${i}]`, role: "[função]", bio: "", photo: "" }))),
+  },
+  {
+    re: /como funciona|passo a passo|etapas/,
+    link: "Como funciona",
+    build: () => section("Como funciona", [1, 2, 3].map((i) => child("step", { title: `[etapa ${i}]`, text: "[o que acontece nesta etapa]" }))),
+  },
+  {
+    re: /n[uú]meros|resultados|estat[ií]stica/,
+    link: "Resultados",
+    build: () => section("Em números", [1, 2, 3].map(() => child("stat", { value: "[número]", label: "[o que esse número mostra]" }))),
+  },
+  {
+    re: /hor[aá]rio|endere[cç]o|localiza|como chegar|onde (fica|estamos)/,
+    link: "Onde estamos",
+    build: () => section("Onde estamos", [child("contact", { hours: "[dias e horários]", address: "[endereço]", phone: "", email: "", whatsapp: "" })]),
   },
 ];
 

@@ -33,7 +33,7 @@ function safeUrl(u: string | undefined): string | undefined {
   }
 }
 
-const GRIDDABLE = new Set(["feature", "pricing", "testimonial"]);
+const GRIDDABLE = new Set(["feature", "pricing", "testimonial", "stat", "step", "team"]);
 const PAGE_LEVEL = new Set(["navbar", "hero", "section", "footer"]);
 
 class Emitter {
@@ -61,7 +61,8 @@ class Emitter {
       let j = i;
       while (j < nodes.length && nodes[j].type === t) j++;
       if (GRIDDABLE.has(t) && j - i >= 2) {
-        const kids = nodes.slice(i, j).map((n) => this.node(n)).filter(Boolean) as string[];
+        // Passos ganham o número pela posição na sequência.
+        const kids = nodes.slice(i, j).map((n, k) => this.node(n, t === "step" ? k + 1 : undefined)).filter(Boolean) as string[];
         const cols = Math.min(Math.max(kids.length, 2), t === "pricing" ? 3 : 4);
         names.push(this.line(this.fresh("grid"), `Grid(children=[${kids.join(", ")}], columns="${cols}")`));
         i = j;
@@ -79,7 +80,7 @@ class Emitter {
     return this.line(name, `Column(children=[${kids.join(", ")}])`);
   }
 
-  node(n: DraftNode): string | undefined {
+  node(n: DraftNode, index?: number): string | undefined {
     const p = n.props;
     const v = this.v(n.id);
     switch (n.type) {
@@ -158,6 +159,31 @@ class Emitter {
         const btn = this.line(this.v(n.id, "_btn"), `Button(child=${lbl}, variant="primary", action=Event("lead_submit", {${ctx}}))`);
         const col = this.line(this.v(n.id, "_col"), `Column(children=[${[title, ...inputs, btn].join(", ")}])`);
         return this.line(v, `Card(child=${col})`);
+      }
+      case "stat":
+        return this.line(v, `Stat(value=${str(p.value)}, label=${str(p.label)})`);
+      case "faq":
+        return this.line(v, `FaqItem(question=${str(p.question)}, answer=${str(p.answer)})`);
+      case "step":
+        return this.line(v, `Step(title=${str(p.title)}, text=${str(p.text)}${index ? `, index="${index}"` : ""})`);
+      case "team": {
+        const opt = (k: string, val?: string) => (val?.trim() ? `, ${k}=${str(val.trim())}` : "");
+        const photo = safeUrl(p.photo);
+        return this.line(v, `TeamMember(name=${str(p.name)}${opt("role", p.role)}${opt("bio", p.bio)}${photo ? `, photo=${str(photo)}` : ""})`);
+      }
+      case "contact": {
+        const opt = (k: string, val?: string) => (val?.trim() ? `, ${k}=${str(val.trim())}` : "");
+        const hours = lines(p.hours).map(str).join(", ");
+        return this.line(v, `ContactInfo(hours=[${hours}]${opt("address", p.address)}${opt("phone", p.phone)}${opt("email", p.email)}${opt("whatsapp", p.whatsapp)})`);
+      }
+      case "logos": {
+        const opt = (k: string, val?: string) => (val?.trim() ? `, ${k}=${str(val.trim())}` : "");
+        return this.line(v, `LogoStrip(names=[${lines(p.names).map(str).join(", ")}]${opt("title", p.title)})`);
+      }
+      case "gallery": {
+        const images = lines(p.images).map((u) => safeUrl(u)).filter((u): u is string => !!u).map(str).join(", ");
+        const captions = lines(p.captions).map(str).join(", ");
+        return this.line(v, `Gallery(images=[${images}], captions=[${captions}])`);
       }
       case "footer": {
         const links = lines(p.links).map(str).join(", ");

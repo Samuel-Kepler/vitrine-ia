@@ -3,7 +3,7 @@
 // A2UI) e copiados tal e qual para o projeto React exportado: o que aparece no
 // preview é exatamente o que vai no código. Só depende de react e lucide-react.
 import { useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
-import { Check, Clock, Heart, Menu, Quote, Rocket, Shield, Sparkles, Star, X, Zap } from "lucide-react";
+import { Check, Clock, Heart, Mail, MapPin, Menu, MessageCircle, Phone, Plus, Quote, Rocket, Shield, Sparkles, Star, X, Zap } from "lucide-react";
 
 export const ICONS: Record<string, typeof Sparkles> = { sparkles: Sparkles, zap: Zap, shield: Shield, heart: Heart, clock: Clock, star: Star, rocket: Rocket, check: Check };
 
@@ -364,5 +364,166 @@ export function FormCard({ endpoint, children }: { endpoint?: string } & Childre
         </p>
       ) : null}
     </form>
+  );
+}
+
+// ---------- Seções extras (números, perguntas, passos, equipe, contato, logos, galeria) ----------
+
+/** Número de destaque: só com números reais do negócio. */
+export function Stat({ value, label }: { value?: string; label?: string }) {
+  return (
+    <div className="text-center">
+      <p className="lp-h text-4xl @3xl:text-5xl" style={{ color: "var(--lp-accent)" }}>
+        {value}
+      </p>
+      <p className="mt-2 text-sm leading-snug @3xl:text-base" style={{ color: "var(--lp-soft)" }}>
+        {label}
+      </p>
+    </div>
+  );
+}
+
+/** Pergunta frequente: abre e fecha com <details> (funciona sem JS no HTML exportado). */
+export function FaqItem({ question, answer }: { question?: string; answer?: string }) {
+  return (
+    <details className="lp-faq border-b" style={{ borderColor: "color-mix(in srgb, var(--lp-fg) 12%, transparent)" }}>
+      <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-4 py-4 text-left text-base font-semibold @3xl:text-lg">
+        <span>{question}</span>
+        <Plus size={20} className="lp-faq-icon shrink-0" style={{ color: "var(--lp-accent)" }} />
+      </summary>
+      <p className="pb-5 pr-8 leading-relaxed" style={{ color: "var(--lp-soft)" }}>
+        {answer}
+      </p>
+    </details>
+  );
+}
+
+/** Passo de um "como funciona": número, título e texto. */
+export function Step({ index, title, text }: { index?: string; title?: string; text?: string }) {
+  return (
+    <div className="h-full">
+      {index ? (
+        <span className="lp-h inline-flex size-11 items-center justify-center rounded-full text-lg" style={{ background: "var(--lp-accent)", color: "var(--lp-accent-fg)" }}>
+          {index}
+        </span>
+      ) : null}
+      <h3 className="lp-hf mt-4 text-lg font-semibold">{title}</h3>
+      <p className="mt-2 leading-relaxed" style={{ color: "var(--lp-soft)" }}>
+        {text}
+      </p>
+    </div>
+  );
+}
+
+const initials = (name = "") =>
+  name
+    .replace(/[[\]]/g, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("") || "?";
+
+/** Pessoa da equipe: foto (ou iniciais), nome, cargo e uma linha sobre ela. */
+export function TeamMember({ name, role, bio, photo }: { name?: string; role?: string; bio?: string; photo?: string }) {
+  return (
+    <div className="h-full text-center">
+      {photo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photo} alt={name ?? ""} className="mx-auto size-28 rounded-full object-cover" />
+      ) : (
+        <div className="lp-h mx-auto flex size-28 items-center justify-center rounded-full text-3xl" style={{ background: "var(--lp-accent-bg)", color: "var(--lp-accent)" }} aria-hidden>
+          {initials(name)}
+        </div>
+      )}
+      <h3 className="lp-hf mt-4 text-lg font-semibold">{name}</h3>
+      {role ? (
+        <p className="text-sm" style={{ color: "var(--lp-accent)" }}>
+          {role}
+        </p>
+      ) : null}
+      {bio ? (
+        <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--lp-soft)" }}>
+          {bio}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+const digits = (s = "") => s.replace(/\D/g, "");
+
+/** Horários, endereço e contato, com links de telefone, e-mail e WhatsApp. */
+export function ContactInfo({ hours = [], address, phone, email, whatsapp }: { hours?: string[]; address?: string; phone?: string; email?: string; whatsapp?: string }) {
+  const row = (Icon: typeof Clock, label: string, body: ReactNode) => (
+    <div className="flex gap-3">
+      <span className="lp-icon inline-flex size-10 shrink-0 items-center justify-center" style={{ background: "var(--lp-accent-bg)", color: "var(--lp-accent)" }}>
+        <Icon size={18} />
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold">{label}</p>
+        <div className="mt-0.5 text-sm leading-relaxed" style={{ color: "var(--lp-soft)" }}>
+          {body}
+        </div>
+      </div>
+    </div>
+  );
+  const wa = digits(whatsapp);
+  return (
+    <div className="lp-card grid gap-6 p-6 @xl:grid-cols-2 @3xl:p-8">
+      {hours.length ? row(Clock, "Horários", hours.map((h) => <p key={h}>{h}</p>)) : null}
+      {address ? row(MapPin, "Endereço", <p>{address}</p>) : null}
+      {phone ? row(Phone, "Telefone", <a href={`tel:${digits(phone)}`} className="underline-offset-2 hover:underline">{phone}</a>) : null}
+      {whatsapp ? row(MessageCircle, "WhatsApp", <a href={wa ? `https://wa.me/${wa.length <= 11 ? `55${wa}` : wa}` : "#"} className="underline-offset-2 hover:underline">{whatsapp}</a>) : null}
+      {email ? row(Mail, "E-mail", <a href={`mailto:${email}`} className="break-all underline-offset-2 hover:underline">{email}</a>) : null}
+    </div>
+  );
+}
+
+/** Faixa de clientes ou parceiros (nomes em texto, sem imagens). Só com nomes reais. */
+export function LogoStrip({ title, names = [] }: { title?: string; names?: string[] }) {
+  return (
+    <div className="text-center">
+      {title ? (
+        <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--lp-soft)" }}>
+          {title}
+        </p>
+      ) : null}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
+        {names.map((n) => (
+          <span key={n} className="lp-hf text-xl font-semibold opacity-60 @3xl:text-2xl">
+            {n}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Galeria: fotos em grade; sem URL, um espaço reservado com a legenda. */
+export function Gallery({ images = [], captions = [] }: { images?: string[]; captions?: string[] }) {
+  const count = Math.max(images.length, captions.length, 3);
+  return (
+    <div className="grid gap-3 @md:grid-cols-2 @3xl:grid-cols-3 @3xl:gap-4">
+      {Array.from({ length: count }, (_, i) => {
+        const src = images[i];
+        const caption = captions[i];
+        return (
+          <figure key={i} className="overflow-hidden" style={{ borderRadius: "var(--lp-radius)" }}>
+            {src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={src} alt={caption ?? ""} className="aspect-[4/3] w-full object-cover" />
+            ) : (
+              <div className="lp-deco flex aspect-[4/3] w-full items-end p-3" role="img" aria-label={caption ?? "foto"}>
+                <span className="rounded-md px-2 py-1 text-xs" style={{ background: "var(--lp-bg)", color: "var(--lp-soft)" }}>
+                  {caption ?? "[foto]"}
+                </span>
+              </div>
+            )}
+            {src && caption ? <figcaption className="pt-2 text-sm" style={{ color: "var(--lp-soft)" }}>{caption}</figcaption> : null}
+          </figure>
+        );
+      })}
+    </div>
   );
 }

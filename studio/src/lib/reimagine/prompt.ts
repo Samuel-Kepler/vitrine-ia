@@ -12,6 +12,7 @@ export const ART_DIRECTION = `Direção de arte (é isso que deixa a página bon
 - Benefícios: Grid(variant="bento") com 3 a 5 Feature dá destaque ao primeiro; Feature.variant "icon-left" para listas mais leves e "minimal" para um visual editorial. Use a mesma variant nos irmãos.
 - Depoimentos: um só depoimento fica melhor como Testimonial(variant="quote"); vários, em Grid com "card".
 - Ritmo: alterne os tons das seções (nunca o mesmo tom duas vezes seguidas) e use tone="gradient" no máximo uma vez, de preferência numa faixa de chamada para ação perto do fim.
+- Seções prontas para quando o rascunho ou o briefing pedirem: Stat (2 a 4 em Grid, só números reais), FaqItem (vários numa Column), Step (3 a 4 em Grid, index "1", "2"…), TeamMember (em Grid), ContactInfo (horários, endereço, telefone, WhatsApp), LogoStrip (só nomes reais de clientes) e Gallery (só URLs dadas). Sem os dados, mantenha os marcadores entre colchetes.
 - Se o rascunho já define um estilo (variant) ou o pedido indica tema, respeite.`;
 
 export function systemPrompt(catalogSnippet: string): string {

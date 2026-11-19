@@ -122,6 +122,20 @@ function emit(ctx: Ctx, id: string, depth: number, inForm = false): string {
       return tag("Testimonial", { quote: str(c.quote), author: str(c.author), role: str(c.role), variant: str(c.variant) });
     case "PricingCard":
       return tag("PricingCard", { name: str(c.name), price: str(c.price), period: str(c.period), features: strList(c.features), cta: str(c.cta), highlighted: c.highlighted === true });
+    case "Stat":
+      return tag("Stat", { value: str(c.value), label: str(c.label) });
+    case "FaqItem":
+      return tag("FaqItem", { question: str(c.question), answer: str(c.answer) });
+    case "Step":
+      return tag("Step", { index: str(c.index), title: str(c.title), text: str(c.text) });
+    case "TeamMember":
+      return tag("TeamMember", { name: str(c.name), role: str(c.role), bio: str(c.bio), photo: str(c.photo) });
+    case "ContactInfo":
+      return tag("ContactInfo", { hours: strList(c.hours), address: str(c.address), phone: str(c.phone), email: str(c.email), whatsapp: str(c.whatsapp) });
+    case "LogoStrip":
+      return tag("LogoStrip", { title: str(c.title), names: strList(c.names) });
+    case "Gallery":
+      return tag("Gallery", { images: strList(c.images), captions: strList(c.captions) });
     case "Card": {
       if (hasTextField(ctx, c.id)) {
         ctx.hasForm = true;

@@ -375,3 +375,17 @@
     animation: none;
   }
 }
+
+/* Perguntas frequentes: sem marcador nativo; o + vira x quando abre. */
+.lp-faq > summary {
+  list-style: none;
+}
+.lp-faq > summary::-webkit-details-marker {
+  display: none;
+}
+.lp-faq-icon {
+  transition: transform 0.2s ease;
+}
+.lp-faq[open] .lp-faq-icon {
+  transform: rotate(45deg);
+}
