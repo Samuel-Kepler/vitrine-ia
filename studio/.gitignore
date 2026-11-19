@@ -38,3 +38,6 @@ docs/research/spec-v1.0.md
 
 # backend de exemplo gerado localmente (GEN_OUT=examples/backend-cafeteria npx vitest run src/lib/arch)
 examples/
+
+# relatorios do orquestrador de pesquisa (orchestrator_v5.py)
+agent_workspace/

@@ -41,4 +41,26 @@ describe("A2UI agent", () => {
   it("rejects unknown components with an actionable error", () => {
     expect(() => compileResponse('<a2ui>\nroot = Page(child=x)\nx = Carousel(items=[])\n</a2ui>')).toThrow(/Carousel/);
   });
+
+  describe("URLs de imagem vindas da IA", () => {
+    const page = (comp: string) => `<a2ui>\nroot = Page(child=col)\ncol = Column(children=[x])\nx = ${comp}\n</a2ui>`;
+
+    it.each([
+      'Hero(title="Oi", image="javascript:alert(1)")',
+      'Hero(title="Oi", image="data:image/svg+xml,<svg onload=alert(1)>")',
+      'TeamMember(name="Ana", photo="vbscript:msgbox(1)")',
+      'Gallery(images=["https://ok.com/a.jpg", "javascript:alert(1)"])',
+    ])("rejeita %s com erro acionável", (comp) => {
+      expect(() => compileResponse(page(comp))).toThrow(/Unsafe image URL/);
+    });
+
+    it.each([
+      'Hero(title="Oi", image="https://images.unsplash.com/a.jpg")',
+      'Hero(title="Oi")',
+      'TeamMember(name="Ana", photo="https://x.com/ana.png")',
+      'Gallery(images=["https://ok.com/a.jpg"])',
+    ])("aceita %s", (comp) => {
+      expect(() => compileResponse(page(comp))).not.toThrow();
+    });
+  });
 });

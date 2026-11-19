@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { Catalog, CommonSchemas, basicCatalog } from "@a2ui/web_core/v1_0";
 import { FEATURE_VARIANTS, GRID_VARIANTS, HERO_VARIANTS, LOGO_VARIANTS, MOTIONS, TESTIMONIAL_VARIANTS, THEMES } from "./themes";
+import { UNSAFE_MEDIA_URL_MESSAGE, isSafeMediaUrl } from "@/lib/security/url";
 
 export const CATALOG_ID = "https://vitrine.studio/catalogs/landing/v1/catalog.json";
 export const SURFACE_ID = "landing";
@@ -13,6 +14,17 @@ export const ICONS = ["sparkles", "zap", "shield", "heart", "clock", "star", "ro
 export const TONES = ["default", "muted", "accent", "dark", "gradient"] as const;
 
 const S = CommonSchemas;
+
+/**
+ * URL de imagem vinda da IA. Rejeitar (em vez de limpar) faz o @a2ui/agent
+ * devolver o erro ao modelo, que corrige na próxima tentativa. Vale para o
+ * preview e para o export. Bindings ({path}) e funções passam: o valor final
+ * é checado de novo no export (src/lib/export/sanitize.ts).
+ */
+const SafeImageUrl = S.DynamicString.refine((v: unknown) => typeof v !== "string" || isSafeMediaUrl(v), {
+  message: UNSAFE_MEDIA_URL_MESSAGE,
+});
+const SafeImageUrlLiteral = z.string().refine(isSafeMediaUrl, { message: UNSAFE_MEDIA_URL_MESSAGE });
 
 export const PageApi = {
   name: "Page",
@@ -50,7 +62,7 @@ export const HeroApi = {
     subtitle: S.DynamicString.optional(),
     cta: S.DynamicString.optional(),
     onCta: S.Action.optional(),
-    image: S.DynamicString.optional().describe("Image URL (https). Omit if unknown."),
+    image: SafeImageUrl.optional().describe("Image URL (https). Omit if unknown."),
     eyebrow: S.DynamicString.optional().describe("Small label above the headline."),
     variant: z
       .enum(HERO_VARIANTS)
@@ -149,7 +161,7 @@ export const TeamMemberApi = {
     name: S.DynamicString,
     role: S.DynamicString.optional(),
     bio: S.DynamicString.optional(),
-    photo: S.DynamicString.optional().describe("Photo URL (https) given by the user. Omit if unknown."),
+    photo: SafeImageUrl.optional().describe("Photo URL (https) given by the user. Omit if unknown."),
   }),
 };
 
@@ -178,7 +190,7 @@ export const LogoStripApi = {
 export const GalleryApi = {
   name: "Gallery",
   description: "Photo grid. Only image URLs the user gave; without URLs it shows placeholders with the captions.",
-  schema: z.object({ images: z.array(z.string()).describe("Image URLs (https)"), captions: z.array(z.string()).optional() }),
+  schema: z.object({ images: z.array(SafeImageUrlLiteral).describe("Image URLs (https)"), captions: z.array(z.string()).optional() }),
 };
 
 export const FooterApi = {

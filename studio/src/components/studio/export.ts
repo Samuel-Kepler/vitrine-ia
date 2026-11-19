@@ -1,5 +1,6 @@
 "use client";
 import { DEFAULT_THEME, fontLinks, isTheme } from "@/lib/a2ui/themes";
+import { EXPORT_CSP, escapeHtml, sanitizeBodyHtml, sanitizeCss } from "@/lib/export/sanitize";
 
 export function download(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
@@ -44,12 +45,14 @@ function shadowRootsIn(root: Element): ShadowRoot[] {
 export function exportStandaloneHtml(frame: HTMLElement): string {
   const roots = shadowRootsIn(frame);
   const withShadow = frame as HTMLElement & { getHTML?: (o: unknown) => string };
-  const body =
+  const rawBody =
     typeof withShadow.getHTML === "function"
       ? withShadow.getHTML({ serializableShadowRoots: true, shadowRoots: roots })
       : frame.innerHTML;
-  const css = cssOf([...Array.from(document.styleSheets), ...(document.adoptedStyleSheets ?? [])]);
-  const shadowCss = roots.map((r) => cssOf(r.adoptedStyleSheets ?? [])).filter(Boolean);
+  // Conteúdo vem da IA: limpa URLs, handlers e tags perigosas antes de virar arquivo.
+  const body = sanitizeBodyHtml(rawBody);
+  const css = sanitizeCss(cssOf([...Array.from(document.styleSheets), ...(document.adoptedStyleSheets ?? [])]));
+  const shadowCss = roots.map((r) => sanitizeCss(cssOf(r.adoptedStyleSheets ?? []))).filter(Boolean);
   const title = frame.querySelector("h1")?.textContent?.trim() || "Landing page";
   // A folha do Google Fonts é de outra origem (cssRules não lê): vai como <link>.
   const themeClass = [...(frame.querySelector(".lp")?.classList ?? [])].find((c) => c.startsWith("lp-theme-"))?.slice(9);
@@ -59,7 +62,8 @@ export function exportStandaloneHtml(frame: HTMLElement): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${title.replace(/</g, "&lt;")}</title>
+<meta http-equiv="Content-Security-Policy" content="${EXPORT_CSP}" />
+<title>${escapeHtml(title)}</title>
 ${fonts}
 <style>
 ${css}
