@@ -349,7 +349,7 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
     type: "custom",
     label: "Bloco livre",
     group: "livre",
-    hint: "Descreva e a IA interpreta",
+    hint: "Descreva ou desenhe; a IA monta a seção",
     defaults: { name: "Logos de clientes", description: "Uma faixa com logos de empresas que já usam o produto." },
     fields: [
       { key: "name", label: "Nome", kind: "text" },

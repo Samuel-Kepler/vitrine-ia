@@ -14,12 +14,15 @@ import {
   moveNode,
   newId,
   removeNode,
+  replaceNode,
+  isNested,
   shiftNode,
   updateProps,
   type DraftNode,
   type DropTarget,
 } from "./tree";
 import { starterDraft } from "./starter";
+import { fitSketch } from "./sketch-shared";
 import { addLink, commitActive, homePage, HOME_ID, newPageTree, chromeOf, removeLink, renameLink, uniqueSlug, migrateStudio, type Page } from "./pages";
 import type { ReimagineResult } from "@/lib/reimagine/reimagine";
 import type { ProviderSettings } from "@/lib/ai/settings";
@@ -64,6 +67,11 @@ interface StudioState {
   renamePage: (id: string, name: string) => void;
   duplicatePage: (id: string) => void;
   removePage: (id: string) => void;
+  /** Desenhos dos Blocos livres (id do bloco -> PNG em data URL). Fora do rascunho para não pesar nas chamadas de IA. */
+  sketches: Record<string, string>;
+  setSketch: (id: string, dataUrl: string | null) => void;
+  /** Troca o Bloco livre pelos blocos montados a partir do desenho (entra no histórico: Ctrl+Z desfaz). */
+  applySketch: (id: string, nodes: DraftNode[]) => void;
   /** Projeto React (aba React): caminho absoluto -> conteúdo. null = ainda não gerado. */
   reactFiles: Record<string, string> | null;
   /** true depois que o código foi editado na aba React (Exportar usa o código editado). */
@@ -202,6 +210,21 @@ export const useStudio = create<StudioState>()(
         },
         reviews: {},
         reactFiles: null,
+        sketches: {},
+        setSketch: (id, dataUrl) => {
+          const next = { ...get().sketches };
+          if (dataUrl) next[id] = dataUrl;
+          else delete next[id];
+          set({ sketches: next });
+        },
+        applySketch: (id, nodes) => {
+          const s = get();
+          const fitted = fitSketch(nodes, isNested(s.tree, id));
+          if (!fitted.length) return;
+          const sketches = { ...s.sketches };
+          delete sketches[id];
+          set({ tree: replaceNode(s.tree, id, fitted), selectedId: fitted[0].id, sketches });
+        },
         reactEdited: false,
         setReactFiles: (reactFiles) => set({ reactFiles, reactEdited: false }),
         setReactFile: (path, content) => set({ reactFiles: { ...(get().reactFiles ?? {}), [path]: content }, reactEdited: true }),
@@ -297,6 +320,7 @@ export const useStudio = create<StudioState>()(
         pages: s.pages,
         pageId: s.pageId,
         reactFiles: s.reactFiles,
+        sketches: s.sketches,
         reactEdited: s.reactEdited,
       }),
     },

@@ -163,6 +163,24 @@ function BlockView({ node, direction, onDrop }: { node: DraftNode; direction: "r
   );
 }
 
+/** Bloco livre: nome, descrição e a miniatura do desenho, se houver. */
+function CustomPreview({ id, name, description }: { id: string; name?: string; description?: string }) {
+  const sketch = useStudio((s) => s.sketches[id]);
+  return (
+    <div className="flex gap-3 text-sm">
+      {sketch ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={sketch} alt="Desenho do bloco" className="h-14 w-24 shrink-0 rounded border border-line bg-white object-contain" />
+      ) : null}
+      <div className="min-w-0">
+        <b>{name}</b>
+        <p className="text-xs text-muted">{description}</p>
+        {sketch ? <p className="mt-0.5 text-[10px] text-brand">desenho pronto para transformar</p> : null}
+      </div>
+    </div>
+  );
+}
+
 /** Miniatura de cada bloco folha (só para o rascunho). */
 function Wireframe({ node }: { node: DraftNode }) {
   const p = node.props;
@@ -284,12 +302,7 @@ function Wireframe({ node }: { node: DraftNode }) {
     case "footer":
       return <p className="text-xs text-muted">{p.text}</p>;
     case "custom":
-      return (
-        <div className="text-sm">
-          <b>{p.name}</b>
-          <p className="text-xs text-muted">{p.description}</p>
-        </div>
-      );
+      return <CustomPreview id={node.id} name={p.name} description={p.description} />;
     default:
       return null;
   }

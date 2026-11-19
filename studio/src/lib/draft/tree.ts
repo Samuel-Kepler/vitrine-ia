@@ -113,6 +113,20 @@ export function removeNode(tree: DraftNode[], id: string): DraftNode[] {
   return next;
 }
 
+/** Troca um bloco por outros no mesmo lugar (ex.: Bloco livre -> seção gerada do desenho). */
+export function replaceNode(tree: DraftNode[], id: string, nodes: DraftNode[]): DraftNode[] {
+  const next = clone(tree);
+  const loc = locate(next, id);
+  if (!loc) return tree;
+  loc.list.splice(loc.index, 1, ...nodes);
+  return next;
+}
+
+/** true se o bloco está dentro de um container (seção, linha, coluna, cartão). */
+export function isNested(tree: DraftNode[], id: string): boolean {
+  return !!locate(tree, id)?.parent;
+}
+
 export function updateProps(tree: DraftNode[], id: string, props: Record<string, string>): DraftNode[] {
   const next = clone(tree);
   const node = findNode(next, id);

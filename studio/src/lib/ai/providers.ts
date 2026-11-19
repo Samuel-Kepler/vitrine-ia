@@ -18,6 +18,23 @@ export const DEFAULT_MODELS: Record<ProviderKind, string> = {
   "openai-compatible": "local-model",
 };
 
+/**
+ * Modelos que leem imagem (desenho do Bloco livre). Groq: o gpt-oss não lê;
+ * o qwen3.8 lê. Ollama/compatível: o modelo escolhido na engrenagem (precisa
+ * ser um modelo com visão, ex.: qwen2.5vl, llava). AI_VISION_MODEL no .env vence.
+ */
+export const VISION_MODELS: Partial<Record<ProviderKind, string>> = {
+  groq: "qwen/qwen3.8-27b",
+  google: "gemini-flash-latest",
+  anthropic: "claude-haiku-5-5",
+};
+
+export function resolveVisionModel(settings: ProviderSettings = {}): ResolvedModel {
+  const kind = settings.kind ?? serverDefaultKind();
+  const model = process.env.AI_VISION_MODEL?.trim() || VISION_MODELS[kind] || settings.model;
+  return resolveModel({ ...settings, kind, model });
+}
+
 const KEY_ENV: Partial<Record<ProviderKind, string>> = {
   groq: "GROQ_API_KEY",
   google: "GOOGLE_GENERATIVE_AI_API_KEY",

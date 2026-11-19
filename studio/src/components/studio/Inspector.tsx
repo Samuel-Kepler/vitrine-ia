@@ -6,6 +6,9 @@ import { useStudio } from "@/lib/draft/store";
 import { PALETTES } from "@/lib/a2ui/catalog-api";
 import { MOTIONS, MOTION_LABELS, THEMES, THEME_DEFS } from "@/lib/a2ui/themes";
 import { BlockIcon } from "./icons";
+import { SketchDialog } from "./SketchDialog";
+import { useState } from "react";
+import { PencilLine } from "lucide-react";
 
 const input =
   "w-full rounded-md border border-line bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -25,9 +28,12 @@ function NodeEditor({ id }: { id: string }) {
   const node = useStudio((s) => findNode(s.tree, id))!;
   const { update, remove, duplicate, shift, saveAsComponent } = useStudio.getState();
   const def = BLOCKS[node.type];
+  const hasSketch = useStudio((s) => !!s.sketches[id]);
+  const [drawing, setDrawing] = useState(false);
 
   return (
     <div className="p-4">
+      {drawing ? <SketchDialog id={id} onClose={() => setDrawing(false)} /> : null}
       <div className="mb-4 flex items-center gap-2">
         <BlockIcon type={node.type} size={18} className="text-brand" />
         <h2 className="font-semibold">{def.label}</h2>
@@ -40,6 +46,16 @@ function NodeEditor({ id }: { id: string }) {
         ))}
         {def.fields.length === 0 ? <p className="text-sm text-muted">Arraste blocos para dentro deste container.</p> : null}
       </div>
+
+      {node.type === "custom" ? (
+        <button
+          onClick={() => setDrawing(true)}
+          data-testid="open-sketch"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-brand py-2 text-sm font-medium text-brand hover:bg-brand-soft"
+        >
+          <PencilLine size={15} /> {hasSketch ? "Editar desenho e transformar" : "Desenhar e transformar com IA"}
+        </button>
+      ) : null}
 
       <div className="mt-6 grid grid-cols-4 gap-1.5">
         <IconBtn label="Subir" onClick={() => shift(id, -1)}>

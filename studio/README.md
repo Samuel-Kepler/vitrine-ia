@@ -226,6 +226,17 @@ No topo da paleta (aba Rascunho), o campo **Gerar com IA** monta a página a par
 
 Diagnóstico com o Groq do `.env`: `RUN_LIVE=1 npx vitest run src/lib/draft/generate.live.test.ts`.
 
+## Desenhar no Bloco livre
+
+Selecione um **Bloco livre** e clique em **Desenhar e transformar com IA**: abre um quadro (caneta, retângulo, borracha, desfazer, limpar) para rabiscar a ideia como um wireframe, com uma descrição opcional. **Transformar com IA** manda o desenho para um modelo que enxerga imagens, que monta a seção **com os blocos do catálogo** (título, benefícios, números, passos, equipe, galeria…). Você vê o que vai entrar ("Seção: Título, Benefício ×3") e só então **Aplica no canvas**: o Bloco livre é trocado pelos blocos, editáveis como os outros, e o Ctrl+Z desfaz. Dentro de uma seção, entra só o conteúdo.
+
+- Continua **100% A2UI**: o resultado herda temas, movimento, exportação React e a regra de não inventar fatos (o que não está legível vira marcador).
+- **Modelo com visão:** no Groq, `qwen/qwen3.8-27b` (o `gpt-oss-120b` não lê imagens), escolhido sozinho; Google e Anthropic usam o modelo padrão deles; no Ollama, escolha um modelo com visão na engrenagem. `AI_VISION_MODEL` no `.env` sobrescreve.
+- Sem visão (mock ou erro), monta pela descrição e avisa.
+- O desenho fica salvo no navegador, à parte do rascunho (não vai nas outras chamadas de IA).
+
+Diagnóstico com o Groq do `.env`: `RUN_LIVE=1 npx vitest run src/lib/draft/sketch.live.test.ts` (gera um wireframe de 3 caixas).
+
 ## Várias páginas
 
 No modo UI, a barra **Páginas** (abaixo do topo) cria o site página por página:
