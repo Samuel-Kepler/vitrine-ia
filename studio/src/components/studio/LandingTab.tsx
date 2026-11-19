@@ -1,7 +1,10 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
-import { AlertTriangle, Download, FileJson, Monitor, ScanSearch, Smartphone, Tablet } from "lucide-react";
+import { AlertTriangle, Download, FileJson, ScanSearch } from "lucide-react";
+import { DeviceToolbar } from "@/components/preview/DeviceToolbar";
+import { DeviceStage } from "@/components/preview/DeviceStage";
+import { DEFAULT_VIEWPORT, resolveViewport, type ViewportState } from "@/lib/preview/devices";
 import { AiReviewPanel } from "@/components/review/AiReviewPanel";
 import { useStudio } from "@/lib/draft/store";
 import type { A2uiAction } from "@/components/preview/SurfaceView";
@@ -13,15 +16,17 @@ const SurfaceView = dynamic(() => import("@/components/preview/SurfaceView"), {
   loading: () => <p className="p-6 text-sm text-muted">Carregando renderer A2UI…</p>,
 });
 
-const VIEWPORTS = [
-  { id: "desktop", width: "100%", icon: Monitor, label: "Desktop" },
-  { id: "tablet", width: "820px", icon: Tablet, label: "Tablet" },
-  { id: "mobile", width: "390px", icon: Smartphone, label: "Celular" },
-] as const;
+// Tamanho escolhido sobrevive à troca de aba/página na mesma sessão.
+let lastViewport: ViewportState = DEFAULT_VIEWPORT;
 
 export function LandingTab() {
   const result = useStudio((s) => s.result);
-  const [viewport, setViewport] = useState<(typeof VIEWPORTS)[number]["id"]>("desktop");
+  const [viewport, setViewportState] = useState<ViewportState>(lastViewport);
+  const setViewport = (v: ViewportState) => {
+    lastViewport = v;
+    setViewportState(v);
+  };
+  const [scale, setScale] = useState(1);
   const [lastAction, setLastAction] = useState<A2uiAction | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const [showReview, setShowReview] = useState(false);
@@ -48,7 +53,7 @@ export function LandingTab() {
       </div>
     );
   }
-  const width = VIEWPORTS.find((v) => v.id === viewport)!.width;
+  const size = resolveViewport(viewport);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -66,17 +71,7 @@ export function LandingTab() {
           <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-medium text-emerald-800">A2UI validado</span>
         )}
         <div className="ml-auto flex items-center gap-1">
-          {VIEWPORTS.map((v) => (
-            <button
-              key={v.id}
-              title={v.label}
-              aria-label={v.label}
-              onClick={() => setViewport(v.id)}
-              className={`rounded-md p-1.5 ${viewport === v.id ? "bg-brand-soft text-brand" : "text-gray-500 hover:bg-gray-100"}`}
-            >
-              <v.icon size={16} />
-            </button>
-          ))}
+          <DeviceToolbar value={viewport} onChange={setViewport} scale={scale} />
           <span className="mx-1 h-5 w-px bg-line" />
           <button
             onClick={() => setShowReview((v) => !v)}
@@ -139,10 +134,10 @@ export function LandingTab() {
       ) : null}
 
       <div className="flex min-h-0 flex-1">
-      <div className="relative flex-1 overflow-auto bg-canvas p-4">
-        <div ref={frameRef} onClickCapture={onFrameClick} className="mx-auto overflow-hidden rounded-xl border border-line bg-white shadow-sm transition-[width]" style={{ width, maxWidth: "100%" }} data-testid="landing-frame">
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <DeviceStage ref={frameRef} size={size} onScale={setScale} onClickCapture={onFrameClick}>
           <SurfaceView messages={result.messages} onAction={setLastAction} />
-        </div>
+        </DeviceStage>
         {lastAction ? (
           <div className="fixed bottom-4 right-4 z-30 max-w-sm rounded-lg bg-ink p-3 text-xs text-white shadow-lg" role="status">
             <p className="font-semibold">Ação A2UI: {lastAction.name}</p>

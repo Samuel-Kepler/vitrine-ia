@@ -54,7 +54,7 @@ describe("modelo sem IA", () => {
     expect(d[1].props.title).toMatch(/^Padaria de bairro com cardápio.*…$/);
     expect(d[1].props.title.length).toBeLessThanOrEqual(70);
     expect(d[0].props.links.split("\n")).toEqual(["Produtos", "Depoimentos", "Planos", "Contato"]);
-    const text = JSON.stringify(d);
+    const text = JSON.stringify(d, (k, v) => (k === "id" ? undefined : v));
     expect(text).not.toMatch(/R\$ ?\d|\d+h\b|Cliente feliz/);
     expect(text).toContain("[preço]");
   });

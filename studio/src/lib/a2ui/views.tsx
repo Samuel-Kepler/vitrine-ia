@@ -38,7 +38,7 @@ const Navbar = createComponentImplementation(NavbarApi as Any, ({ props }: Any) 
   <header className="sticky top-0 z-10 border-b border-black/5 backdrop-blur" style={{ background: "color-mix(in srgb, var(--lp-bg) 85%, transparent)" }}>
     <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-4">
       <span className="text-lg font-extrabold tracking-tight">{props.brand}</span>
-      <nav className="ml-auto hidden gap-6 text-sm md:flex" style={{ color: "var(--lp-soft)" }}>
+      <nav className="ml-auto hidden gap-6 text-sm @3xl:flex" style={{ color: "var(--lp-soft)" }}>
         {(props.links ?? []).map((l: string) => (
           <a key={l} href="#" className="hover:opacity-70">
             {l}
@@ -46,7 +46,7 @@ const Navbar = createComponentImplementation(NavbarApi as Any, ({ props }: Any) 
         ))}
       </nav>
       {props.cta ? (
-        <button className="lp-btn ml-auto py-2 text-sm md:ml-0" onClick={() => props.onCta?.()}>
+        <button className="lp-btn ml-auto py-2 text-sm @3xl:ml-0" onClick={() => props.onCta?.()}>
           {props.cta}
         </button>
       ) : null}
@@ -60,16 +60,16 @@ const Hero = createComponentImplementation(HeroApi as Any, ({ props }: Any) => (
       className="pointer-events-none absolute inset-0 opacity-60"
       style={{ background: "radial-gradient(60% 60% at 80% 0%, var(--lp-accent-bg), transparent 70%)" }}
     />
-    <div className={`relative mx-auto grid max-w-6xl items-center gap-12 px-6 py-24 ${props.image ? "md:grid-cols-2" : ""}`}>
+    <div className={`relative mx-auto grid max-w-6xl items-center gap-12 px-6 py-24 ${props.image ? "@3xl:grid-cols-2" : ""}`}>
       <div className={`lp-rise ${props.image ? "" : "mx-auto max-w-3xl text-center"}`}>
         {props.eyebrow ? (
           <span className="mb-5 inline-block rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider" style={{ background: "var(--lp-accent-bg)", color: "var(--lp-accent)" }}>
             {props.eyebrow}
           </span>
         ) : null}
-        <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">{props.title}</h1>
+        <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight @3xl:text-6xl">{props.title}</h1>
         {props.subtitle ? (
-          <p className="mt-6 text-lg leading-relaxed md:text-xl" style={{ color: "var(--lp-soft)" }}>
+          <p className="mt-6 text-lg leading-relaxed @3xl:text-xl" style={{ color: "var(--lp-soft)" }}>
             {props.subtitle}
           </p>
         ) : null}
@@ -91,7 +91,7 @@ const Hero = createComponentImplementation(HeroApi as Any, ({ props }: Any) => (
 
 const Heading = createComponentImplementation(HeadingApi as Any, ({ props }: Any) => {
   const level = props.level ?? "2";
-  const cls = level === "1" ? "text-4xl md:text-5xl" : level === "2" ? "text-3xl md:text-4xl" : "text-xl md:text-2xl";
+  const cls = level === "1" ? "text-4xl @3xl:text-5xl" : level === "2" ? "text-3xl @3xl:text-4xl" : "text-xl @3xl:text-2xl";
   const Tag = (`h${level}` as "h1" | "h2" | "h3");
   return <Tag className={`${cls} font-bold tracking-tight ${props.align === "center" ? "text-center" : ""}`}>{props.text}</Tag>;
 });
@@ -102,7 +102,7 @@ const Section = createComponentImplementation(SectionApi as Any, ({ props, build
   </section>
 ));
 
-const COLS: Record<string, string> = { "2": "md:grid-cols-2", "3": "md:grid-cols-3", "4": "md:grid-cols-2 lg:grid-cols-4" };
+const COLS: Record<string, string> = { "2": "@3xl:grid-cols-2", "3": "@3xl:grid-cols-3", "4": "@3xl:grid-cols-2 @5xl:grid-cols-4" };
 const Grid = createComponentImplementation(GridApi as Any, ({ props, buildChild }: Any) => (
   <div className={`grid gap-6 ${COLS[props.columns ?? "3"]}`}>{children(props.children, buildChild)}</div>
 ));
@@ -166,7 +166,7 @@ const PricingCard = createComponentImplementation(PricingCardApi as Any, ({ prop
 
 const Footer = createComponentImplementation(FooterApi as Any, ({ props }: Any) => (
   <footer className="tone-dark px-6 py-10">
-    <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm md:flex-row">
+    <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm @3xl:flex-row">
       <span style={{ color: "var(--lp-soft)" }}>{props.text}</span>
       <nav className="flex gap-5">
         {(props.links ?? []).map((l: string) => (

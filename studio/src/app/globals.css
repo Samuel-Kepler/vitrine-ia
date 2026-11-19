@@ -79,6 +79,10 @@ body {
 
 .lp {
   --lp-radius: 16px;
+  /* A landing responde à própria largura (container queries @3xl/@5xl), não à
+     janela: assim o preview de celular/tablet no Studio mostra o layout certo,
+     e no HTML exportado (.lp ocupa a tela) o resultado é o mesmo. */
+  container-type: inline-size;
   background: var(--lp-bg);
   color: var(--lp-fg);
   font-family: var(--font-landing);
