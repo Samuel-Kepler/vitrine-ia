@@ -3,8 +3,10 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { Loader2, PackageOpen } from "lucide-react";
 import { useStudio } from "@/lib/draft/store";
-import { hasProjectContent, projectFiles } from "@/lib/export/project";
+import { linkPagesInHtml, pageFile } from "@/lib/draft/pages";
+import { hasProjectContent, projectFiles, type WebPage } from "@/lib/export/project";
 import { downloadZip, exportStandaloneHtml } from "./export";
+import { sitePalette } from "./reimagine-client";
 
 const SurfaceView = dynamic(() => import("@/components/preview/SurfaceView"), { ssr: false });
 
@@ -21,50 +23,109 @@ function whenRendered(el: HTMLElement): Promise<void> {
   });
 }
 
-/** Baixa um zip com a landing (web/), o backend e o banco. Funciona de qualquer modo. */
+interface Item {
+  id: string;
+  name: string;
+  file: string;
+  messages: unknown[];
+  auto: boolean;
+}
+interface Job {
+  items: Item[];
+  index: number;
+  done: WebPage[];
+}
+
+/** Página sem Reimaginar: versão automática (provedor mock, sem IA), sem gravar no Studio. */
+async function automaticMessages(draft: unknown, palette?: string): Promise<unknown[]> {
+  const res = await fetch("/api/reimagine", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ draft, palette, settings: { kind: "mock" } }),
+  });
+  const json = (await res.json()) as { messages?: unknown[]; error?: string };
+  if (!res.ok || !json.messages) throw new Error(json.error ?? `Erro ${res.status}`);
+  return json.messages;
+}
+
+/** Baixa um zip com o site (web/, um HTML por página), o backend e o banco. */
 export function ExportProject() {
-  const result = useStudio((s) => s.result);
   const arch = useStudio((s) => s.arch);
   const db = useStudio((s) => s.db);
-  const [capturing, setCapturing] = useState(false);
+  const hasPages = useStudio((s) => s.tree.length > 0 || s.pages.some((p) => p.tree.length > 0));
+  const [job, setJob] = useState<Job | null>(null);
+  const [preparing, setPreparing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const frame = useRef<HTMLDivElement>(null);
 
-  const enabled = hasProjectContent({ landingHtml: result ? "x" : null, arch, db });
+  const enabled = hasProjectContent({ webPages: hasPages ? [{ file: "", name: "", html: "" }] : [], arch, db });
+  const busy = preparing || !!job;
 
+  const start = async () => {
+    setError(null);
+    const s = useStudio.getState();
+    const pages = s.allPages().filter((p) => p.tree.length > 0);
+    if (!pages.length) {
+      downloadZip("vitrine-projeto.zip", projectFiles({ webPages: [], arch: s.arch, db: s.db }));
+      return;
+    }
+    setPreparing(true);
+    try {
+      const palette = s.palette !== "auto" ? s.palette : sitePalette(pages);
+      const items: Item[] = [];
+      for (const p of pages) {
+        const messages = p.result?.messages ?? (await automaticMessages(p.tree, palette));
+        items.push({ id: p.id, name: p.name, file: pageFile(pages, p.id), messages, auto: !p.result });
+      }
+      setJob({ items, index: 0, done: [] });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPreparing(false);
+    }
+  };
+
+  // Uma página por vez: renderiza fora da tela, captura o HTML, passa para a próxima.
   useEffect(() => {
-    if (!capturing) return;
+    if (!job || !frame.current) return;
     let alive = true;
     (async () => {
-      let html: string | null = null;
-      if (result && frame.current) {
-        await whenRendered(frame.current);
-        html = exportStandaloneHtml(frame.current);
-      }
+      await whenRendered(frame.current!);
       if (!alive) return;
-      downloadZip("vitrine-projeto.zip", projectFiles({ landingHtml: html, arch, db }));
-      setCapturing(false);
+      const item = job.items[job.index];
+      const done = [...job.done, { file: item.file, name: item.name, auto: item.auto, html: exportStandaloneHtml(frame.current!) }];
+      if (job.index + 1 < job.items.length) {
+        setJob({ ...job, index: job.index + 1, done });
+        return;
+      }
+      const s = useStudio.getState();
+      const pages = s.allPages().filter((p) => p.tree.length > 0);
+      const webPages = done.map((w) => ({ ...w, html: linkPagesInHtml(w.html, pages) }));
+      downloadZip("vitrine-projeto.zip", projectFiles({ webPages, arch: s.arch, db: s.db }));
+      setJob(null);
     })();
     return () => {
       alive = false;
     };
-  }, [capturing, result, arch, db]);
+  }, [job]);
 
+  const current = job?.items[job.index];
   return (
     <>
       <button
-        onClick={() => setCapturing(true)}
-        disabled={!enabled || capturing}
+        onClick={start}
+        disabled={!enabled || busy}
         data-testid="export-project"
-        title={enabled ? "Baixar landing + backend + banco num .zip" : "Nada para exportar ainda: desenhe a landing, a arquitetura ou o banco."}
-        className="ml-1 flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+        title={error ?? (enabled ? "Baixar o site (todas as páginas) + backend + banco num .zip" : "Nada para exportar ainda: desenhe a landing, a arquitetura ou o banco.")}
+        className={`ml-1 flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs disabled:opacity-40 ${error ? "border-red-300 text-red-700" : "border-line text-gray-700 hover:bg-gray-50"}`}
       >
-        {capturing ? <Loader2 size={14} className="animate-spin" /> : <PackageOpen size={14} />}
-        Exportar projeto
+        {busy ? <Loader2 size={14} className="animate-spin" /> : <PackageOpen size={14} />}
+        {job ? `Exportando ${job.index + 1}/${job.items.length}…` : preparing ? "Preparando…" : error ? "Exportar (falhou, tente de novo)" : "Exportar projeto"}
       </button>
-      {capturing && result ? (
+      {current ? (
         <div aria-hidden className="pointer-events-none fixed top-0 -left-[20000px] w-[1280px] bg-white">
-          <div ref={frame}>
-            <SurfaceView messages={result.messages} />
+          <div ref={frame} key={current.id}>
+            <SurfaceView messages={current.messages} />
           </div>
         </div>
       ) : null}

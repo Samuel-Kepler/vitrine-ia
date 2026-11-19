@@ -1,5 +1,6 @@
 "use client";
 import { useStudio } from "@/lib/draft/store";
+import { siteDraft } from "@/lib/draft/pages";
 import { expandArch, expandDb } from "@/lib/infer/expand";
 import type { SuggestResult } from "@/lib/infer/suggest";
 import type { ArchGraph } from "@/lib/arch/model";
@@ -16,7 +17,8 @@ export async function runSuggest(): Promise<{ error?: string; info?: string }> {
     const res = await fetch("/api/suggest", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ draft: s.tree, brief: s.brief || undefined, settings: settings.kind ? settings : undefined }),
+      // O site inteiro: um formulário na página Contato também vira rota e tabela.
+      body: JSON.stringify({ draft: siteDraft(s.allPages()), brief: s.brief || undefined, settings: settings.kind ? settings : undefined }),
     });
     const json = (await res.json()) as SuggestResult & { error?: string };
     if (!res.ok) return { error: json.error ?? `Erro ${res.status}` };

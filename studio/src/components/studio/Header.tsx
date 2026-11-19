@@ -17,7 +17,21 @@ const MODES: { id: StudioMode; label: string; icon: typeof PenTool; hint: string
   { id: "db", label: "Banco", icon: Database, hint: "Diagrama ER → SQL, Prisma, Drizzle, DBML" },
 ];
 
-export function Header({ onReimagine, onOpenSettings, serverDefault }: { onReimagine: () => void; onOpenSettings: () => void; serverDefault?: string }) {
+export function Header({
+  onReimagine,
+  onReimagineAll,
+  progress,
+  onOpenSettings,
+  serverDefault,
+}: {
+  onReimagine: () => void;
+  onReimagineAll: () => void;
+  /** Texto do progresso do "Reimaginar todas" (ex.: "2/4 · Cardápio"). */
+  progress?: string | null;
+  onOpenSettings: () => void;
+  serverDefault?: string;
+}) {
+  const pageCount = useStudio((s) => s.pages.length);
   const tab = useStudio((s) => s.tab);
   const setTab = useStudio((s) => s.setTab);
   const busy = useStudio((s) => s.busy);
@@ -92,15 +106,29 @@ export function Header({ onReimagine, onOpenSettings, serverDefault }: { onReima
           <span className="max-w-56 truncate">{providerLabel}</span>
         </button>
         {mode === "ui" ? (
-          <button
-            onClick={onReimagine}
-            disabled={busy}
-            data-testid="reimagine"
-            className="ml-2 flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-70"
-          >
-            {busy ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-            {busy ? "Reimaginando…" : "Reimaginar"}
-          </button>
+          <div className="ml-2 flex items-stretch overflow-hidden rounded-lg bg-brand text-white shadow-sm">
+            <button
+              onClick={onReimagine}
+              disabled={busy}
+              data-testid="reimagine"
+              title={pageCount > 1 ? "Reimaginar a página aberta" : "Reimaginar"}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold transition hover:brightness-110 disabled:opacity-70"
+            >
+              {busy ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+              {busy ? (progress ? `Reimaginando ${progress}…` : "Reimaginando…") : "Reimaginar"}
+            </button>
+            {pageCount > 1 ? (
+              <button
+                onClick={onReimagineAll}
+                disabled={busy}
+                data-testid="reimagine-all"
+                title={`Reimaginar as ${pageCount} páginas, uma de cada vez, com a mesma paleta`}
+                className="border-l border-white/20 px-3 text-xs font-medium transition hover:brightness-110 disabled:opacity-70"
+              >
+                Todas ({pageCount})
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </header>

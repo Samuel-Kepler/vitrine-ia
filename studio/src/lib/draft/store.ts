@@ -86,6 +86,8 @@ interface StudioState {
   setBrief: (brief: string) => void;
   setPalette: (palette: string) => void;
   setResult: (r: ReimagineResult | null) => void;
+  /** Resultado do Reimaginar de qualquer página (a aberta vai para result). */
+  setPageResult: (id: string, r: ReimagineResult | null) => void;
   setBusy: (b: boolean) => void;
   setSettings: (s: ProviderSettings) => void;
   reset: (tree?: DraftNode[]) => void;
@@ -232,6 +234,10 @@ export const useStudio = create<StudioState>()(
         setBrief: (brief) => set({ brief }),
         setPalette: (palette) => set({ palette }),
         setResult: (result) => set({ result }),
+        setPageResult: (id, result) => {
+          if (id === get().pageId) set({ result });
+          else set({ pages: get().pages.map((p) => (p.id === id ? { ...p, result } : p)) });
+        },
         setBusy: (busy) => set({ busy }),
         setSettings: (settings) => set({ settings }),
         reset: (tree) => set({ tree: tree ?? [], selectedId: null }),

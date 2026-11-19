@@ -17,28 +17,82 @@ export function pageBrief(s: { brief: string; pages: { id: string; name: string 
   return brief ? `${brief}\n${site}` : site;
 }
 
+type ReimagineJson = ReimagineResult & { error?: string };
+
+/** Paleta já usada no site (express da página reimaginada): mantém as páginas com a mesma cor. */
+export function sitePalette(pages: { result: ReimagineResult | null }[]): string | undefined {
+  for (const p of pages) {
+    const m = p.result?.express?.match(/palette\s*=\s*"([\w-]+)"/);
+    if (m) return m[1];
+  }
+  return undefined;
+}
+
+async function requestReimagine(body: { draft: unknown; brief?: string; palette?: string; settings?: ProviderSettings }): Promise<ReimagineJson> {
+  const res = await fetch("/api/reimagine", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const json = (await res.json()) as ReimagineJson;
+  if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`);
+  return json;
+}
+
+function paletteFor(s: ReturnType<typeof useStudio.getState>, exceptId?: string): string | undefined {
+  if (s.palette !== "auto") return s.palette;
+  return sitePalette(s.allPages().filter((p) => p.id !== exceptId));
+}
+
 /** Chama /api/reimagine com o rascunho atual. `override` força um provedor (ex.: mock). */
 export async function runReimagine(override?: ProviderSettings): Promise<{ error?: string }> {
   const s = useStudio.getState();
   s.setBusy(true);
   try {
-    const res = await fetch("/api/reimagine", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        draft: s.tree,
-        brief: pageBrief(s) || undefined,
-        palette: s.palette === "auto" ? undefined : s.palette,
-        settings: cleanSettings({ ...s.settings, ...override }),
-      }),
+    const json = await requestReimagine({
+      draft: s.tree,
+      brief: pageBrief(s) || undefined,
+      palette: paletteFor(s, s.pageId),
+      settings: cleanSettings({ ...s.settings, ...override }),
     });
-    const json = (await res.json()) as ReimagineResult & { error?: string };
-    if (!res.ok) return { error: json.error ?? `Erro ${res.status}` };
     s.setResult(json);
     s.setTab("landing");
     return {};
   } catch (err) {
     return { error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    useStudio.getState().setBusy(false);
+  }
+}
+
+/**
+ * Reimagina todas as páginas, uma de cada vez (o limite por minuto dos
+ * provedores gratuitos não aguenta em paralelo). A primeira define a paleta
+ * quando ela está em "A IA escolhe"; as outras seguem.
+ */
+export async function runReimagineAll(onProgress?: (done: number, total: number, name: string) => void): Promise<{ error?: string; failed: string[] }> {
+  const s = useStudio.getState();
+  const pages = s.allPages();
+  const failed: string[] = [];
+  let palette = s.palette === "auto" ? undefined : s.palette;
+  s.setBusy(true);
+  try {
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      onProgress?.(i, pages.length, page.name);
+      try {
+        const json = await requestReimagine({
+          draft: page.tree,
+          brief: pageBrief({ ...s, pageId: page.id }) || undefined,
+          palette,
+          settings: cleanSettings(s.settings),
+        });
+        useStudio.getState().setPageResult(page.id, json);
+        palette ??= sitePalette([{ result: json }]);
+        if (json.fallback) failed.push(`${page.name} (versão automática: ${json.error ?? "IA indisponível"})`);
+      } catch (err) {
+        failed.push(`${page.name}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    onProgress?.(pages.length, pages.length, "");
+    useStudio.getState().setTab("landing");
+    return { failed, error: failed.length ? `Algumas páginas não saíram com IA: ${failed.join("; ")}` : undefined };
   } finally {
     useStudio.getState().setBusy(false);
   }

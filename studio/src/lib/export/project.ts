@@ -1,13 +1,23 @@
-// Monta o projeto completo num conjunto de arquivos: landing (web/), backend
-// (raiz, com docker-compose) e schemas do banco (db/). Puro: testável sem DOM.
+// Monta o projeto completo num conjunto de arquivos: site (web/, uma página
+// HTML por página do Studio), backend (raiz, com docker-compose) e schemas do
+// banco (db/). Puro: testável sem DOM.
 import type { ArchGraph } from "@/lib/arch/model";
 import { archFiles } from "@/lib/arch/codegen";
 import { dbFiles, type GeneratedFile } from "@/lib/db/codegen";
 import type { ErModel } from "@/lib/db/model";
 
+export interface WebPage {
+  /** index.html, cardapio.html… */
+  file: string;
+  name: string;
+  html: string;
+  /** true quando a página não tinha Reimaginar e saiu na versão automática. */
+  auto?: boolean;
+}
+
 export interface ProjectInput {
-  /** HTML estático da landing (null se ainda não houve Reimaginar). */
-  landingHtml: string | null;
+  /** Páginas do site já em HTML estático (vazio se não houver landing). */
+  webPages: WebPage[];
   arch: ArchGraph;
   db: ErModel;
 }
@@ -24,21 +34,25 @@ const WEB_SERVICE = [
   "    restart: on-failure",
 ].join("\n");
 
-export function hasProjectContent({ landingHtml, arch, db }: ProjectInput): boolean {
-  return !!landingHtml || arch.nodes.length > 0 || db.tables.length > 0;
+export function hasProjectContent({ webPages, arch, db }: ProjectInput): boolean {
+  return webPages.length > 0 || arch.nodes.length > 0 || db.tables.length > 0;
 }
 
-function projectReadme(parts: { web: boolean; backend: boolean; db: boolean }, backendReadme?: string): string {
+function projectReadme(parts: { pages: WebPage[]; backend: boolean; db: boolean }, backendReadme?: string): string {
+  const web = parts.pages.length > 0;
   const lines = ["# Projeto exportado do Vitrine Studio", "", "## O que vem neste zip", ""];
-  if (parts.web) lines.push("- `web/index.html`: a landing page, em HTML estático (abre direto no navegador).");
+  if (web) {
+    lines.push(parts.pages.length > 1 ? `- \`web/\`: o site, com ${parts.pages.length} páginas em HTML estático (abrem direto no navegador):` : "- `web/index.html`: a landing page, em HTML estático (abre direto no navegador).");
+    if (parts.pages.length > 1) for (const p of parts.pages) lines.push(`  - \`web/${p.file}\`: ${p.name}${p.auto ? " (versão automática: ainda não reimaginada)" : ""}`);
+  }
   if (parts.backend) lines.push("- `docker-compose.yml`, `.env.example` e as pastas dos serviços: o backend gerado pelo canvas de Arquitetura.");
   if (parts.db) lines.push("- `db/`: o schema do canvas Banco em SQL (Postgres, MySQL, SQLite), Prisma, Drizzle e DBML.");
-  if (!parts.web) lines.push("", "_A landing não foi incluída: clique em **Reimaginar** no Studio antes de exportar._");
+  if (!web) lines.push("", "_O site não foi incluído: clique em **Reimaginar** no Studio antes de exportar._");
   lines.push("", "## Como rodar", "");
   if (parts.backend) {
     lines.push("```bash", "cp .env.example .env", "docker compose up --build", "```", "");
-    if (parts.web) lines.push(`A landing fica em http://localhost:${WEB_PORT} (serviço \`web\`, nginx) e a API nas portas listadas abaixo.`, "");
-  } else if (parts.web) {
+    if (web) lines.push(`O site fica em http://localhost:${WEB_PORT} (serviço \`web\`, nginx) e a API nas portas listadas abaixo.`, "");
+  } else if (web) {
     lines.push("Abra `web/index.html` no navegador, ou sirva a pasta com `npx serve web`.", "");
   } else {
     lines.push("Aplique `db/schema.postgres.sql` (ou o dialeto do seu banco) com o cliente de sua preferência.", "");
@@ -48,8 +62,8 @@ function projectReadme(parts: { web: boolean; backend: boolean; db: boolean }, b
 }
 
 export function projectFiles(input: ProjectInput): GeneratedFile[] {
-  const { landingHtml, arch, db } = input;
-  const web = !!landingHtml;
+  const { webPages, arch, db } = input;
+  const web = webPages.length > 0;
   const backend = arch.nodes.length > 0;
   const out: GeneratedFile[] = [];
   let backendReadme: string | undefined;
@@ -63,9 +77,9 @@ export function projectFiles(input: ProjectInput): GeneratedFile[] {
   } else if (db.tables.length) {
     out.push(...dbFiles(db));
   }
-  if (web) out.push({ path: "web/index.html", content: landingHtml! });
+  for (const p of webPages) out.push({ path: `web/${p.file}`, content: p.html });
 
   const hasDb = out.some((f) => f.path.startsWith("db/"));
-  out.unshift({ path: "README.md", content: projectReadme({ web, backend, db: hasDb }, backendReadme) });
+  out.unshift({ path: "README.md", content: projectReadme({ pages: webPages, backend, db: hasDb }, backendReadme) });
   return out;
 }

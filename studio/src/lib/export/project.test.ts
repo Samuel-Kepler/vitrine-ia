@@ -15,7 +15,7 @@ const paths = (fs: { path: string }[]) => fs.map((f) => f.path);
 describe("projectFiles", () => {
   it("junta landing, backend e banco, com serviço web no compose", () => {
     const { arch, db } = full();
-    const files = projectFiles({ landingHtml: HTML, arch, db });
+    const files = projectFiles({ webPages: [{ file: "index.html", name: "Início", html: HTML }], arch, db });
     const p = paths(files);
     expect(p[0]).toBe("README.md");
     expect(p).toContain("web/index.html");
@@ -35,26 +35,26 @@ describe("projectFiles", () => {
 
   it("sem Reimaginar: exporta backend sem web e avisa no README", () => {
     const { arch, db } = full();
-    const files = projectFiles({ landingHtml: null, arch, db });
+    const files = projectFiles({ webPages: [], arch, db });
     expect(paths(files)).not.toContain("web/index.html");
     expect(files.find((f) => f.path === "docker-compose.yml")!.content).not.toContain("nginx");
     expect(files[0].content).toContain("Reimaginar");
   });
 
   it("só landing: README ensina abrir o HTML", () => {
-    const files = projectFiles({ landingHtml: HTML, arch: { nodes: [], edges: [] }, db: { tables: [], relations: [] } });
+    const files = projectFiles({ webPages: [{ file: "index.html", name: "Início", html: HTML }], arch: { nodes: [], edges: [] }, db: { tables: [], relations: [] } });
     expect(paths(files)).toEqual(["README.md", "web/index.html"]);
     expect(files[0].content).toContain("npx serve web");
   });
 
   it("só banco: inclui os schemas em db/", () => {
     const { db } = full();
-    const files = projectFiles({ landingHtml: null, arch: { nodes: [], edges: [] }, db });
+    const files = projectFiles({ webPages: [], arch: { nodes: [], edges: [] }, db });
     expect(paths(files)).toContain("db/schema.dbml");
     expect(paths(files)).not.toContain("docker-compose.yml");
   });
 
   it("nada desenhado: botão desabilitado", () => {
-    expect(hasProjectContent({ landingHtml: null, arch: { nodes: [], edges: [] }, db: { tables: [], relations: [] } })).toBe(false);
+    expect(hasProjectContent({ webPages: [], arch: { nodes: [], edges: [] }, db: { tables: [], relations: [] } })).toBe(false);
   });
 });

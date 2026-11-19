@@ -204,7 +204,9 @@ No modo UI, a barra **Páginas** (abaixo do topo) cria o site página por págin
 - O Reimaginar avisa a IA de qual página está desenhando e quais existem.
 - Desfazer vale dentro da página aberta. Rascunhos salvos antes desta versão viram a página **Início**.
 
-Ainda faltam (etapa 2): **Reimaginar todas**, exportar um HTML por página e o Sugerir lendo todas as páginas. Hoje, exportar e Sugerir usam a página aberta.
+- **Reimaginar → Todas (N)**, ao lado do Reimaginar, reimagina as páginas uma de cada vez e mostra o progresso. Com a paleta em "A IA escolhe", a primeira página define a paleta e as outras seguem; o Reimaginar de uma página só também usa a paleta do site.
+- **Exportar projeto** gera um HTML por página (`web/index.html` para a primeira, `web/<slug>.html` para as outras), com os links do menu e do rodapé apontando para os arquivos. Páginas sem Reimaginar saem na versão automática, e o README do zip avisa quais são.
+- **Sugerir da landing** lê o site inteiro: um formulário na página Contato também vira rota e tabela.
 
 ## Revisão com IA
 
@@ -228,7 +230,7 @@ Leitor próprio (`src/lib/db/import.ts`), sem `@dbml/core`, que pesaria alguns M
 
 O botão **Exportar projeto**, no topo e em qualquer modo, baixa `vitrine-projeto.zip` com:
 
-- `web/index.html`: a landing do último Reimaginar, em HTML estático;
+- `web/`: o site em HTML estático, um arquivo por página (`index.html` + `<slug>.html`);
 - o backend do canvas Arquitetura (`docker-compose.yml`, serviços, `.env.example`), com um serviço `web` (nginx) que serve a landing em http://localhost:8080;
 - `db/`: os schemas do canvas Banco.
 

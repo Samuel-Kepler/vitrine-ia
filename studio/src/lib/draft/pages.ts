@@ -107,3 +107,27 @@ export function migrateStudio(persisted: unknown, version: number): Record<strin
   if (version >= 2) return st;
   return { ...st, pages: [homePage((st.tree as DraftNode[]) ?? [], (st.result as ReimagineResult | null) ?? null)], pageId: HOME_ID };
 }
+
+/** Arquivo da página no site exportado: a primeira é index.html. */
+export function pageFile(pages: Pick<Page, "id" | "slug">[], id: string): string {
+  const i = pages.findIndex((p) => p.id === id);
+  return i <= 0 ? "index.html" : `${pages[i].slug}.html`;
+}
+
+/** O site inteiro como um rascunho só (menu, miolo de cada página, rodapé), para o Sugerir. */
+export function siteDraft(pages: Page[]): DraftNode[] {
+  const first = pages[0]?.tree ?? [];
+  const { navbar, footer } = chromeOf(first);
+  const bodies = pages.flatMap((p) => p.tree.filter((n) => n.type !== "navbar" && n.type !== "footer"));
+  return [...(navbar ? [navbar] : []), ...bodies, ...(footer ? [footer] : [])];
+}
+
+const stripTags = (s: string) => s.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").trim();
+
+/** No HTML exportado, liga os links do menu/rodapé com nome de página ao arquivo dela. */
+export function linkPagesInHtml(html: string, pages: Pick<Page, "id" | "name" | "slug">[]): string {
+  return html.replace(/<a\b([^>]*?)\bhref="#"([^>]*)>([\s\S]*?)<\/a>/g, (m, pre: string, post: string, inner: string) => {
+    const page = pageForLink(pages as Page[], stripTags(inner));
+    return page ? `<a${pre}href="${pageFile(pages, page.id)}"${post}>${inner}</a>` : m;
+  });
+}

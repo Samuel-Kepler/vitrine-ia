@@ -11,7 +11,7 @@ import { Inspector } from "./Inspector";
 import { LandingTab } from "./LandingTab";
 import { CodeTab } from "./CodeTab";
 import { SettingsDialog, type ServerStatus } from "./SettingsDialog";
-import { runReimagine } from "./reimagine-client";
+import { runReimagine, runReimagineAll } from "./reimagine-client";
 
 // React Flow só no navegador e só quando o modo é aberto.
 const ArchCanvas = dynamic(() => import("@/components/arch/ArchCanvas"), { ssr: false });
@@ -59,9 +59,17 @@ export default function Studio() {
     if (r.error) setError(r.error);
   };
 
+  const [progress, setProgress] = useState<string | null>(null);
+  const reimagineAll = async () => {
+    setError(null);
+    const r = await runReimagineAll((done, total, name) => setProgress(done < total ? `${done + 1}/${total} · ${name}` : null));
+    setProgress(null);
+    if (r.error) setError(r.error);
+  };
+
   return (
     <div className="flex h-screen flex-col">
-      <Header onReimagine={reimagineNow} onOpenSettings={() => setSettingsOpen(true)} serverDefault={status ? `${status.defaultKind} · ${status.defaultModel}` : undefined} />
+      <Header onReimagine={reimagineNow} onReimagineAll={reimagineAll} progress={progress} onOpenSettings={() => setSettingsOpen(true)} serverDefault={status ? `${status.defaultKind} · ${status.defaultModel}` : undefined} />
       {mode === "ui" ? <PageBar /> : null}
       {error ? (
         <div className="flex items-start gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800" role="alert">
