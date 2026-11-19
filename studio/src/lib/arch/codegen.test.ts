@@ -180,6 +180,37 @@ describe("inferência + codegen", () => {
     expect(get("services/api/src/queue.ts")).toContain("lazyConnect: true");
   });
 
+  it("/ready checa as dependências e o serviço desliga com calma no SIGTERM", () => {
+    const { graph, er } = sample();
+    const files = archFiles(graph, er);
+    const get = (p: string) => files.find((f) => f.path === p)?.content ?? "";
+    const api = get("services/api/src/index.ts");
+    expect(api).toContain('app.get("/ready"');
+    expect(api).toContain('postgres: () => db.query("select 1")');
+    expect(api).toContain("fila: () => pingQueue()");
+    expect(api).toMatch(/if \(shuttingDown\) return c\.json\(\{ ok: false, status: "desligando" \}, 503\)/);
+    expect(api).toContain('process.on("SIGTERM"');
+    expect(api).toContain("server.close(");
+    expect(api.indexOf("server.close(")).toBeLessThan(api.indexOf("await db.end();"));
+    expect(get("services/api/openapi.yaml")).toContain("/ready:");
+    // worker: fecha a fila, sem rota HTTP
+    const worker = get("services/notificacoes/src/index.ts");
+    expect(worker).toContain("await closeQueue();");
+    expect(worker).not.toContain("/ready");
+    expect(worker).not.toMatch(/^await consume/m); // filas em paralelo, não em sequência
+  });
+
+  it("fila: retry de eventos parados, dead-letter e consumidor por contêiner", () => {
+    const { graph, er } = sample();
+    const queue = archFiles(graph, er).find((f) => f.path === "services/notificacoes/src/queue.ts")!.content;
+    expect(queue).toContain('"XPENDING", stream, group, "IDLE"');
+    expect(queue).toContain('"XCLAIM"');
+    expect(queue).toContain("`${stream}:dlq`");
+    expect(queue).toContain("deliveries >= MAX_DELIVERIES");
+    expect(queue).toContain("hostname()");
+    expect(queue).toContain("BUSYGROUP");
+  });
+
   it("SQL respeita a ordem pai -> filho e cria FK", () => {
     const { er } = sample();
     const sql = toSql(er, "postgres");

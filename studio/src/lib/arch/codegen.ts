@@ -253,15 +253,16 @@ function serviceIndex(p: ServicePlan, er: ErModel): string {
   if (posts.length) imports.push('import type { z } from "zod";', `import { ${posts.map(schemaName).join(", ")} } from "./schemas.js";`);
   if (isHttp && p.jwt) imports.push(`import { ${p.ownAuth ? "authRoutes, " : ""}requireAuth, type AuthEnv } from "./auth.js";`);
   if (p.cache) imports.push('import { cache } from "./cache.js";');
-  if (p.publishes.length) imports.push('import { publish } from "./queue.js";');
-  if (p.consumes.length) imports.push('import { consume } from "./queue.js";');
+  const queueFns = [...(p.publishes.length ? ["publish"] : []), ...(p.consumes.length ? ["consume"] : []), ...(p.publishes.length || p.consumes.length ? [...(isHttp ? ["pingQueue"] : []), "closeQueue"] : [])];
+  if (queueFns.length) imports.push(`import { ${queueFns.join(", ")} } from "./queue.js";`);
   if (p.httpTargets.length) imports.push(`import { ${p.httpTargets.map((t) => clientFn(t)).join(", ")} } from "./clients.js";`);
   const uniqImports = [...new Set(imports)];
   const parts = [`// ${p.node.name} — gerado pelo Vitrine Studio`, ...uniqImports, ""];
+  if (!isHttp) parts.push("let shuttingDown = false;");
 
   if (isHttp) {
     const routes = routeLines(p.node.props.routes);
-    parts.push(p.jwt ? "const app = new Hono<AuthEnv>();" : "const app = new Hono();", "", HARDENING, "", 'app.get("/health", (c) => c.json({ ok: true, service: "' + p.slug + '" }));', "");
+    parts.push(p.jwt ? "const app = new Hono<AuthEnv>();" : "const app = new Hono();", "", HARDENING, "", 'app.get("/health", (c) => c.json({ ok: true, service: "' + p.slug + '" }));', readyRoute(p), "");
     if (posts.length) parts.push(ISSUES_FN, "");
     parts.push(onErrorHandler(!!p.db), "");
     if (p.ownAuth) parts.push("// POST /auth/register, POST /auth/login, GET /auth/me (ver src/auth.ts)", 'app.route("/auth", authRoutes);', "");
@@ -282,24 +283,96 @@ function serviceIndex(p: ServicePlan, er: ErModel): string {
       "",
       'if (process.env.NODE_ENV !== "test") {',
       `  const port = Number(process.env.PORT ?? ${p.port});`,
-      `  serve({ fetch: app.fetch, port }, () => console.log(\`${p.slug} ouvindo em http://localhost:\${port}\`));`,
+      `  const server = serve({ fetch: app.fetch, port }, () => console.log(\`${p.slug} ouvindo em http://localhost:\${port}\`));`,
     );
   }
   const ind = isHttp ? "  " : "";
   for (const q of p.consumes) {
     parts.push(
       "",
-      `${ind}await consume("${streamName(q)}", "${p.slug}", async (event) => {`,
+      `${ind}// Cada fila roda em paralelo; se o consumo não conseguir nem começar, o processo cai e o Docker reinicia.`,
+      `${ind}consume("${streamName(q)}", "${p.slug}", async (event) => {`,
       `${ind}  console.log("[${p.slug}] evento recebido", event);`,
-      `${ind}  // TODO: processe o evento (ex.: enviar e-mail, atualizar CRM)`,
+      `${ind}  // TODO: processe o evento (ex.: enviar e-mail, atualizar CRM).`,
+      `${ind}  // Lançar erro aqui = o evento volta para nova tentativa (e vai para a dead-letter depois de várias).`,
+      `${ind}}).catch((err) => {`,
+      `${ind}  console.error("[${p.slug}] consumo parou:", err);`,
+      `${ind}  process.exit(1);`,
       `${ind}});`,
     );
   }
-  if (isHttp) parts.push("}");
   if (!isHttp && !p.consumes.length) {
-    parts.push("// Worker sem fila ligada: ligue uma Fila -> este worker no canvas.", 'setInterval(() => console.log("worker vivo"), 60_000);');
+    parts.push("// Worker sem fila ligada: ligue uma Fila -> este worker no canvas.", 'const timer = setInterval(() => console.log("worker vivo"), 60_000);');
   }
+  parts.push("", ...shutdownBlock(p).split("\n").map((l) => (l ? ind + l : l)));
+  if (isHttp) parts.push("}");
   return parts.join("\n") + "\n";
+}
+
+// Desligamento gracioso: "docker stop" manda SIGTERM e espera 10 s antes do
+// SIGKILL. Paramos de aceitar trabalho novo, terminamos o que está em andamento
+// e fechamos as conexões, com um limite de 9 s.
+function shutdownBlock(p: ServicePlan): string {
+  const isHttp = p.node.kind !== "worker";
+  const steps = [
+    ...(isHttp ? ["await new Promise<void>((resolve) => server.close(() => resolve())); // termina as requisições em andamento"] : []),
+    ...(!isHttp && !p.consumes.length ? ["clearInterval(timer);"] : []),
+    ...(p.publishes.length || p.consumes.length ? ["await closeQueue(); // o consumo termina o evento atual antes de parar"] : []),
+    ...(p.cache ? ["await cache.quit();"] : []),
+    ...(p.db ? ["await db.end();"] : []),
+  ];
+  return `// Desligamento gracioso (docker stop manda SIGTERM e mata em 10 s).
+async function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;${isHttp ? " // /ready passa a responder 503" : ""}
+  console.log(\`[${p.slug}] \${signal}: desligando...\`);
+  setTimeout(() => process.exit(1), 9_000).unref(); // não trava o docker stop
+  try {
+${steps.map((s) => `    ${s}`).join("\n")}
+  } catch (err) {
+    console.error("[${p.slug}] erro ao desligar:", err);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));`;
+}
+
+// Prontidão: /health diz que o processo está vivo; /ready diz se as
+// dependências (Postgres, Redis, fila) respondem. 503 quando alguma falha ou
+// quando o serviço está desligando.
+function readyRoute(p: ServicePlan): string {
+  const checks = [
+    ...(p.db ? ['postgres: () => db.query("select 1")'] : []),
+    ...(p.cache ? ["redis: () => cache.ping()"] : []),
+    ...(p.publishes.length || p.consumes.length ? ["fila: () => pingQueue()"] : []),
+  ];
+  return `let shuttingDown = false;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([promise, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(\`sem resposta em \${ms} ms\`)), ms).unref())]);
+}
+
+// /health = processo vivo (healthcheck do Docker); /ready = dependências respondendo.
+const READY_CHECKS: Record<string, () => Promise<unknown>> = {${checks.map((c) => `\n  ${c},`).join("")}
+};
+app.get("/ready", async (c) => {
+  if (shuttingDown) return c.json({ ok: false, status: "desligando" }, 503);
+  const entries = await Promise.all(
+    Object.entries(READY_CHECKS).map(async ([name, check]) => {
+      try {
+        await withTimeout(check(), 2_000);
+        return [name, "ok"] as const;
+      } catch (err) {
+        console.error(\`[ready] \${name}:\`, (err as Error).message);
+        return [name, "falhou"] as const; // detalhe só no log, não na resposta
+      }
+    }),
+  );
+  const ok = entries.every(([, s]) => s === "ok");
+  return c.json({ ok, ...Object.fromEntries(entries) }, ok ? 200 : 503);
+});`;
 }
 
 /** Porta do site (nginx) no projeto completo; é a origem liberada no CORS por padrão. */
@@ -527,29 +600,103 @@ export const cache = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"
   if (p.publishes.length || p.consumes.length) {
     files.push({
       path: `${base}/src/queue.ts`,
-      content: `// Fila com Redis Streams. Molde simples: sem retry nem dead-letter.
+      content: `// Fila com Redis Streams: entrega "pelo menos uma vez", com nova tentativa e dead-letter.
+// - Evento cujo handler lança erro não é confirmado (XACK): volta depois de QUEUE_RETRY_IDLE_MS.
+// - Depois de QUEUE_MAX_DELIVERIES tentativas (ou JSON inválido) vai para "<stream>:dlq",
+//   com o erro, para inspeção:  docker compose exec redis redis-cli XRANGE eventos:dlq - +
+// Como um evento pode chegar mais de uma vez, o handler deve ser idempotente.
+import { hostname } from "node:os";
 import { Redis } from "ioredis";
 
+// lazyConnect: conecta no primeiro comando (importar o módulo nos testes não abre conexão).
 const redis = new Redis(process.env.QUEUE_URL ?? "redis://localhost:6379", { lazyConnect: true });
+
+const MAX_DELIVERIES = Number(process.env.QUEUE_MAX_DELIVERIES ?? 5);
+const RETRY_IDLE_MS = Number(process.env.QUEUE_RETRY_IDLE_MS ?? 30_000);
+const BLOCK_MS = 5_000;
+
+type Entry = [id: string, fields: string[]];
+type Handler = (event: unknown) => Promise<void>;
+
+let stopping = false;
+const loops = new Set<Promise<void>>();
 
 export async function publish(stream: string, event: unknown): Promise<void> {
   await redis.xadd(stream, "*", "data", JSON.stringify(event));
 }
 
-export async function consume(stream: string, group: string, handle: (event: unknown) => Promise<void>): Promise<never> {
-  const consumer = \`\${group}-\${process.pid}\`;
-  await redis.xgroup("CREATE", stream, group, "$", "MKSTREAM").catch(() => {}); // já existe
-  for (;;) {
-    const res = (await redis.xreadgroup("GROUP", group, consumer, "COUNT", 10, "BLOCK", 5000, "STREAMS", stream, ">")) as
-      | [string, [string, string[]][]][]
-      | null;
-    for (const [, entries] of res ?? []) {
-      for (const [id, fields] of entries) {
-        await handle(JSON.parse(fields[1] ?? "null"));
-        await redis.xack(stream, group, id);
+export function pingQueue(): Promise<unknown> {
+  return redis.ping();
+}
+
+/** Para os consumidores (terminam o evento atual; até 5 s ms) e fecha a conexão. */
+export async function closeQueue(): Promise<void> {
+  stopping = true;
+  await Promise.allSettled(loops);
+  await redis.quit().catch(() => {});
+}
+
+async function deadLetter(stream: string, group: string, [id, fields]: Entry, reason: string, deliveries: number) {
+  await redis.xadd(\`\${stream}:dlq\`, "*", "data", fields[1] ?? "null", "error", reason, "source_id", id, "group", group, "deliveries", String(deliveries));
+  await redis.xack(stream, group, id);
+  console.error(\`[fila] \${stream} \${id} -> \${stream}:dlq (\${deliveries} tentativa(s)): \${reason}\`);
+}
+
+async function deliver(stream: string, group: string, handle: Handler, entry: Entry, deliveries: number) {
+  let event: unknown;
+  try {
+    event = JSON.parse(entry[1][1] ?? "null");
+  } catch {
+    return deadLetter(stream, group, entry, "JSON inválido", deliveries); // nunca vai dar certo: sem retry
+  }
+  try {
+    await handle(event);
+    await redis.xack(stream, group, entry[0]);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    if (deliveries >= MAX_DELIVERIES) return deadLetter(stream, group, entry, reason, deliveries);
+    console.warn(\`[fila] \${stream} \${entry[0]} falhou (tentativa \${deliveries}/\${MAX_DELIVERIES}): \${reason}\`);
+  }
+}
+
+/** Pega de volta eventos parados há RETRY_IDLE_MS (falharam ou o consumidor caiu) e tenta de novo. */
+async function retryStale(stream: string, group: string, consumer: string, handle: Handler) {
+  const pending = (await redis.call("XPENDING", stream, group, "IDLE", RETRY_IDLE_MS, "-", "+", 10)) as [string, string, number, number][];
+  for (const [id, , , count] of pending) {
+    const claimed = (await redis.call("XCLAIM", stream, group, consumer, RETRY_IDLE_MS, id)) as (Entry | null)[];
+    for (const entry of claimed) if (entry?.[1]) await deliver(stream, group, handle, entry, count + 1);
+  }
+}
+
+async function loop(stream: string, group: string, handle: Handler) {
+  // hostname = id do contêiner: réplicas diferentes não se confundem (o pid é sempre 1 no Docker).
+  const consumer = \`\${group}-\${hostname()}\`;
+  await redis.xgroup("CREATE", stream, group, "$", "MKSTREAM").catch((err: Error) => {
+    if (!err.message.includes("BUSYGROUP")) throw err; // BUSYGROUP = o grupo já existe
+  });
+  let lastRetry = 0;
+  while (!stopping) {
+    try {
+      if (Date.now() - lastRetry >= RETRY_IDLE_MS / 2) {
+        lastRetry = Date.now();
+        await retryStale(stream, group, consumer, handle);
       }
+      const res = (await redis.xreadgroup("GROUP", group, consumer, "COUNT", 10, "BLOCK", BLOCK_MS, "STREAMS", stream, ">")) as [string, Entry[]][] | null;
+      for (const [, entries] of res ?? []) for (const entry of entries) await deliver(stream, group, handle, entry, 1);
+    } catch (err) {
+      if (stopping) break;
+      // Redis caiu ou reiniciou: o ioredis reconecta; esperamos um pouco e seguimos.
+      console.error(\`[fila] \${stream}: \${(err as Error).message}; tentando de novo em 1 s\`);
+      await new Promise((r) => setTimeout(r, 1_000));
     }
   }
+}
+
+/** Consome o stream até closeQueue(). Rejeita só se não conseguir nem criar o grupo. */
+export function consume(stream: string, group: string, handle: Handler): Promise<void> {
+  const run = loop(stream, group, handle);
+  loops.add(run);
+  return run;
 }
 `,
     });
@@ -582,6 +729,7 @@ function openapi(p: ServicePlan): string {
   const byPath = new Map<string, RouteLine[]>();
   for (const r of routes) byPath.set(r.path, [...(byPath.get(r.path) ?? []), r]);
   if (!byPath.has("/health")) byPath.set("/health", [{ method: "GET", path: "/health", protected: false }]);
+  if (!byPath.has("/ready")) byPath.set("/ready", [{ method: "GET", path: "/ready", protected: false }]);
   const lines = ["openapi: 3.1.0", "info:", `  title: ${JSON.stringify(p.node.name)}`, "  version: 0.1.0", "servers:", `  - url: http://localhost:${p.port}`, "paths:"];
   for (const [path, rs] of byPath) {
     lines.push(`  ${path.replace(/:(\w+)/g, "{$1}")}:`);
@@ -773,6 +921,16 @@ npm install
 npm run dev
 npm test   # testes de fumaça das APIs (test/), sem precisar de banco
 \`\`\`
+
+## Saúde, desligamento e fila
+
+- \`GET /health\`: o processo está vivo (é o healthcheck do Docker).
+- \`GET /ready\`: Postgres, Redis e fila respondem (503 se algum falhar ou durante o desligamento).
+- \`docker compose stop\` desliga com calma: o serviço para de aceitar requisições,
+  termina as que estão em andamento e fecha as conexões (limite de 9 s).
+- Fila: evento cujo handler lança erro volta para nova tentativa depois de
+  \`QUEUE_RETRY_IDLE_MS\` (30 s); depois de \`QUEUE_MAX_DELIVERIES\` (5) tentativas vai para
+  \`<stream>:dlq\`. Como um evento pode chegar mais de uma vez, o handler deve ser idempotente.
 
 Variáveis de ambiente: veja \`.env.example\`.
 `;
