@@ -109,6 +109,32 @@ describe("codegen: Autenticação Própria", () => {
   });
 });
 
+describe("codegen: rotas protegidas só devolvem dados do dono", () => {
+  const { graph, er } = sample();
+  const api = graph.nodes.find((n) => n.kind === "api")!;
+  api.props.routes += "\nGET /subscriptions/me auth\nGET /subscriptions/{id} auth\nGET /users/me auth\nGET /testimonials/me auth";
+  const index = file(archFiles(graph, er), "services/api/src/index.ts")!;
+  const handler = (path: string) => index.slice(index.indexOf(`app.get("${path}"`)).split("\n});")[0];
+
+  it("lista protegida filtra pela FK para users com o sub do token", () => {
+    expect(handler("/subscriptions/me")).toContain(`where "user_id" = $1 limit 100', [c.get("jwtPayload").sub]`);
+  });
+  it("busca por id protegida também confere o dono", () => {
+    expect(handler("/subscriptions/:id")).toContain(`where "id" = $1 and "user_id" = $2', [c.req.param("id"), c.get("jwtPayload").sub]`);
+  });
+  it("/users/me devolve o próprio usuário, sem hash", () => {
+    expect(handler("/users/me")).toContain(`where "id" = $1', [c.get("jwtPayload").sub]`);
+    expect(handler("/users/me")).not.toContain("password_hash");
+  });
+  it("/me numa tabela sem dono vira TODO em vez de listar tudo", () => {
+    expect(handler("/testimonials/me")).toContain("501");
+    expect(handler("/testimonials/me")).not.toContain("select");
+  });
+  it("rota pública continua listando a tabela", () => {
+    expect(handler("/leads")).toContain(`from "leads" limit 100'`);
+  });
+});
+
 describe("codegen: Autenticação Externa", () => {
   it("mantém o cliente HTTP e não gera /auth", () => {
     const { graph, er } = sample();

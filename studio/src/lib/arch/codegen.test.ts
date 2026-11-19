@@ -113,11 +113,11 @@ describe("inferência + codegen", () => {
 
   it("segredos fixos podem ser injetados (export reproduzível)", () => {
     const { graph, er } = sample();
-    const s = { postgresPassword: "a".repeat(32), jwtSecret: "b".repeat(64), minioPassword: "c".repeat(32) };
+    const s = { postgresPassword: "a".repeat(32), jwtSecret: "b".repeat(64), storageSecret: "c".repeat(32) };
     expect(archFiles(graph, er, s)).toEqual(archFiles(graph, er, s));
   });
 
-  it("banco, Redis e MinIO só escutam no localhost; APIs continuam acessíveis", () => {
+  it("banco, Redis e storage só escutam no localhost; APIs continuam acessíveis", () => {
     const { graph, er } = sample();
     graph.nodes.push({ id: "s3", kind: "storage", name: "Arquivos", props: {}, position: { x: 0, y: 0 } } as never);
     const compose = archFiles(graph, er).find((f) => f.path === "docker-compose.yml")!.content;
@@ -125,6 +125,23 @@ describe("inferência + codegen", () => {
       expect(compose).toContain(`"127.0.0.1:${port}:${port}"`);
       expect(compose).not.toContain(`- "${port}:${port}"`);
     }
+  });
+
+  it("storage S3: RustFS com versão fixa, segredo no .env e credenciais nos serviços", () => {
+    const { graph, er } = sample();
+    graph.nodes.push({ id: "s3", kind: "storage", name: "Arquivos", props: {}, position: { x: 0, y: 0 } } as never);
+    const api = graph.nodes.find((n) => n.kind === "api")!;
+    graph.edges.push({ id: "e-s3", source: api.id, target: "s3", kind: "writes" } as never);
+    const files = archFiles(graph, er);
+    const get = (p: string) => files.find((f) => f.path === p)!.content;
+    const compose = get("docker-compose.yml");
+    expect(compose).toMatch(/ {2}storage:\n {4}image: rustfs\/rustfs:\d+\.\d+\.\d+\n/);
+    expect(compose).not.toMatch(/minio|:latest/);
+    expect(compose).toContain("RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?");
+    expect(compose).toContain("S3_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:?");
+    expect(compose).toContain("S3_ENDPOINT: http://storage:9000");
+    expect(compose).toMatch(/volumes:\n {2}pgdata:\n {2}storagedata:/);
+    expect(get(".env")).toMatch(/^S3_SECRET_KEY=[0-9a-f]{32}$/m);
   });
 
   it("API gerada: cabeçalhos seguros, limite de corpo e CORS só para as origens configuradas", () => {
@@ -149,6 +166,7 @@ describe("inferência + codegen", () => {
     expect(db).toContain("connectionTimeoutMillis: 5_000");
     expect(db).toContain("statement_timeout: 10_000");
     expect(db).toContain('db.on("error"');
+    expect(db).toContain("pg.types.setTypeParser(pg.types.builtins.DATE, (v) => v);");
   });
 
   it("SELECT nunca usa *: colunas explícitas, sem hash de senha", () => {

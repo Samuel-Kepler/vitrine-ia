@@ -28,8 +28,12 @@ function walk(tree: DraftNode[]): DraftNode[] {
 const ID = { name: "id", type: "uuid" as ColType, pk: true, default: "uuid" };
 const CREATED = { name: "created_at", type: "timestamp" as ColType, default: "now" };
 
-function fieldType(label: string): { type: ColType; unique?: boolean } {
+function fieldType(label: string): { type: ColType; unique?: boolean; nullable?: boolean } {
   const s = slug(label);
+  // Arquivo enviado pelo formulário: a coluna guarda a URL/chave dele e é opcional
+  // (o envio do arquivo em si é outra etapa; exigir aqui recusaria o lead sem foto).
+  if (/upload|foto|imagem|arquivo|anexo|curriculo/.test(s)) return { type: "varchar", nullable: true };
+  if (/opcional/.test(s)) return { ...fieldType(label.replace(/\(?opcional\)?/i, "")), nullable: true };
   if (/mail/.test(s)) return { type: "varchar", unique: false };
   if (/telefone|whats|celular|phone/.test(s)) return { type: "varchar" };
   if (/idade|quantidade|qtd|numero/.test(s)) return { type: "int" };
@@ -62,7 +66,7 @@ export function inferFromDraft(draft: DraftNode[], brief = ""): Suggestion {
     const fields = [...new Set(forms.flatMap((f) => lines(f.props.fields)))];
     db.tables.push({
       name: "leads",
-      columns: [ID, ...fields.map((f) => ({ name: slug(f).replace(/^e_?mail$/, "email"), ...fieldType(f) })), { name: "origem", type: "varchar" as ColType, nullable: true }, CREATED],
+      columns: [ID, ...fields.map((f) => ({ name: slug(f.replace(/\(?opcional\)?/i, "")).replace(/^e_?mail$/, "email"), ...fieldType(f) })), { name: "origem", type: "varchar" as ColType, nullable: true }, CREATED],
     });
     routes.push("POST /leads", "GET /leads");
     notes.push(`Formulário → tabela leads (${fields.join(", ")}) e POST /leads.`);

@@ -64,6 +64,27 @@ describe("extractOutline", () => {
 const find = (tree: DraftNode[], type: string): DraftNode[] =>
   tree.flatMap((n) => [...(n.type === type ? [n] : []), ...find(n.children ?? [], type)]);
 
+describe("extractOutline: campos fora de <form>", () => {
+  // Como o HTML que o próprio Studio exporta: label + input soltos dentro de um card.
+  const LOOSE = `<!doctype html><html><head><title>Contato</title></head><body><main>
+    <h2>Envie sua mensagem</h2>
+    <div class="card">
+      <a2ui-textfield><label>Nome</label><!-- lit --><input type="text"></a2ui-textfield>
+      <a2ui-textfield><label>E-mail</label><input type="email"></a2ui-textfield>
+      <div><textarea aria-label="Mensagem"></textarea></div>
+      <input type="hidden" name="csrf">
+      <button>Enviar</button>
+    </div>
+  </main></body></html>`;
+
+  it("lê os campos pelo label vizinho ou aria-label e monta o formulário", () => {
+    const o = extractOutline(new DOMParser().parseFromString(LOOSE, "text/html"), "contato.html");
+    expect(o.items.filter((i) => i.kind === "field").map((i) => i.text)).toEqual(["Nome", "E-mail", "Mensagem"]);
+    const form = outlineToDraft(o).find((n) => n.type === "form")!;
+    expect(form.props).toMatchObject({ title: "Envie sua mensagem", fields: "Nome\nE-mail\nMensagem", cta: "Enviar" });
+  });
+});
+
 describe("outlineToDraft (sem IA)", () => {
   const tree = outlineToDraft(extractOutline(parse(HOME), "index.html"), { year: 2026 });
 

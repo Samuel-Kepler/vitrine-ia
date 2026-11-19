@@ -101,7 +101,7 @@ export const ARCH: Record<ArchKind, ArchKindDef> = {
   storage: {
     kind: "storage",
     label: "Arquivos",
-    hint: "S3 / MinIO",
+    hint: "S3 (RustFS)",
     color: "#14b8a6",
     runnable: false,
     defaults: { bucket: "uploads" },

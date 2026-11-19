@@ -42,6 +42,20 @@ export function pageNameFromFile(file: string, title: string): string {
   return (fromFile.length <= 30 ? fromFile : fromTitle) || fromTitle || "Página";
 }
 
+const SKIP_INPUT_TYPES = ["hidden", "submit", "button", "checkbox", "radio", "reset", "image"];
+
+/** Rótulo de um campo: <label for>, <label> em volta, <label> logo antes, aria-label, placeholder ou name. */
+function fieldLabel(f: Element, scope: ParentNode): string {
+  if (SKIP_INPUT_TYPES.includes((f.getAttribute("type") ?? "").toLowerCase())) return "";
+  const id = f.getAttribute("id");
+  const forLabel = id ? [...scope.querySelectorAll("label")].find((l) => l.getAttribute("for") === id) : undefined;
+  // Só o irmão imediato: pular elementos pegaria o rótulo do campo anterior.
+  const prev = f.previousElementSibling;
+  const before = prev?.tagName === "LABEL" && !prev.getAttribute("for") ? prev : undefined;
+  const label = forLabel?.textContent || f.closest("label")?.textContent || before?.textContent || f.getAttribute("aria-label") || f.getAttribute("placeholder") || f.getAttribute("name");
+  return clean(label, 40);
+}
+
 /** Lê o conteúdo de um documento HTML já parseado. */
 export function extractOutline(doc: Document, file: string): PageOutline {
   const title = clean(doc.title, 200) || clean(doc.querySelector("h1")?.textContent, 200) || file;
@@ -72,7 +86,7 @@ export function extractOutline(doc: Document, file: string): PageOutline {
     if (items.length < MAX_ITEMS) items.push(item);
   };
 
-  for (const el of root ? [...root.querySelectorAll("h1, h2, h3, h4, p, li, blockquote, img, button, a, form")] : []) {
+  for (const el of root ? [...root.querySelectorAll("h1, h2, h3, h4, p, li, blockquote, img, button, a, form, input, textarea, select")] : []) {
     if (inside(el, SKIP) || footerEl?.contains(el)) continue;
     // <header> só com logo e menu fica de fora; com <h1> é o hero da página.
     const header = el.closest("header");
@@ -88,17 +102,18 @@ export function extractOutline(doc: Document, file: string): PageOutline {
     if (tag === "form") {
       taken.push(el);
       for (const f of el.querySelectorAll("input, textarea, select")) {
-        const type = (f.getAttribute("type") ?? "").toLowerCase();
-        if (["hidden", "submit", "button", "checkbox", "radio"].includes(type)) continue;
-        const id = f.getAttribute("id");
-        const forLabel = id ? [...el.querySelectorAll("label")].find((l) => l.getAttribute("for") === id) : undefined;
-        const label = forLabel?.textContent || f.closest("label")?.textContent || f.getAttribute("placeholder") || f.getAttribute("name");
-        const text = clean(label, 40);
+        const text = fieldLabel(f, el);
         if (text) push({ kind: "field", text });
       }
       const submit = el.querySelector("button, input[type=submit]");
       const cta = clean(submit?.textContent || submit?.getAttribute("value"), 40);
       if (cta) push({ kind: "button", text: cta });
+      continue;
+    }
+    if (tag === "input" || tag === "textarea" || tag === "select") {
+      // Campo fora de <form> (sites com JS, ou o HTML que o próprio Studio exporta).
+      const text = fieldLabel(el, doc);
+      if (text) push({ kind: "field", text });
       continue;
     }
     if (tag === "button" || (tag === "a" && (BUTTONISH.test(el.getAttribute("class") ?? "") || el.getAttribute("role") === "button"))) {

@@ -43,3 +43,16 @@ describe("inferFromDraft: login", () => {
     expect(inferFromDraft([navbar("Contatos")]).arch.nodes.some((n) => n.kind === "auth")).toBe(false);
   });
 });
+
+describe("formulário: campos de arquivo e opcionais", () => {
+  it("upload/foto e '(opcional)' viram colunas anuláveis, sem o sufixo no nome", () => {
+    const form = createNode("form");
+    form.props = { ...form.props, fields: "Nome\nE-mail\nUpload de foto\nTelefone (opcional)" };
+    const leads = inferFromDraft([form]).db.tables.find((t) => t.name === "leads")!;
+    const col = (n: string) => leads.columns.find((c) => c.name === n);
+    expect(col("nome")?.nullable).toBeFalsy();
+    expect(col("upload_de_foto")).toMatchObject({ type: "varchar", nullable: true });
+    expect(col("telefone")).toMatchObject({ type: "varchar", nullable: true });
+    expect(leads.columns.some((c) => /opcional/.test(c.name))).toBe(false);
+  });
+});

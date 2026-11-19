@@ -222,21 +222,44 @@ function routeHandler(p: ServicePlan, route: RouteLine, er: ErModel): string {
   const guard = route.protected ? "requireAuth, " : "";
   const cols = table ? selectList(table, er) : "*";
 
+  // Rota protegida em tabela com dono (FK para users): só as linhas do usuário do token.
+  const owner = route.protected && table ? userFk(table, er) : undefined;
+  const pkCol = table ? snake(table.columns.find((col) => col.pk)?.name ?? "id") : "id";
+  const isMe = /\/me$/.test(path);
   if (table && method === "GET" && !hasId) {
-    return `app.get("${honoPath}", ${guard}async (c) => {
+    if (route.protected && snake(table.name) === USERS_TABLE) {
+      // GET /users/me e afins: o próprio usuário, pelo id do token.
+      return `app.get("${honoPath}", ${guard}async (c) => {
+  const { rows } = await db.query('select ${cols} from "${tn}" where "${pkCol}" = $1', [c.get("jwtPayload").sub]);
+  return rows[0] ? c.json(rows[0]) : c.json({ error: "não encontrado" }, 404);
+});`;
+    }
+    if (owner) {
+      return `app.get("${honoPath}", ${guard}async (c) => {
+  // Só as linhas do usuário logado (o dono vem do token, nunca da URL).
+  const { rows } = await db.query('select ${cols} from "${tn}" where "${owner}" = $1 limit 100', [c.get("jwtPayload").sub]);
+  return c.json(rows);
+});`;
+    }
+    if (!isMe) {
+      return `app.get("${honoPath}", ${guard}async (c) => {
   const { rows } = await db.query('select ${cols} from "${tn}" limit 100');
   return c.json(rows);
 });`;
+    }
+    // ".../me" sem coluna de dono: listar a tabela inteira vazaria dados de outros usuários.
   }
   if (table && method === "GET" && hasId) {
+    const param = honoPath.match(/:(\w+)/)?.[1] ?? "id";
+    const where = owner ? `"${pkCol}" = $1 and "${owner}" = $2` : `"${pkCol}" = $1`;
+    const args = owner ? `[c.req.param("${param}"), c.get("jwtPayload").sub]` : `[c.req.param("${param}")]`;
     return `app.get("${honoPath}", ${guard}async (c) => {
-  const { rows } = await db.query('select ${cols} from "${tn}" where "${snake(table.columns.find((col) => col.pk)?.name ?? "id")}" = $1', [c.req.param("${honoPath.match(/:(\w+)/)?.[1] ?? "id"}")]);
+  const { rows } = await db.query('select ${cols} from "${tn}" where ${where}', ${args});
   return rows[0] ? c.json(rows[0]) : c.json({ error: "não encontrado" }, 404);
 });`;
   }
   if (table && method === "POST" && p.dbWrites && !hasId && bodyFields(table, er).length) {
     // Rota protegida com FK para users: o dono vem do token (sub), não do corpo.
-    const owner = route.protected ? userFk(table, er) : undefined;
     const schema = owner ? `${schemaName(table)}.omit({ ${JSON.stringify(owner)}: true })` : schemaName(table);
     const data = owner
       ? `const data: [string, unknown][] = [...Object.entries(parsed.data).filter(([, v]) => v !== undefined), ["${owner}", c.get("jwtPayload").sub]];`
@@ -597,6 +620,9 @@ function serviceFiles(p: ServicePlan, er: ErModel): GeneratedFile[] {
       path: `${base}/src/db.ts`,
       content: `import pg from "pg";
 
+// DATE volta como texto "2026-12-05": virar Date do JS poria um fuso e mudaria o dia.
+pg.types.setTypeParser(pg.types.builtins.DATE, (v) => v);
+
 // Pool com limites: sem eles, o banco fora do ar ou uma consulta travada
 // prendem a requisição para sempre.
 export const db = new pg.Pool({
@@ -800,7 +826,8 @@ function openapi(p: ServicePlan, er: ErModel): string {
 export interface BackendSecrets {
   postgresPassword: string;
   jwtSecret: string;
-  minioPassword: string;
+  /** Chave secreta do storage S3 (RustFS). */
+  storageSecret: string;
 }
 
 function randomHex(bytes: number): string {
@@ -810,17 +837,21 @@ function randomHex(bytes: number): string {
 }
 
 export function randomSecrets(): BackendSecrets {
-  return { postgresPassword: randomHex(16), jwtSecret: randomHex(32), minioPassword: randomHex(16) };
+  return { postgresPassword: randomHex(16), jwtSecret: randomHex(32), storageSecret: randomHex(16) };
 }
 
 /** Valores do .env.example: deixam claro que precisam ser trocados. */
 const PLACEHOLDER_SECRETS: BackendSecrets = {
   postgresPassword: "troque-esta-senha",
   jwtSecret: "troque-este-segredo",
-  minioPassword: "troque-esta-senha",
+  storageSecret: "troque-esta-senha",
 };
 
-/** Infra (banco, Redis, MinIO) só escuta no localhost da máquina, não na rede. */
+/** Storage S3 local. Versão fixa: "latest" muda sem aviso. */
+export const STORAGE_IMAGE = "rustfs/rustfs:1.0.4";
+const STORAGE_USER = "storage";
+
+/** Infra (banco, Redis, storage) só escuta no localhost da máquina, não na rede. */
 const localPort = (port: number | string, inner = port) => `      - "127.0.0.1:${port}:${inner}"`;
 const required = (name: string) => `\${${name}:?defina ${name} no .env}`;
 
@@ -841,14 +872,15 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
       const target = plans.find((x) => x.node.id === t.id);
       env.push(`${envName(t)}_URL: ${target ? `http://${target.slug}:${target.port}` : `\${${envName(t)}_URL:-${t.props.url || t.props.issuer || ""}}`}`);
     }
-    if (p.storage) env.push("S3_ENDPOINT: http://minio:9000", `S3_BUCKET: ${p.storage.props.bucket || "uploads"}`);
+    if (p.storage)
+      env.push("S3_ENDPOINT: http://storage:9000", `S3_BUCKET: ${p.storage.props.bucket || "uploads"}`, `S3_ACCESS_KEY_ID: ${STORAGE_USER}`, `S3_SECRET_ACCESS_KEY: ${required("S3_SECRET_KEY")}`);
     lines.push("    environment:", ...env.map((e) => `      ${e}`));
     // Banco e Redis precisam estar prontos (healthcheck), não só "iniciados".
     const deps = new Map<string, string>();
     if (p.db) deps.set("postgres", "service_healthy");
     if (p.db && hasSchema) deps.set("migrate", "service_completed_successfully");
     if (needsRedis && (p.cache || p.publishes.length || p.consumes.length)) deps.set("redis", "service_healthy");
-    if (p.storage) deps.set("minio", "service_started");
+    if (p.storage) deps.set("storage", "service_started");
     for (const t of p.httpTargets) {
       const tp = plans.find((x) => x.node.id === t.id);
       if (tp) deps.set(tp.slug, tp.node.kind === "worker" ? "service_started" : "service_healthy");
@@ -910,18 +942,23 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
   }
   if (storage) {
     lines.push(
-      "  minio:",
-      "    image: minio/minio:latest",
-      "    command: server /data --console-address :9001",
+      // RustFS: compatível com S3 (API na 9000, console na 9001). A imagem pública
+      // do MinIO saiu do Docker Hub; qualquer cliente S3 funciona igual aqui.
+      "  storage:",
+      `    image: ${STORAGE_IMAGE}`,
       "    environment:",
-      "      MINIO_ROOT_USER: minio",
-      `      MINIO_ROOT_PASSWORD: ${required("MINIO_ROOT_PASSWORD")}`,
+      `      RUSTFS_ACCESS_KEY: ${STORAGE_USER}`,
+      `      RUSTFS_SECRET_KEY: ${required("S3_SECRET_KEY")}`,
+      '      RUSTFS_CONSOLE_ENABLE: "true"',
+      "    volumes:",
+      "      - storagedata:/data",
       "    ports:",
       localPort(9000),
       localPort(9001),
     );
   }
-  if (pg) lines.push("volumes:", "  pgdata:");
+  const volumes = [...(pg ? ["pgdata"] : []), ...(storage ? ["storagedata"] : [])];
+  if (volumes.length) lines.push("volumes:", ...volumes.map((v) => `  ${v}:`));
   return lines.join("\n") + "\n";
 }
 
@@ -1002,7 +1039,7 @@ docker compose up --build
 \`\`\`
 
 O \`.env\` já vem com senhas e segredos **aleatórios, gerados neste export**: não
-commite esse arquivo (ele está no \`.gitignore\`). Banco, Redis e MinIO só ficam
+commite esse arquivo (ele está no \`.gitignore\`). Banco, Redis e storage (S3) só ficam
 acessíveis pelo \`localhost\` desta máquina, não pela rede.
 
 ## Serviços
@@ -1054,13 +1091,14 @@ function envFile(graph: ArchGraph, plans: ServicePlan[], s: BackendSecrets, real
   const jwt = plans.some((p) => p.jwt);
   if (pgNode) lines.push(`POSTGRES_PASSWORD=${s.postgresPassword}`);
   if (jwt) lines.push("# Segredo do JWT (HS256). Para gerar outro: openssl rand -hex 32", `JWT_SECRET=${s.jwtSecret}`);
-  if (hasStorage) lines.push(`MINIO_ROOT_PASSWORD=${s.minioPassword}`);
+  if (hasStorage) lines.push(`# Chave secreta do storage S3 (usuário: ${STORAGE_USER}; console em http://localhost:9001/rustfs/console/)`, `S3_SECRET_KEY=${s.storageSecret}`);
   if (plans.some((p) => p.node.kind !== "worker"))
     lines.push("# Sites que podem chamar a API pelo navegador (separados por vírgula)", `CORS_ORIGINS=http://localhost:${WEB_PORT}`);
   lines.push("", "# Para rodar um serviço fora do Docker (npm run dev)");
   if (pgNode) lines.push(`DATABASE_URL=postgres://app:${s.postgresPassword}@localhost:5432/${dbName(pgNode)}`);
   if (graph.nodes.some((n) => n.kind === "cache")) lines.push("REDIS_URL=redis://localhost:6379");
   if (graph.nodes.some((n) => n.kind === "queue")) lines.push("QUEUE_URL=redis://localhost:6379");
+  if (hasStorage) lines.push("S3_ENDPOINT=http://localhost:9000", `S3_ACCESS_KEY_ID=${STORAGE_USER}`, `S3_SECRET_ACCESS_KEY=${s.storageSecret}`);
   const targets = new Map<string, string>();
   for (const p of plans) for (const t of p.httpTargets) {
     const tp = plans.find((x) => x.node.id === t.id);
