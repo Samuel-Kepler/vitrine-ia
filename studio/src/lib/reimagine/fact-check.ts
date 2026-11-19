@@ -12,7 +12,7 @@ export interface FactFinding {
 const MAX_FINDINGS = 12;
 
 // Chaves de props que não são texto visível (ids, enums, bindings).
-const SKIP_KEYS = new Set(["id", "component", "child", "children", "palette", "theme", "tone", "variant", "photo", "images", "index", "level", "align", "justify", "direction", "url", "src", "href", "icon", "surfaceId", "catalogId", "version", "path", "name", "action", "event"]);
+const SKIP_KEYS = new Set(["id", "component", "child", "children", "palette", "theme", "tone", "variant", "animation", "motion", "photo", "images", "index", "level", "align", "justify", "direction", "url", "src", "href", "icon", "surfaceId", "catalogId", "version", "path", "name", "action", "event"]);
 
 // Rótulos padrão de navegação/CTA e palavras com maiúscula comuns em landing: não são fatos.
 const STANDARD = [

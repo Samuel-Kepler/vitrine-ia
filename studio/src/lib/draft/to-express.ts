@@ -4,6 +4,7 @@
 import type { DraftNode } from "./tree";
 import { lines } from "./tree";
 import { BLOCKS } from "./blocks";
+import { SECTION_ANIMATIONS } from "@/lib/a2ui/themes";
 
 export interface ExpressOptions {
   palette?: string;
@@ -88,7 +89,9 @@ class Emitter {
     switch (n.type) {
       case "section": {
         const col = this.column(n.children ?? [], this.v(n.id, "_col"));
-        return this.line(v, `Section(child=${col}, tone=${str(p.tone || "default")})`);
+        // "auto" (ou vazio): não manda; o Reimaginar pode escolher, senão vale o padrão.
+        const anim = (SECTION_ANIMATIONS as readonly string[]).includes(p.animation) ? `, animation=${str(p.animation)}` : "";
+        return this.line(v, `Section(child=${col}, tone=${str(p.tone || "default")}${anim})`);
       }
       case "column":
         return this.column(n.children ?? [], v);

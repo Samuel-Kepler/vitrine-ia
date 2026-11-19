@@ -34,6 +34,8 @@ export async function collectSitePages(): Promise<SitePage[]> {
   const motion = s.motion && s.motion !== "auto" ? s.motion : siteMotion(pages);
   const out: SitePage[] = [];
   for (const p of pages) {
+    // Imagens do computador ficam como https://asset.invalid/<id>: o HTML resolve no
+    // SurfaceView; o projeto React grava os arquivos em public/images (exportAssetFiles).
     const messages = p.result?.messages ?? (await automaticMessages(p.tree, palette, theme, motion));
     out.push({ id: p.id, name: p.name, file: pageFile(pages, p.id), messages, auto: !p.result });
   }

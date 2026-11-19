@@ -14,6 +14,7 @@ export const ART_DIRECTION = `Direção de arte (é isso que deixa a página bon
 - Ritmo: alterne os tons das seções (nunca o mesmo tom duas vezes seguidas) e use tone="gradient" no máximo uma vez, de preferência numa faixa de chamada para ação perto do fim.
 - Seções prontas para quando o rascunho ou o briefing pedirem: Stat (2 a 4 em Grid, só números reais), FaqItem (vários numa Column), Step (3 a 4 em Grid, index "1", "2"…), TeamMember (em Grid), ContactInfo (horários, endereço, telefone, WhatsApp), LogoStrip (só nomes reais de clientes) e Gallery (só URLs dadas). Sem os dados, mantenha os marcadores entre colchetes.
 - Movimento (motion): "calm" na maioria; "lively" para negócios alegres e jovens (infantil, eventos, tecnologia, academia); "none" para assuntos sérios (saúde, jurídico, contabilidade). LogoStrip com 5 nomes ou mais pode usar variant="marquee".
+- Section.animation (entrada ao rolar): varie ao longo da página em vez de repetir; "zoom" em seções com Gallery ou Image, "blur" combina com temas elegante e editorial, "slide" em sequências (passos, benefícios). Omita na maioria e use em 2 ou 3 seções. Com motion "none", não use. Se o rascunho já traz animation, respeite.
 - Se o rascunho já define um estilo (variant) ou o pedido indica tema ou movimento, respeite.`;
 
 export function systemPrompt(catalogSnippet: string): string {
@@ -31,6 +32,7 @@ ${NO_INVENTED_FACTS}
 
 - "Bloco livre" traz uma descrição: interprete-a usando só os componentes do catálogo. Se ele pede algo que depende de dados reais que não foram dados (ex.: "Logos de clientes", "Números", "Parceiros"), use um título e um texto descritivo neutro, sem nomes de empresas, sem números e sem prova social inventada.
 - Não invente URLs de imagem: use Image só com URLs que o usuário forneceu.
+- URLs que começam com https://asset.invalid/ são fotos que o usuário enviou: copie cada uma EXATAMENTE (sem mudar uma letra) no mesmo lugar do rascunho (Hero.image, Image.url, TeamMember.photo, Gallery.images). Não descarte nenhuma. Hero com foto: variant "split" ou "image-bg".
 - Nomes de variáveis em snake_case (letras, números e _).
 - Se o compilador recusar sua resposta, corrija exatamente o erro apontado e envie o bloco inteiro de novo.
 

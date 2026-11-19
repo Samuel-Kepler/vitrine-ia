@@ -31,6 +31,7 @@ import { usesOwnAuth, type ArchGraph } from "@/lib/arch/model";
 import { ensureAuthUsers, type ErModel } from "@/lib/db/model";
 import type { AiReviewResult, ReviewMode } from "@/lib/review/ai-input";
 import { blankProjectData, PROJECT_KEYS, STUDIO_VERSION, type ProjectData } from "@/lib/projects/data";
+import { assetUrl, newAssetId, referencedAssets } from "@/lib/assets/assets";
 
 export { blankProjectData, PROJECT_KEYS, STUDIO_VERSION, type ProjectData };
 
@@ -117,6 +118,10 @@ interface StudioState {
   setBusy: (b: boolean) => void;
   setSettings: (s: ProviderSettings) => void;
   reset: (tree?: DraftNode[]) => void;
+  /** Imagens enviadas do computador: id -> data URL. No rascunho fica https://asset.invalid/<id>. */
+  assets: Record<string, string>;
+  /** Guarda a imagem e devolve o endereço para pôr no campo do bloco. */
+  addAsset: (dataUrl: string) => string;
   /** Dados do projeto aberto (o que vai para o snapshot e para o arquivo .json). */
   projectData: () => ProjectData;
   /** Troca o projeto aberto inteiro; desfazer não atravessa projetos. */
@@ -311,6 +316,17 @@ export const useStudio = create<StudioState>()(
         setBusy: (busy) => set({ busy }),
         setSettings: (settings) => set({ settings }),
         reset: (tree) => set({ tree: tree ?? [], selectedId: null }),
+        assets: {},
+        addAsset: (dataUrl) => {
+          const s = get();
+          // Imagens que nenhuma página usa mais saem (o localStorage é pequeno).
+          const used = referencedAssets(s.allPages());
+          const kept = Object.fromEntries(Object.entries(s.assets).filter(([id]) => used.has(id)));
+          const same = Object.entries(kept).find(([, d]) => d === dataUrl)?.[0];
+          const id = same ?? newAssetId();
+          set({ assets: { ...kept, [id]: dataUrl } });
+          return assetUrl(id);
+        },
         projectData: () => {
           const s = get();
           // Grava a página aberta em pages antes de tirar a foto.
@@ -353,6 +369,7 @@ export const useStudio = create<StudioState>()(
         sketches: s.sketches,
         sketchDocs: s.sketchDocs,
         reactEdited: s.reactEdited,
+        assets: s.assets,
       }),
     },
   ),

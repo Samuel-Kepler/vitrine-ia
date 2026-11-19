@@ -1,6 +1,7 @@
 // Blocos que o usuário arrasta para o canvas de UI. O rascunho é uma árvore
 // simples ({id, type, props, children}); a IA (ou o compilador determinístico)
 // transforma essa árvore em componentes A2UI.
+import { SECTION_ANIMATION_LABELS, SECTION_ANIMATIONS } from "@/lib/a2ui/themes";
 
 export type FieldKind = "text" | "textarea" | "select" | "lines";
 
@@ -55,6 +56,11 @@ export type BlockType = (typeof BLOCK_TYPES)[number];
 
 export const FEATURE_ICONS = ["sparkles", "zap", "shield", "heart", "clock", "star", "rocket", "check"] as const;
 
+const SECTION_ANIMATION_OPTIONS = [
+  { value: "auto", label: "Automática" },
+  ...SECTION_ANIMATIONS.map((a) => ({ value: a, label: SECTION_ANIMATION_LABELS[a] })),
+];
+
 const TONES = [
   { value: "default", label: "Padrão" },
   { value: "muted", label: "Suave" },
@@ -75,8 +81,12 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
     group: "layout",
     hint: "Faixa da página que agrupa blocos",
     container: { direction: "column" },
-    defaults: { tone: "default" },
-    fields: [{ key: "tone", label: "Fundo", kind: "select", options: TONES }],
+    defaults: { tone: "default", animation: "auto" },
+    fields: [
+      { key: "tone", label: "Fundo", kind: "select", options: TONES },
+      // Auto: o Reimaginar escolhe (ou vale o Movimento da página). Movimento "Nenhum" desliga todas.
+      { key: "animation", label: "Animação ao rolar", kind: "select", options: SECTION_ANIMATION_OPTIONS },
+    ],
   },
   row: {
     type: "row",

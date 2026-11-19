@@ -4,6 +4,7 @@ import { MousePointer2 } from "lucide-react";
 import { BLOCKS } from "@/lib/draft/blocks";
 import { lines, type DraftNode, type DropTarget } from "@/lib/draft/tree";
 import { useStudio } from "@/lib/draft/store";
+import { isAssetUrl, resolveAssets } from "@/lib/assets/assets";
 import { BlockIcon } from "./icons";
 import { endDrag, readDrop, startDrag } from "./dnd";
 
@@ -181,6 +182,15 @@ function CustomPreview({ id, name, description }: { id: string; name?: string; d
   );
 }
 
+/** Imagem do bloco no rascunho (resolve as enviadas do computador). */
+function CanvasImg({ src, className, fallback }: { src?: string; className: string; fallback: string }) {
+  const real = useStudio((s) => (src ? resolveAssets(src, s.assets) : ""));
+  if (!real || isAssetUrl(real) || !/^(https?:|data:image\/)/.test(real))
+    return <div className={`flex items-center justify-center rounded bg-gray-100 text-[10px] text-muted ${className}`}>{fallback}</div>;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={real} alt="" className={`rounded object-cover ${className}`} />;
+}
+
 /** Miniatura de cada bloco folha (só para o rascunho). */
 function Wireframe({ node }: { node: DraftNode }) {
   const p = node.props;
@@ -199,10 +209,13 @@ function Wireframe({ node }: { node: DraftNode }) {
       );
     case "hero":
       return (
-        <div className="py-3 text-center">
-          <p className="text-xl font-bold">{p.title}</p>
-          {p.subtitle ? <p className="mt-1 text-sm text-muted">{p.subtitle}</p> : null}
-          {p.cta ? <span className="mt-3 inline-block rounded-full bg-gray-800 px-3 py-1 text-xs text-white">{p.cta}</span> : null}
+        <div className="flex items-center gap-3 py-3">
+          <div className="min-w-0 flex-1 text-center">
+            <p className="text-xl font-bold">{p.title}</p>
+            {p.subtitle ? <p className="mt-1 text-sm text-muted">{p.subtitle}</p> : null}
+            {p.cta ? <span className="mt-3 inline-block rounded-full bg-gray-800 px-3 py-1 text-xs text-white">{p.cta}</span> : null}
+          </div>
+          {p.image ? <CanvasImg src={p.image} className="h-20 w-28 shrink-0" fallback="imagem" /> : null}
         </div>
       );
     case "heading":
@@ -212,7 +225,7 @@ function Wireframe({ node }: { node: DraftNode }) {
     case "button":
       return <span className="inline-block rounded-full bg-gray-800 px-3 py-1 text-xs text-white">{p.label}</span>;
     case "image":
-      return <div className="flex h-20 items-center justify-center rounded bg-gray-100 text-xs text-muted">{p.url ? "imagem" : "sem URL"}</div>;
+      return <CanvasImg src={p.url} className="h-24 w-full" fallback="sem imagem" />;
     case "feature":
       return (
         <div>
@@ -256,9 +269,12 @@ function Wireframe({ node }: { node: DraftNode }) {
       );
     case "team":
       return (
-        <p className="text-sm">
-          <b>{p.name}</b> <span className="text-muted">{p.role}</span>
-        </p>
+        <div className="flex items-center gap-2 text-sm">
+          {p.photo ? <CanvasImg src={p.photo} className="size-9 shrink-0 !rounded-full" fallback="" /> : null}
+          <p>
+            <b>{p.name}</b> <span className="text-muted">{p.role}</span>
+          </p>
+        </div>
       );
     case "contact":
       return (
@@ -280,10 +296,8 @@ function Wireframe({ node }: { node: DraftNode }) {
     case "gallery":
       return (
         <div className="grid grid-cols-3 gap-1">
-          {(lines(p.captions).length ? lines(p.captions) : ["foto", "foto", "foto"]).slice(0, 6).map((c, i) => (
-            <div key={i} className="flex h-12 items-center justify-center rounded bg-gray-100 text-[10px] text-muted">
-              {lines(p.images)[i] ? "imagem" : c}
-            </div>
+          {Array.from({ length: Math.min(6, Math.max(lines(p.images).length, lines(p.captions).length, 3)) }, (_, i) => (
+            <CanvasImg key={i} src={lines(p.images)[i]} className="h-12 w-full" fallback={lines(p.captions)[i] ?? "foto"} />
           ))}
         </div>
       );

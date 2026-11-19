@@ -32,6 +32,8 @@ export interface ProjectData {
   sketches: Record<string, string>;
   sketchDocs: Record<string, Shape[]>;
   reactEdited: boolean;
+  /** Imagens enviadas do computador: id -> data URL (ver src/lib/assets). */
+  assets: Record<string, string>;
 }
 
 export const PROJECT_KEYS = [
@@ -51,6 +53,7 @@ export const PROJECT_KEYS = [
   "sketches",
   "sketchDocs",
   "reactEdited",
+  "assets",
 ] as const satisfies readonly (keyof ProjectData)[];
 
 export function blankProjectData(): ProjectData {
@@ -71,5 +74,6 @@ export function blankProjectData(): ProjectData {
     sketches: {},
     sketchDocs: {},
     reactEdited: false,
+    assets: {},
   };
 }

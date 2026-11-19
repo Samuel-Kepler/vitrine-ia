@@ -46,7 +46,7 @@ const HeroView = createComponentImplementation(HeroApi as Any, ({ props }: Any) 
 
 const HeadingView = createComponentImplementation(HeadingApi as Any, ({ props }: Any) => <Heading text={props.text} level={props.level} align={props.align} />);
 
-const SectionView = createComponentImplementation(SectionApi as Any, ({ props, buildChild }: Any) => <Section tone={props.tone}>{props.child ? buildChild(props.child) : null}</Section>);
+const SectionView = createComponentImplementation(SectionApi as Any, ({ props, buildChild }: Any) => <Section tone={props.tone} animation={props.animation}>{props.child ? buildChild(props.child) : null}</Section>);
 
 const GridView = createComponentImplementation(GridApi as Any, ({ props, buildChild }: Any) => <Grid columns={props.columns} variant={props.variant}>{children(props.children, buildChild)}</Grid>);
 

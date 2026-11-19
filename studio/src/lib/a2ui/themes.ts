@@ -80,3 +80,18 @@ export const MOTIONS = ["none", "calm", "lively"] as const;
 export type Motion = (typeof MOTIONS)[number];
 export const DEFAULT_MOTION: Motion = "calm";
 export const MOTION_LABELS: Record<Motion, string> = { none: "Nenhum", calm: "Calmo", lively: "Animado" };
+
+/**
+ * Animação de entrada de cada Section (CSS, ligada à rolagem; ver landing.css).
+ * Sem o campo, vale o Movimento da página (rise). "none" desliga só a seção;
+ * Movimento "Nenhum" na página desliga todas.
+ */
+export const SECTION_ANIMATIONS = ["rise", "slide", "zoom", "blur", "none"] as const;
+export type SectionAnimation = (typeof SECTION_ANIMATIONS)[number];
+export const SECTION_ANIMATION_LABELS: Record<SectionAnimation, string> = {
+  rise: "Surgir",
+  slide: "Deslizar",
+  zoom: "Zoom",
+  blur: "Desfocar",
+  none: "Nenhuma",
+};

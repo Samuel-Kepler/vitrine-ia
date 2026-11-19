@@ -77,12 +77,12 @@ ${body}
 </html>`;
 }
 
-export function downloadZip(name: string, files: { path: string; content: string }[]) {
+export function downloadZip(name: string, files: { path: string; content: string | Uint8Array }[]) {
   // Nomes podem vir da IA (tabelas, serviços, arquivos do chat): nada de ../ no zip.
   const bad = files.find((f) => !isSafeZipPath(f.path));
   if (bad) throw new Error(`Caminho inválido no zip: ${bad.path}`);
   void import("fflate").then(({ strToU8, zipSync }) => {
-    const zip = zipSync(Object.fromEntries(files.map((f) => [f.path, strToU8(f.content)])));
+    const zip = zipSync(Object.fromEntries(files.map((f) => [f.path, typeof f.content === "string" ? strToU8(f.content) : f.content])));
     const url = URL.createObjectURL(new Blob([zip as BlobPart], { type: "application/zip" }));
     const a = document.createElement("a");
     a.href = url;

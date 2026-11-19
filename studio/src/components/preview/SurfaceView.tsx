@@ -7,6 +7,8 @@ import { A2uiSurface, MarkdownContext } from "@a2ui/react/v0_9";
 import { renderMarkdown } from "@a2ui/markdown-it";
 import { landingCatalog } from "@/lib/a2ui/views";
 import { SURFACE_ID } from "@/lib/a2ui/catalog-api";
+import { useStudio } from "@/lib/draft/store";
+import { resolveAssets } from "@/lib/assets/assets";
 
 export interface A2uiAction {
   name: string;
@@ -22,12 +24,14 @@ interface Props {
 export default function SurfaceView({ messages, onAction }: Props) {
   const [handler] = useState(() => ({ current: onAction }));
   handler.current = onAction;
+  // Imagens do computador: o A2UI traz https://asset.invalid/<id>; aqui vira a imagem.
+  const assets = useStudio((s) => s.assets);
 
   const { surface, errors } = useMemo(() => {
     const processor = new MessageProcessor([landingCatalog as never], (a: A2uiAction) => handler.current?.(a));
-    const errs = (processor as any).processMessagesWithErrors(messages) as unknown[];
+    const errs = (processor as any).processMessagesWithErrors(resolveAssets(messages, assets)) as unknown[];
     return { surface: processor.model.surfacesMap.get(SURFACE_ID), errors: errs ?? [] };
-  }, [messages, handler]);
+  }, [messages, handler, assets]);
 
   if (errors.length) {
     return (

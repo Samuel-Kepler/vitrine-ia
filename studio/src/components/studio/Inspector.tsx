@@ -6,6 +6,7 @@ import { useStudio } from "@/lib/draft/store";
 import { PALETTES } from "@/lib/a2ui/catalog-api";
 import { MOTIONS, MOTION_LABELS, THEMES, THEME_DEFS } from "@/lib/a2ui/themes";
 import { BlockIcon } from "./icons";
+import { GalleryImagesField, IMAGE_KEYS, SingleImageField } from "./ImageField";
 import { SketchDialog } from "./SketchDialog";
 import { useState } from "react";
 import { PencilLine } from "lucide-react";
@@ -96,6 +97,13 @@ function NodeEditor({ id }: { id: string }) {
 
 function Field({ field, value, onChange }: { field: FieldDef; value: string; onChange: (v: string) => void }) {
   const id = `f-${field.key}`;
+  if (IMAGE_KEYS.has(field.key)) {
+    return field.kind === "lines" ? (
+      <GalleryImagesField id={id} label={field.label} value={value} onChange={onChange} />
+    ) : (
+      <SingleImageField id={id} label={field.label} value={value} onChange={onChange} />
+    );
+  }
   return (
     <label htmlFor={id} className="block">
       <span className="mb-1 block text-xs font-medium text-gray-700">{field.label}</span>

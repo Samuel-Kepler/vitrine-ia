@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
-import { AlertTriangle, Download, FileJson, ScanSearch } from "lucide-react";
+import { AlertTriangle, Download, FileJson, Play, ScanSearch } from "lucide-react";
 import { DeviceToolbar } from "@/components/preview/DeviceToolbar";
 import { DeviceStage } from "@/components/preview/DeviceStage";
 import { DEFAULT_VIEWPORT, resolveViewport, type ViewportState } from "@/lib/preview/devices";
@@ -10,6 +10,7 @@ import { useStudio } from "@/lib/draft/store";
 import type { A2uiAction } from "@/components/preview/SurfaceView";
 import { download, exportStandaloneHtml } from "./export";
 import { pageForLink } from "@/lib/draft/pages";
+import { resolveAssets } from "@/lib/assets/assets";
 import { runReimagine } from "./reimagine-client";
 
 const SurfaceView = dynamic(() => import("@/components/preview/SurfaceView"), {
@@ -34,6 +35,35 @@ export function LandingTab() {
   const review = useStudio((s) => s.reviews.landing);
 
   const pageName = useStudio((s) => s.pages.find((p) => p.id === s.pageId)?.name);
+  const [replay, setReplay] = useState(0);
+
+  // "Ver animação": remonta a página (reinicia a entrada do hero) e rola do topo ao fim.
+  // As animações das seções são ligadas à rolagem, então é a rolagem que as mostra.
+  const playTour = () => {
+    let el: HTMLElement | null = frameRef.current;
+    while (el && !(el.scrollHeight > el.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(el).overflowY))) el = el.parentElement;
+    setReplay((n) => n + 1);
+    if (!el) return;
+    const box = el;
+    box.scrollTo({ top: 0 });
+    let stopped = false;
+    const stop = () => {
+      stopped = true;
+      for (const ev of ["wheel", "pointerdown", "keydown", "touchstart"]) box.removeEventListener(ev, stop);
+    };
+    for (const ev of ["wheel", "pointerdown", "keydown", "touchstart"]) box.addEventListener(ev, stop, { passive: true });
+    let last = 0;
+    const step = (t: number) => {
+      if (stopped) return;
+      const dt = last ? Math.min(50, t - last) : 0;
+      last = t;
+      box.scrollTop += dt * 0.45; // ~450 px/s
+      if (box.scrollTop + box.clientHeight >= box.scrollHeight - 2) return stop();
+      requestAnimationFrame(step);
+    };
+    // Espera o hero animar antes de descer.
+    setTimeout(() => requestAnimationFrame(step), 900);
+  };
 
   // Links do menu com o nome de uma página trocam de página no preview.
   const onFrameClick = (e: React.MouseEvent) => {
@@ -83,8 +113,16 @@ export function LandingTab() {
             <ScanSearch size={14} /> Revisão{review ? ` · ${review.score}` : ""}
           </button>
           <button
+            onClick={playTour}
             className="flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 hover:bg-gray-50"
-            onClick={() => download("landing.a2ui.json", JSON.stringify(result.messages, null, 2), "application/json")}
+            title="Recarrega a página e rola do topo ao fim para ver as animações (role ou clique para parar)"
+            data-testid="play-animations"
+          >
+            <Play size={14} /> Ver animação
+          </button>
+          <button
+            className="flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 hover:bg-gray-50"
+            onClick={() => download("landing.a2ui.json", JSON.stringify(resolveAssets(result.messages, useStudio.getState().assets), null, 2), "application/json")}
           >
             <FileJson size={14} /> A2UI JSON
           </button>
@@ -137,7 +175,7 @@ export function LandingTab() {
       <div className="flex min-h-0 flex-1">
       <div className="relative flex min-h-0 flex-1 flex-col">
         <DeviceStage ref={frameRef} size={size} onScale={setScale} onClickCapture={onFrameClick}>
-          <SurfaceView messages={result.messages} onAction={setLastAction} />
+          <SurfaceView key={replay} messages={result.messages} onAction={setLastAction} />
         </DeviceStage>
         {lastAction ? (
           <div className="fixed bottom-4 right-4 z-30 max-w-sm rounded-lg bg-ink p-3 text-xs text-white shadow-lg" role="status">

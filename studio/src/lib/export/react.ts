@@ -109,7 +109,7 @@ function emit(ctx: Ctx, id: string, depth: number, inForm = false): string {
     case "Heading":
       return tag("Heading", { text: str(c.text), level: str(c.level), align: str(c.align) });
     case "Section":
-      return tag("Section", { tone: str(c.tone) }, child(c.child));
+      return tag("Section", { tone: str(c.tone), animation: str(c.animation) }, child(c.child));
     case "Grid":
       return tag("Grid", { columns: str(c.columns), variant: str(c.variant) }, children(c.children));
     case "Column":

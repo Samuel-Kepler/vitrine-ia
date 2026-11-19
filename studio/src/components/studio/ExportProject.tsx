@@ -7,6 +7,7 @@ import { linkPagesInHtml } from "@/lib/draft/pages";
 import { hasProjectContent, projectFiles, type WebPage } from "@/lib/export/project";
 import { reactProject } from "@/lib/export/react";
 import { downloadZip, exportStandaloneHtml } from "./export";
+import { exportAssetFiles } from "@/lib/assets/assets";
 import { collectSitePages, siteBrand, type SitePage } from "./site-pages";
 
 const SurfaceView = dynamic(() => import("@/components/preview/SurfaceView"), { ssr: false });
@@ -81,7 +82,9 @@ export function ExportProject() {
       const react = s.reactEdited && s.reactFiles
         ? Object.entries(s.reactFiles).map(([path, content]) => ({ path: `react${path}`, content }))
         : reactProject(job.items, { brand: siteBrand() });
-      downloadZip("vitrine-projeto.zip", projectFiles({ webPages, arch: s.arch, db: s.db, react }));
+      // Imagens do computador: o site estático já vem com elas embutidas (SurfaceView);
+      // o projeto React recebe os arquivos em react/public/images.
+      downloadZip("vitrine-projeto.zip", exportAssetFiles(projectFiles({ webPages, arch: s.arch, db: s.db, react }), s.assets, "react/"));
       setJob(null);
     })();
     return () => {

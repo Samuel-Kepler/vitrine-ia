@@ -434,6 +434,111 @@
     .lp-motion-lively .lp-stagger > :nth-child(n + 4) {
       animation-range: entry 24% entry 84%;
     }
+
+    /* Animação por seção (Section.animation). Sem o campo: lp-rise acima. */
+    .lp:not(.lp-motion-none) .lp-anim-slide .lp-reveal {
+      animation-name: lp-slide;
+    }
+    .lp:not(.lp-motion-none) .lp-anim-zoom .lp-reveal {
+      animation-name: lp-zoom;
+    }
+    .lp:not(.lp-motion-none) .lp-anim-blur .lp-reveal {
+      animation-name: lp-blur;
+    }
+    /* Seção ímpar desliza da direita: a página não fica toda pendendo para um lado. */
+    .lp:not(.lp-motion-none) section.lp-anim-slide:nth-of-type(even) .lp-reveal {
+      animation-name: lp-slide-right;
+    }
+
+    /* Imagens dentro das seções crescem de leve ao entrar na tela. */
+    .lp:not(.lp-motion-none) .lp-reveal .lp-img {
+      animation: lp-img-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 35%;
+    }
+
+    /* Hero com foto de fundo: paralaxe leve enquanto a página rola. */
+    .lp:not(.lp-motion-none) .lp-hero-image {
+      animation: lp-parallax linear both;
+      animation-timeline: scroll(nearest);
+      animation-range: 0 100vh;
+    }
+    .lp-motion-lively .lp-hero-image {
+      animation-name: lp-parallax-strong;
+    }
+
+    /* "Nenhuma" na seção desliga tudo dentro dela. */
+    .lp-anim-none .lp-reveal,
+    .lp-anim-none .lp-stagger > *,
+    .lp-anim-none .lp-img {
+      animation: none !important;
+    }
+  }
+}
+@keyframes lp-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes lp-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes lp-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes lp-blur {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    filter: none;
+  }
+}
+@keyframes lp-img-in {
+  from {
+    opacity: 0.4;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes lp-parallax {
+  from {
+    background-position: center 50%;
+  }
+  to {
+    background-position: center 65%;
+  }
+}
+@keyframes lp-parallax-strong {
+  from {
+    background-position: center 40%;
+  }
+  to {
+    background-position: center 80%;
   }
 }
 .lp-motion-none .lp-rise,

@@ -10,6 +10,7 @@ import { reactProject } from "@/lib/export/react";
 import { previewHtml, transformProject } from "@/lib/react-preview/bundle";
 import { collectSitePages, siteBrand } from "./site-pages";
 import { downloadZip } from "./export";
+import { exportAssetFiles, resolveAssets } from "@/lib/assets/assets";
 
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false, loading: () => <p className="p-4 text-xs text-muted">Carregando editor…</p> });
 
@@ -82,7 +83,8 @@ export default function ReactTab() {
       const key = entries.some((e) => e.key === entry) ? entry : (entries[0]?.key ?? "index");
       setRuntimeError(null);
       setReady(null);
-      setHtml(previewHtml(transformProject(files, babel), `/src/entries/${key}.tsx`, key));
+      // Imagens do computador: no preview entram embutidas (o iframe isolado não tem /public).
+      setHtml(previewHtml(transformProject(resolveAssets(files, useStudio.getState().assets), babel), `/src/entries/${key}.tsx`, key));
     }, 400);
     return () => {
       alive = false;
@@ -158,7 +160,9 @@ export default function ReactTab() {
             <Bot size={14} /> Chat IA
           </button>
           <button
-            onClick={() => downloadZip("vitrine-react.zip", Object.entries(files).map(([path, content]) => ({ path: path.slice(1), content })))}
+            onClick={() =>
+              downloadZip("vitrine-react.zip", exportAssetFiles(Object.entries(files).map(([path, content]) => ({ path: path.slice(1), content })), useStudio.getState().assets))
+            }
             className="flex items-center gap-1.5 rounded-md bg-ink px-2.5 py-1.5 text-white hover:opacity-90"
             data-testid="react-download"
           >

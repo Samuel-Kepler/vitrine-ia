@@ -149,9 +149,10 @@ export function Heading({ text, level = "2", align }: { text?: string; level?: s
   return <Tag className={`${cls} lp-h text-balance ${align === "center" ? "text-center" : ""}`}>{text}</Tag>;
 }
 
-export function Section({ tone = "default", children }: { tone?: string } & Children) {
+/** animation: rise (padrão) | slide | zoom | blur | none — CSS ligado à rolagem, ver landing.css. */
+export function Section({ tone = "default", animation, children }: { tone?: string; animation?: string } & Children) {
   return (
-    <section className={`tone-${tone} px-5 py-14 @3xl:px-6 @3xl:py-20`}>
+    <section className={`tone-${tone} ${animation ? `lp-anim-${animation} ` : ""}px-5 py-14 @3xl:px-6 @3xl:py-20`}>
       <div className="lp-reveal mx-auto max-w-6xl">{children}</div>
     </section>
   );
@@ -309,7 +310,7 @@ export function Card({ children }: Children) {
 
 export function Image({ src, alt = "" }: { src?: string; alt?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return src ? <img src={src} alt={alt} className="w-full rounded-2xl object-cover" /> : <div className="aspect-[4/3] w-full rounded-2xl" style={{ background: "var(--lp-muted-bg)" }} role="img" aria-label={alt} />;
+  return src ? <img src={src} alt={alt} className="lp-img w-full rounded-2xl object-cover" /> : <div className="aspect-[4/3] w-full rounded-2xl" style={{ background: "var(--lp-muted-bg)" }} role="img" aria-label={alt} />;
 }
 
 export function Divider() {
@@ -521,7 +522,7 @@ export function Gallery({ images = [], captions = [] }: { images?: string[]; cap
           <figure key={i} className="overflow-hidden" style={{ borderRadius: "var(--lp-radius)" }}>
             {src ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={src} alt={caption ?? ""} className="aspect-[4/3] w-full object-cover" />
+              <img src={src} alt={caption ?? ""} className="lp-img aspect-[4/3] w-full object-cover" />
             ) : (
               <div className="lp-deco flex aspect-[4/3] w-full items-end p-3" role="img" aria-label={caption ?? "foto"}>
                 <span className="rounded-md px-2 py-1 text-xs" style={{ background: "var(--lp-bg)", color: "var(--lp-soft)" }}>

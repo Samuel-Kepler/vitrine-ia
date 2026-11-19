@@ -3,7 +3,7 @@
 // via @a2ui/agent) e pelo navegador (renderer em ./views.tsx).
 import { z } from "zod";
 import { Catalog, CommonSchemas, basicCatalog } from "@a2ui/web_core/v1_0";
-import { FEATURE_VARIANTS, GRID_VARIANTS, HERO_VARIANTS, LOGO_VARIANTS, MOTIONS, TESTIMONIAL_VARIANTS, THEMES } from "./themes";
+import { FEATURE_VARIANTS, GRID_VARIANTS, HERO_VARIANTS, LOGO_VARIANTS, MOTIONS, SECTION_ANIMATIONS, TESTIMONIAL_VARIANTS, THEMES } from "./themes";
 import { UNSAFE_MEDIA_URL_MESSAGE, isSafeMediaUrl } from "@/lib/security/url";
 
 export const CATALOG_ID = "https://vitrine.studio/catalogs/landing/v1/catalog.json";
@@ -87,6 +87,10 @@ export const SectionApi = {
   schema: z.object({
     child: S.ComponentId.describe("Id of the single child, usually a Column."),
     tone: z.enum(TONES).optional().describe("Background: default, muted, accent, dark, gradient (accent gradient; use at most once, e.g. a call-to-action band)."),
+    animation: z
+      .enum(SECTION_ANIMATIONS)
+      .optional()
+      .describe("Entrance animation on scroll: rise (default), slide, zoom (good for galleries/images), blur (soft, elegant), none. Vary along the page; omit to use the default."),
   }),
 };
 
