@@ -30,6 +30,9 @@ import type { ProviderSettings } from "@/lib/ai/settings";
 import { usesOwnAuth, type ArchGraph } from "@/lib/arch/model";
 import { ensureAuthUsers, type ErModel } from "@/lib/db/model";
 import type { AiReviewResult, ReviewMode } from "@/lib/review/ai-input";
+import { blankProjectData, PROJECT_KEYS, STUDIO_VERSION, type ProjectData } from "@/lib/projects/data";
+
+export { blankProjectData, PROJECT_KEYS, STUDIO_VERSION, type ProjectData };
 
 export interface SavedComponent {
   id: string;
@@ -114,7 +117,12 @@ interface StudioState {
   setBusy: (b: boolean) => void;
   setSettings: (s: ProviderSettings) => void;
   reset: (tree?: DraftNode[]) => void;
+  /** Dados do projeto aberto (o que vai para o snapshot e para o arquivo .json). */
+  projectData: () => ProjectData;
+  /** Troca o projeto aberto inteiro; desfazer não atravessa projetos. */
+  loadProjectData: (d: ProjectData) => void;
 }
+
 
 function nodeFromPayload(state: StudioState, payload: Exclude<DragPayload, { kind: "move" }>): DraftNode | undefined {
   if (payload.kind === "new") return createNode(payload.type);
@@ -303,6 +311,16 @@ export const useStudio = create<StudioState>()(
         setBusy: (busy) => set({ busy }),
         setSettings: (settings) => set({ settings }),
         reset: (tree) => set({ tree: tree ?? [], selectedId: null }),
+        projectData: () => {
+          const s = get();
+          // Grava a página aberta em pages antes de tirar a foto.
+          const data = Object.fromEntries(PROJECT_KEYS.map((k) => [k, s[k]])) as unknown as ProjectData;
+          return { ...data, pages: s.allPages() };
+        },
+        loadProjectData: (d) => {
+          set({ ...blankProjectData(), ...d, selectedId: null, tab: "canvas", busy: false, reviews: {}, flowSel: null });
+          useStudio.temporal.getState().clear();
+        },
       }),
       {
         // Desfazer/refazer só olha a árvore do rascunho.
@@ -313,7 +331,7 @@ export const useStudio = create<StudioState>()(
     ),
     {
       name: "vitrine-studio:v1",
-      version: 2,
+      version: STUDIO_VERSION,
       // v1 tinha uma página só: ela vira a "Início".
       migrate: (persisted, version) => migrateStudio(persisted, version) as never,
       partialize: (s) => ({

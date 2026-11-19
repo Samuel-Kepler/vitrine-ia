@@ -4,6 +4,7 @@ import { Braces, Code2, Database, LayoutTemplate, Loader2, Network, PenTool, Red
 import { useStudio, type StudioMode, type StudioTab } from "@/lib/draft/store";
 import { PROVIDER_LABELS } from "@/lib/ai/settings";
 import { ExportProject } from "./ExportProject";
+import { ProjectsMenu } from "./ProjectsMenu";
 
 const TABS: { id: StudioTab; label: string; icon: typeof PenTool }[] = [
   { id: "canvas", label: "Rascunho", icon: PenTool },
@@ -52,6 +53,8 @@ export function Header({
         <span className="text-[15px] font-semibold tracking-tight">vitrine</span>
         <span className="label-mono">studio</span>
       </div>
+
+      <ProjectsMenu />
 
       <nav className="flex items-center gap-1 rounded-lg bg-canvas p-1" aria-label="Modos">
         {MODES.map((m) => (

@@ -36,7 +36,7 @@ export type GenerateMode = "replace" | "append";
 
 // ---------------- prompt ----------------
 
-function blockCatalog(): string {
+export function blockCatalog(): string {
   const line = (t: BlockType) => {
     const d = BLOCKS[t];
     const fields = d.fields.map((f) => (f.options ? `${f.key} (${f.options.map((o) => o.value).join("|")})` : `${f.key}${f.kind === "lines" ? " (um por linha, separados por \\n)" : ""}`));
