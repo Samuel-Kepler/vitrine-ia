@@ -95,6 +95,8 @@ describe("codegen: Autenticação Própria", () => {
     expect(file(files, "docker-compose.yml")).toContain("JWT_SECRET: ${JWT_SECRET:?");
     expect(file(files, ".env")).toMatch(/^JWT_SECRET=[0-9a-f]{64}$/m);
     expect(file(files, ".env.example")).toContain("JWT_SECRET=troque-este-segredo");
+    // segredo curto não sobe (o gerado tem 64 caracteres)
+    expect(file(files, "services/api/src/auth.ts")).toContain("secret.length < 32");
     expect(file(files, "services/api/src/clients.ts") ?? "").not.toContain("callLogin");
     expect(file(files, "db/schema.postgres.sql")).toMatch(/"password_hash" text NOT NULL/);
     expect(file(files, "services/api/openapi.yaml")).toContain("bearerAuth");

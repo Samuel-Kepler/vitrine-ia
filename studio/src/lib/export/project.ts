@@ -2,7 +2,7 @@
 // HTML por página do Studio), backend (raiz, com docker-compose) e schemas do
 // banco (db/). Puro: testável sem DOM.
 import type { ArchGraph } from "@/lib/arch/model";
-import { archFiles } from "@/lib/arch/codegen";
+import { archFiles, WEB_PORT } from "@/lib/arch/codegen";
 import { dbFiles, type GeneratedFile } from "@/lib/db/codegen";
 import type { ErModel } from "@/lib/db/model";
 
@@ -24,7 +24,8 @@ export interface ProjectInput {
   react?: GeneratedFile[];
 }
 
-export const WEB_PORT = 8080;
+// A porta vive no gerador do backend: é a origem que o CORS das APIs libera.
+export { WEB_PORT };
 
 const WEB_SERVICE = [
   "  web:",

@@ -138,9 +138,11 @@ function zodFor(type: ColType, name: string, required: boolean): string {
 
 const schemaName = (t: Table) => `${pascal(t.name)}Input`;
 
-/** Colunas devolvidas ao cliente: "*" ou, se a tabela guarda hash de senha, a lista sem ele. */
+/**
+ * Colunas devolvidas ao cliente, sempre explícitas (nunca "*"): coluna nova no
+ * banco não vaza sozinha na API, e o hash de senha nunca sai.
+ */
 function selectList(t: Table, er: ErModel): string {
-  if (!t.columns.some((c) => snake(c.name) === PASSWORD_COL)) return "*";
   const cols = [...t.columns.map((c) => snake(c.name)).filter((n) => n !== PASSWORD_COL), ...fkColumns(er).filter((f) => f.table.id === t.id).map((f) => f.name)];
   return cols.map((c) => `"${c}"`).join(", ");
 }
@@ -237,7 +239,15 @@ function routeHandler(p: ServicePlan, route: RouteLine, er: ErModel): string {
 function serviceIndex(p: ServicePlan, er: ErModel): string {
   const imports: string[] = [];
   const isHttp = p.node.kind !== "worker";
-  if (isHttp) imports.push('import { Hono } from "hono";', 'import { HTTPException } from "hono/http-exception";', 'import { serve } from "@hono/node-server";');
+  if (isHttp)
+    imports.push(
+      'import { Hono } from "hono";',
+      'import { HTTPException } from "hono/http-exception";',
+      'import { bodyLimit } from "hono/body-limit";',
+      'import { cors } from "hono/cors";',
+      'import { secureHeaders } from "hono/secure-headers";',
+      'import { serve } from "@hono/node-server";',
+    );
   if (p.db) imports.push('import { db } from "./db.js";');
   const posts = isHttp ? postTables(p, er) : [];
   if (posts.length) imports.push('import type { z } from "zod";', `import { ${posts.map(schemaName).join(", ")} } from "./schemas.js";`);
@@ -251,7 +261,7 @@ function serviceIndex(p: ServicePlan, er: ErModel): string {
 
   if (isHttp) {
     const routes = routeLines(p.node.props.routes);
-    parts.push(p.jwt ? "const app = new Hono<AuthEnv>();" : "const app = new Hono();", "", 'app.get("/health", (c) => c.json({ ok: true, service: "' + p.slug + '" }));', "");
+    parts.push(p.jwt ? "const app = new Hono<AuthEnv>();" : "const app = new Hono();", "", HARDENING, "", 'app.get("/health", (c) => c.json({ ok: true, service: "' + p.slug + '" }));', "");
     if (posts.length) parts.push(ISSUES_FN, "");
     parts.push(onErrorHandler(!!p.db), "");
     if (p.ownAuth) parts.push("// POST /auth/register, POST /auth/login, GET /auth/me (ver src/auth.ts)", 'app.route("/auth", authRoutes);', "");
@@ -285,6 +295,17 @@ function serviceIndex(p: ServicePlan, er: ErModel): string {
   }
   return parts.join("\n") + "\n";
 }
+
+/** Porta do site (nginx) no projeto completo; é a origem liberada no CORS por padrão. */
+export const WEB_PORT = 8080;
+export const BODY_LIMIT_KB = 100;
+
+// Segurança básica de toda API gerada (middlewares do próprio Hono, sem dependência nova).
+const HARDENING = `// Segurança básica: cabeçalhos seguros, corpo de no máximo ${BODY_LIMIT_KB} KB e CORS só
+// para as origens de CORS_ORIGINS (separadas por vírgula; vazio = nenhum site de fora).
+app.use(secureHeaders());
+app.use(bodyLimit({ maxSize: ${BODY_LIMIT_KB} * 1024, onError: (c) => c.json({ error: "Corpo grande demais (máx. ${BODY_LIMIT_KB} KB)." }, 413) }));
+app.use(cors({ origin: (process.env.CORS_ORIGINS ?? "").split(",").map((o) => o.trim()).filter(Boolean) }));`;
 
 const ISSUES_FN = `function issuesOf(error: z.ZodError) {
   return error.issues.map((i) => ({ campo: i.path.join(".") || "(corpo)", erro: i.message }));
@@ -387,7 +408,18 @@ function serviceFiles(p: ServicePlan, er: ErModel): GeneratedFile[] {
       path: `${base}/src/db.ts`,
       content: `import pg from "pg";
 
-export const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+// Pool com limites: sem eles, o banco fora do ar ou uma consulta travada
+// prendem a requisição para sempre.
+export const db = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: Number(process.env.DB_POOL_MAX ?? 10),
+  connectionTimeoutMillis: 5_000, // espera por uma conexão livre
+  idleTimeoutMillis: 30_000,
+  statement_timeout: 10_000, // consulta mais longa que isso é cancelada pelo Postgres
+});
+
+// Erro numa conexão ociosa (ex.: o Postgres reiniciou) não pode derrubar o processo.
+db.on("error", (err) => console.error("[db] conexão perdida:", err.message));
 `,
     });
   }
@@ -513,7 +545,7 @@ function compose(graph: ArchGraph, plans: ServicePlan[], hasSchema: boolean): st
   for (const p of plans) {
     lines.push(`  ${p.slug}:`, `    build: ./services/${p.slug}`);
     if (p.node.kind !== "worker") lines.push("    ports:", `      - "${p.port}:${p.port}"`);
-    const env = p.node.kind === "worker" ? [] : [`PORT: "${p.port}"`];
+    const env = p.node.kind === "worker" ? [] : [`PORT: "${p.port}"`, `CORS_ORIGINS: \${CORS_ORIGINS:-http://localhost:${WEB_PORT}}`];
     if (p.db) env.push(`DATABASE_URL: postgres://app:${required("POSTGRES_PASSWORD")}@postgres:5432/${dbName(p.db)}`);
     if (p.cache) env.push("REDIS_URL: redis://redis:6379");
     if (p.publishes.length || p.consumes.length) env.push("QUEUE_URL: redis://redis:6379");
@@ -666,6 +698,8 @@ function envFile(graph: ArchGraph, plans: ServicePlan[], s: BackendSecrets, real
   if (pgNode) lines.push(`POSTGRES_PASSWORD=${s.postgresPassword}`);
   if (jwt) lines.push("# Segredo do JWT (HS256). Para gerar outro: openssl rand -hex 32", `JWT_SECRET=${s.jwtSecret}`);
   if (hasStorage) lines.push(`MINIO_ROOT_PASSWORD=${s.minioPassword}`);
+  if (plans.some((p) => p.node.kind !== "worker"))
+    lines.push("# Sites que podem chamar a API pelo navegador (separados por vírgula)", `CORS_ORIGINS=http://localhost:${WEB_PORT}`);
   lines.push("", "# Para rodar um serviço fora do Docker (npm run dev)");
   if (pgNode) lines.push(`DATABASE_URL=postgres://app:${s.postgresPassword}@localhost:5432/${dbName(pgNode)}`);
   if (graph.nodes.some((n) => n.kind === "cache")) lines.push("REDIS_URL=redis://localhost:6379");

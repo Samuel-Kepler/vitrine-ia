@@ -127,6 +127,38 @@ describe("inferência + codegen", () => {
     }
   });
 
+  it("API gerada: cabeçalhos seguros, limite de corpo e CORS só para as origens configuradas", () => {
+    const { graph, er } = sample();
+    const files = archFiles(graph, er);
+    const api = files.find((f) => f.path === "services/api/src/index.ts")!.content;
+    expect(api).toContain('import { secureHeaders } from "hono/secure-headers";');
+    expect(api).toContain("app.use(secureHeaders());");
+    expect(api).toMatch(/app\.use\(bodyLimit\(\{ maxSize: 100 \* 1024, onError: \(c\) => c\.json\(\{ error: .*\}, 413\) \}\)\);/);
+    expect(api).toContain('app.use(cors({ origin: (process.env.CORS_ORIGINS ?? "")');
+    // os middlewares vêm antes de qualquer rota
+    expect(api.indexOf("app.use(cors(")).toBeLessThan(api.indexOf('app.get("/health"'));
+    expect(files.find((f) => f.path === "docker-compose.yml")!.content).toContain("CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}");
+    expect(files.find((f) => f.path === ".env")!.content).toContain("CORS_ORIGINS=http://localhost:8080");
+    // worker não é HTTP: sem middlewares
+    expect(files.find((f) => f.path === "services/notificacoes/src/index.ts")!.content).not.toContain("secureHeaders");
+  });
+
+  it("pool do Postgres com timeouts e sem derrubar o processo em erro de conexão ociosa", () => {
+    const { graph, er } = sample();
+    const db = archFiles(graph, er).find((f) => f.path === "services/api/src/db.ts")!.content;
+    expect(db).toContain("connectionTimeoutMillis: 5_000");
+    expect(db).toContain("statement_timeout: 10_000");
+    expect(db).toContain('db.on("error"');
+  });
+
+  it("SELECT nunca usa *: colunas explícitas, sem hash de senha", () => {
+    const { graph, er } = sample();
+    const api = archFiles(graph, er).find((f) => f.path === "services/api/src/index.ts")!.content;
+    expect(api).not.toMatch(/select \*|returning \*/i);
+    expect(api).toMatch(/select "id", .*from "leads"/);
+    expect(api).not.toContain("password_hash");
+  });
+
   it("SQL respeita a ordem pai -> filho e cria FK", () => {
     const { er } = sample();
     const sql = toSql(er, "postgres");

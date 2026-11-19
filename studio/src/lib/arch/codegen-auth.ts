@@ -19,7 +19,8 @@ export function authFile(own?: OwnAuthSpec): string {
 ${own ? 'import { randomBytes, scrypt, timingSafeEqual, type BinaryLike } from "node:crypto";\n' : ""}${own ? 'import { Hono } from "hono";\n' : ""}import { jwt${own ? ", sign" : ""} } from "hono/jwt";
 ${own ? 'import { z } from "zod";\nimport { db } from "./db.js";\n' : ""}
 const secret = process.env.JWT_SECRET;
-if (!secret) throw new Error("Defina a variável JWT_SECRET (veja .env.example).");
+// Segredo curto é quebrável por força bruta: HS256 pede pelo menos 32 bytes.
+if (!secret || secret.length < 32) throw new Error("JWT_SECRET precisa ter pelo menos 32 caracteres (veja .env; gere com: openssl rand -hex 32).");
 const JWT_SECRET: string = secret;
 
 export type JwtClaims = { sub: string; email: string; exp: number };
