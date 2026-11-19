@@ -236,6 +236,8 @@ No modo UI, a aba **React** mostra o site como projeto React (o mesmo que vai em
 - **erros** de sintaxe ou de execução aparecem no preview, com arquivo e linha, sem derrubar o Studio;
 - **Regerar do Studio** (depois de Reimaginar) e **Baixar projeto React**.
 
+- **Chat IA** (painel à direita): peça ajustes em texto ("anime os cards", "crie uma seção de perguntas frequentes"). A IA edita só os arquivos necessários com ferramentas (`list_files`, `view_file`, `str_replace`, `write_file`, `delete_file`, como no vitrine-ia), cada edição passa pelo Babel (erro de sintaxe volta para a IA corrigir) e o Studio aplica só o que mudou, com **Desfazer** por resposta. Horários, preços, porcentagens e telefones novos que não estavam no site geram um aviso na resposta. Precisa de IA de verdade (não funciona com o Mock). Para caber no limite do Groq gratuito (~8 mil tokens/min), o contexto inicial leva só as páginas; componentes e CSS a IA abre quando precisa. Diagnóstico: `RUN_LIVE=1 npx vitest run src/lib/react-chat/agent.live.test.ts`.
+
 Quando o código é editado, a aba mostra **editado à mão**, o **Exportar projeto** passa a usar o código editado, e Regerar pede confirmação (apaga as edições).
 
 Como o preview funciona: Babel no navegador transforma o TSX; os imports locais viram módulos `data:` num import map (`@app/src/…`) e os pacotes vêm do esm.sh, com um React só para todos; o CSS da landing passa pelo Tailwind v4 de navegador. O iframe roda **isolado** (`sandbox="allow-scripts allow-forms"`, sem a origem do Studio) e conversa com o Studio só por `postMessage`. O preview precisa de internet (esm.sh e jsdelivr).

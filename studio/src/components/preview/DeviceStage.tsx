@@ -35,7 +35,9 @@ export const DeviceStage = forwardRef<HTMLDivElement, Props>(function DeviceStag
   const content = useSize(contentRef);
   const scale = size && area.width ? fitScale(size, area) : 1;
 
-  useEffect(() => onScale?.(scale), [scale, onScale]);
+  useEffect(() => {
+    onScale?.(scale);
+  }, [scale, onScale]);
 
   const frameClass = "overflow-hidden rounded-lg border border-line bg-white shadow-sm";
   return (

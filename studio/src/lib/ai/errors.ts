@@ -25,6 +25,11 @@ function isConnectionError(error: unknown): boolean {
 
 export function friendlyAIError(error: unknown, kind: ProviderKind, baseURL?: string): string {
   const cause = rootCause(error);
+  // Pedido maior que o limite por minuto (ex.: Groq free tier, 8 mil tokens/min):
+  // esperar não resolve, precisa diminuir o pedido ou trocar de provedor.
+  if (cause instanceof Error && /request too large|reduce your message size|context.{0,20}(length|window)/i.test(cause.message)) {
+    return `O pedido ficou grande demais para o limite do ${kind}${kind === "groq" ? " (free tier: ~8 mil tokens por minuto)" : ""}. Tente um pedido mais curto, um projeto menor ou outro provedor na engrenagem.`;
+  }
   if (isRateLimit(cause)) {
     const daily = /per day|TPD|RPD|daily/i.test((cause as Error).message ?? "");
     return daily

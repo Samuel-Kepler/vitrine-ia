@@ -3,7 +3,8 @@
 // (Monaco, como no vitrine-ia) e preview ao vivo num iframe isolado.
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Download, FileCode2, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, Bot, Download, FileCode2, Loader2, RefreshCw } from "lucide-react";
+import { ReactChat } from "./ReactChat";
 import { useStudio } from "@/lib/draft/store";
 import { reactProject } from "@/lib/export/react";
 import { previewHtml, transformProject } from "@/lib/react-preview/bundle";
@@ -40,6 +41,7 @@ export default function ReactTab() {
   const [ready, setReady] = useState<string | null>(null);
   const [confirmRegen, setConfirmRegen] = useState(false);
   const iframe = useRef<HTMLIFrameElement>(null);
+  const [chatOpen, setChatOpen] = useState(true);
 
   const regenerate = useCallback(async () => {
     setBusy(true);
@@ -148,6 +150,14 @@ export default function ReactTab() {
             </button>
           )}
           <button
+            onClick={() => setChatOpen((v) => !v)}
+            aria-pressed={chatOpen}
+            data-testid="react-chat-toggle"
+            className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 ${chatOpen ? "border-brand bg-brand-soft text-brand" : "border-line hover:bg-gray-50"}`}
+          >
+            <Bot size={14} /> Chat IA
+          </button>
+          <button
             onClick={() => downloadZip("vitrine-react.zip", Object.entries(files).map(([path, content]) => ({ path: path.slice(1), content })))}
             className="flex items-center gap-1.5 rounded-md bg-ink px-2.5 py-1.5 text-white hover:opacity-90"
             data-testid="react-download"
@@ -193,7 +203,7 @@ export default function ReactTab() {
           ) : null}
         </div>
 
-        <div className="flex w-[44%] min-w-[320px] flex-col bg-canvas">
+        <div className={`flex ${chatOpen ? "w-[36%]" : "w-[44%]"} min-w-[300px] flex-col bg-canvas`}>
           <div className="flex items-center gap-2 border-b border-line bg-panel px-3 py-1.5 text-xs">
             <span className="label-mono">Preview</span>
             <select value={entry} onChange={(e) => setEntry(e.target.value)} className="rounded-md border border-line bg-white px-1.5 py-1" aria-label="Página do preview" data-testid="react-entry">
@@ -224,6 +234,7 @@ export default function ReactTab() {
             <p className="p-4 text-xs text-muted">Compilando…</p>
           )}
         </div>
+        {chatOpen ? <ReactChat onClose={() => setChatOpen(false)} onOpenFile={setActive} /> : null}
       </div>
     </div>
   );
