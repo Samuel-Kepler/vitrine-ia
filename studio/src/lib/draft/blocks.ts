@@ -53,7 +53,13 @@ const TONES = [
   { value: "muted", label: "Suave" },
   { value: "accent", label: "Destaque" },
   { value: "dark", label: "Escuro" },
+  { value: "gradient", label: "Gradiente" },
 ];
+
+const AUTO = { value: "auto", label: "A IA escolhe" };
+const HERO_STYLES = [AUTO, { value: "centered", label: "Centralizado" }, { value: "split", label: "Dividido (texto + imagem)" }, { value: "image-bg", label: "Imagem de fundo" }, { value: "gradient", label: "Gradiente" }, { value: "minimal", label: "Minimalista" }];
+const FEATURE_STYLES = [AUTO, { value: "card", label: "Cartão" }, { value: "icon-left", label: "Ícone ao lado" }, { value: "minimal", label: "Mínimo" }];
+const TESTIMONIAL_STYLES = [AUTO, { value: "card", label: "Cartão" }, { value: "quote", label: "Citação grande" }];
 
 export const BLOCKS: Record<BlockType, BlockDef> = {
   section: {
@@ -109,12 +115,13 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
     label: "Hero",
     group: "secoes",
     hint: "Título grande com chamada",
-    defaults: { title: "Seu produto em uma frase", subtitle: "Explique o benefício principal.", cta: "Quero conhecer" },
+    defaults: { title: "Seu produto em uma frase", subtitle: "Explique o benefício principal.", cta: "Quero conhecer", variant: "auto" },
     fields: [
       { key: "title", label: "Título", kind: "text" },
       { key: "subtitle", label: "Subtítulo", kind: "textarea" },
       { key: "cta", label: "Botão", kind: "text" },
       { key: "image", label: "Imagem (URL)", kind: "text", placeholder: "https://..." },
+      { key: "variant", label: "Estilo", kind: "select", options: HERO_STYLES },
     ],
   },
   heading: {
@@ -181,11 +188,12 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
     label: "Benefício",
     group: "conteudo",
     hint: "Ícone, título e texto",
-    defaults: { icon: "sparkles", title: "Benefício", text: "Por que isso importa para o cliente." },
+    defaults: { icon: "sparkles", title: "Benefício", text: "Por que isso importa para o cliente.", variant: "auto" },
     fields: [
       { key: "icon", label: "Ícone", kind: "select", options: ICON_OPTIONS() },
       { key: "title", label: "Título", kind: "text" },
       { key: "text", label: "Texto", kind: "textarea" },
+      { key: "variant", label: "Estilo", kind: "select", options: FEATURE_STYLES },
     ],
   },
   testimonial: {
@@ -193,11 +201,12 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
     label: "Depoimento",
     group: "conteudo",
     hint: "Citação de cliente",
-    defaults: { quote: "Mudou a forma como trabalhamos.", author: "Cliente feliz", role: "Cargo, Empresa" },
+    defaults: { quote: "Mudou a forma como trabalhamos.", author: "Cliente feliz", role: "Cargo, Empresa", variant: "auto" },
     fields: [
       { key: "quote", label: "Citação", kind: "textarea" },
       { key: "author", label: "Autor", kind: "text" },
       { key: "role", label: "Cargo", kind: "text" },
+      { key: "variant", label: "Estilo", kind: "select", options: TESTIMONIAL_STYLES },
     ],
   },
   pricing: {

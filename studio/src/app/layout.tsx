@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { fontsHref } from "@/lib/a2ui/themes";
 
 // Interface do Studio: Plex Sans no texto, JetBrains Mono em rótulos e dados.
 // A landing gerada (.lp) tem a própria fonte e não herda estas.
@@ -15,6 +16,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={`${plex.variable} ${mono.variable}`}>
+      <head>
+        {/* Fontes dos temas da landing (preview). As exportações levam só as do tema usado. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link rel="stylesheet" href={fontsHref()} />
+      </head>
       <body>{children}</body>
     </html>
   );

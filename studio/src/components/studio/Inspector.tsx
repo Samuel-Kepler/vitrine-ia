@@ -4,6 +4,7 @@ import { BLOCKS, type FieldDef } from "@/lib/draft/blocks";
 import { findNode } from "@/lib/draft/tree";
 import { useStudio } from "@/lib/draft/store";
 import { PALETTES } from "@/lib/a2ui/catalog-api";
+import { THEMES, THEME_DEFS } from "@/lib/a2ui/themes";
 import { BlockIcon } from "./icons";
 
 const input =
@@ -115,7 +116,8 @@ function IconBtn({ label, onClick, danger, children }: { label: string; onClick:
 function PageSettings() {
   const brief = useStudio((s) => s.brief);
   const palette = useStudio((s) => s.palette);
-  const { setBrief, setPalette } = useStudio.getState();
+  const theme = useStudio((s) => s.theme);
+  const { setBrief, setPalette, setTheme } = useStudio.getState();
   return (
     <div className="p-4">
       <h2 className="mb-1 font-semibold">Página</h2>
@@ -136,6 +138,17 @@ function PageSettings() {
           {PALETTES.map((p) => (
             <option key={p} value={p}>
               {p}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="mt-3 block">
+        <span className="mb-1 block text-xs font-medium text-gray-700">Tema (tipografia e formas)</span>
+        <select className={input} value={theme ?? "auto"} onChange={(e) => setTheme(e.target.value)} data-testid="theme-select">
+          <option value="auto">A IA escolhe</option>
+          {THEMES.map((t) => (
+            <option key={t} value={t}>
+              {THEME_DEFS[t].label}: {THEME_DEFS[t].heading}
             </option>
           ))}
         </select>

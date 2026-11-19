@@ -29,23 +29,23 @@ function children(list: unknown, build: Build): ReactNode[] {
   );
 }
 
-const PageView = createComponentImplementation(PageApi as Any, ({ props, buildChild }: Any) => <Page palette={props.palette}>{props.child ? buildChild(props.child) : null}</Page>);
+const PageView = createComponentImplementation(PageApi as Any, ({ props, buildChild }: Any) => <Page palette={props.palette} theme={props.theme}>{props.child ? buildChild(props.child) : null}</Page>);
 
 const NavbarView = createComponentImplementation(NavbarApi as Any, ({ props }: Any) => <Navbar brand={props.brand} links={props.links} cta={props.cta} onCta={props.onCta} />);
 
 const HeroView = createComponentImplementation(HeroApi as Any, ({ props }: Any) => (
-  <Hero title={props.title} subtitle={props.subtitle} cta={props.cta} onCta={props.onCta} image={props.image} eyebrow={props.eyebrow} />
+  <Hero title={props.title} subtitle={props.subtitle} cta={props.cta} onCta={props.onCta} image={props.image} eyebrow={props.eyebrow} variant={props.variant} />
 ));
 
 const HeadingView = createComponentImplementation(HeadingApi as Any, ({ props }: Any) => <Heading text={props.text} level={props.level} align={props.align} />);
 
 const SectionView = createComponentImplementation(SectionApi as Any, ({ props, buildChild }: Any) => <Section tone={props.tone}>{props.child ? buildChild(props.child) : null}</Section>);
 
-const GridView = createComponentImplementation(GridApi as Any, ({ props, buildChild }: Any) => <Grid columns={props.columns}>{children(props.children, buildChild)}</Grid>);
+const GridView = createComponentImplementation(GridApi as Any, ({ props, buildChild }: Any) => <Grid columns={props.columns} variant={props.variant}>{children(props.children, buildChild)}</Grid>);
 
-const FeatureView = createComponentImplementation(FeatureApi as Any, ({ props }: Any) => <Feature icon={props.icon} title={props.title} text={props.text} />);
+const FeatureView = createComponentImplementation(FeatureApi as Any, ({ props }: Any) => <Feature icon={props.icon} title={props.title} text={props.text} variant={props.variant} />);
 
-const TestimonialView = createComponentImplementation(TestimonialApi as Any, ({ props }: Any) => <Testimonial quote={props.quote} author={props.author} role={props.role} />);
+const TestimonialView = createComponentImplementation(TestimonialApi as Any, ({ props }: Any) => <Testimonial quote={props.quote} author={props.author} role={props.role} variant={props.variant} />);
 
 const PricingCardView = createComponentImplementation(PricingCardApi as Any, ({ props }: Any) => (
   <PricingCard name={props.name} price={props.price} period={props.period} features={props.features} cta={props.cta} onCta={props.onCta} highlighted={props.highlighted} />

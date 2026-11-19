@@ -1,4 +1,5 @@
 "use client";
+import { DEFAULT_THEME, fontLinks, isTheme } from "@/lib/a2ui/themes";
 
 export function download(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
@@ -50,12 +51,16 @@ export function exportStandaloneHtml(frame: HTMLElement): string {
   const css = cssOf([...Array.from(document.styleSheets), ...(document.adoptedStyleSheets ?? [])]);
   const shadowCss = roots.map((r) => cssOf(r.adoptedStyleSheets ?? [])).filter(Boolean);
   const title = frame.querySelector("h1")?.textContent?.trim() || "Landing page";
+  // A folha do Google Fonts é de outra origem (cssRules não lê): vai como <link>.
+  const themeClass = [...(frame.querySelector(".lp")?.classList ?? [])].find((c) => c.startsWith("lp-theme-"))?.slice(9);
+  const fonts = fontLinks(isTheme(themeClass) ? themeClass : DEFAULT_THEME);
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${title.replace(/</g, "&lt;")}</title>
+${fonts}
 <style>
 ${css}
 </style>

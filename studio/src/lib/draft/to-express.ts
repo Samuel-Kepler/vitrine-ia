@@ -7,6 +7,8 @@ import { BLOCKS } from "./blocks";
 
 export interface ExpressOptions {
   palette?: string;
+  /** Tema visual (moderno, elegante…). Sem tema: Page fica sem theme (= moderno). */
+  theme?: string;
 }
 
 const str = (s: string | undefined) => JSON.stringify(s ?? "");
@@ -106,6 +108,8 @@ class Emitter {
         if (p.cta) parts.push(`cta=${str(p.cta)}`, `onCta=Event("cta_click", {source: "hero"})`);
         const img = safeUrl(p.image);
         if (img) parts.push(`image=${str(img)}`);
+        // image-bg sem imagem não faz sentido: deixa o componente decidir.
+        if (p.variant && p.variant !== "auto" && !(p.variant === "image-bg" && !img)) parts.push(`variant=${str(p.variant)}`);
         return this.line(v, `Hero(${parts.join(", ")})`);
       }
       case "heading":
@@ -123,11 +127,14 @@ class Emitter {
         const url = safeUrl(p.url) ?? "https://placehold.co/960x540/png?text=Imagem";
         return this.line(v, `Image(url=${str(url)}, description=${str(p.alt)}, fit="cover", variant="mediumFeature")`);
       }
-      case "feature":
-        return this.line(v, `Feature(icon=${str(p.icon || "sparkles")}, title=${str(p.title)}, text=${str(p.text)})`);
+      case "feature": {
+        const variant = p.variant && p.variant !== "auto" ? `, variant=${str(p.variant)}` : "";
+        return this.line(v, `Feature(icon=${str(p.icon || "sparkles")}, title=${str(p.title)}, text=${str(p.text)}${variant})`);
+      }
       case "testimonial": {
         const role = p.role ? `, role=${str(p.role)}` : "";
-        return this.line(v, `Testimonial(quote=${str(p.quote)}, author=${str(p.author)}${role})`);
+        const variant = p.variant && p.variant !== "auto" ? `, variant=${str(p.variant)}` : "";
+        return this.line(v, `Testimonial(quote=${str(p.quote)}, author=${str(p.author)}${role}${variant})`);
       }
       case "pricing": {
         const feats = lines(p.features).map(str).join(", ");
@@ -204,7 +211,7 @@ export function draftToExpress(tree: DraftNode[], opts: ExpressOptions = {}): st
     "<a2ui>",
     ...dataLines,
     ...e.out,
-    `root = Page(child=${pageCol}, palette=${str(palette)})`,
+    `root = Page(child=${pageCol}, palette=${str(palette)}${opts.theme ? `, theme=${str(opts.theme)}` : ""})`,
     "</a2ui>",
   ].join("\n");
 }

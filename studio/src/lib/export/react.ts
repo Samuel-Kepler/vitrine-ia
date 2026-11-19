@@ -4,6 +4,7 @@
 // entradas HTML do Vite (index.html, cardapio.html…), sem roteador.
 import type { GeneratedFile } from "@/lib/db/codegen";
 import { LANDING_COMPONENTS_TSX, LANDING_CSS } from "./react-sources";
+import { DEFAULT_THEME, fontLinks, isTheme } from "@/lib/a2ui/themes";
 
 export interface ReactPage {
   name: string;
@@ -67,6 +68,8 @@ interface Ctx {
   used: Set<string>;
   hasForm: boolean;
   href: (label: string) => string;
+  /** Coluna filha direta da Page: sem espaço entre as seções. */
+  rootColumn?: string;
 }
 
 function hasTextField(ctx: Ctx, id: string, seen = new Set<string>()): boolean {
@@ -91,7 +94,8 @@ function emit(ctx: Ctx, id: string, depth: number, inForm = false): string {
 
   switch (c.component) {
     case "Page":
-      return tag("Page", { palette: str(c.palette) }, child(c.child));
+      ctx.rootColumn = str(c.child);
+      return tag("Page", { palette: str(c.palette), theme: str(c.theme) }, child(c.child));
     case "Navbar": {
       const links = strList(c.links);
       return tag("Navbar", { brand: str(c.brand), links, hrefs: links.map(ctx.href), cta: str(c.cta) });
@@ -101,21 +105,21 @@ function emit(ctx: Ctx, id: string, depth: number, inForm = false): string {
       return tag("Footer", { text: str(c.text), links, hrefs: links.map(ctx.href) });
     }
     case "Hero":
-      return tag("Hero", { title: str(c.title), subtitle: str(c.subtitle), cta: str(c.cta), image: str(c.image), eyebrow: str(c.eyebrow) });
+      return tag("Hero", { title: str(c.title), subtitle: str(c.subtitle), cta: str(c.cta), image: str(c.image), eyebrow: str(c.eyebrow), variant: str(c.variant) });
     case "Heading":
       return tag("Heading", { text: str(c.text), level: str(c.level), align: str(c.align) });
     case "Section":
       return tag("Section", { tone: str(c.tone) }, child(c.child));
     case "Grid":
-      return tag("Grid", { columns: str(c.columns) }, children(c.children));
+      return tag("Grid", { columns: str(c.columns), variant: str(c.variant) }, children(c.children));
     case "Column":
-      return tag("Column", {}, [...child(c.child), ...children(c.children)]);
+      return tag("Column", { flush: c.id === ctx.rootColumn }, [...child(c.child), ...children(c.children)]);
     case "Row":
       return tag("Row", {}, [...child(c.child), ...children(c.children)]);
     case "Feature":
-      return tag("Feature", { icon: str(c.icon), title: str(c.title), text: str(c.text) });
+      return tag("Feature", { icon: str(c.icon), title: str(c.title), text: str(c.text), variant: str(c.variant) });
     case "Testimonial":
-      return tag("Testimonial", { quote: str(c.quote), author: str(c.author), role: str(c.role) });
+      return tag("Testimonial", { quote: str(c.quote), author: str(c.author), role: str(c.role), variant: str(c.variant) });
     case "PricingCard":
       return tag("PricingCard", { name: str(c.name), price: str(c.price), period: str(c.period), features: strList(c.features), cta: str(c.cta), highlighted: c.highlighted === true });
     case "Card": {
@@ -212,9 +216,12 @@ export function reactProject(pages: ReactPage[], opts: { brand?: string } = {}):
       ].join("\n"),
     );
     const title = opts.brand && opts.brand !== page.name ? `${page.name} · ${opts.brand}` : page.name;
+    // Fontes do tema da página (Google Fonts).
+    const theme = [...componentsOf(page.messages).values()].find((c) => c.component === "Page")?.theme;
+    const fonts = fontLinks(isTheme(theme) ? theme : DEFAULT_THEME).replace(/\n/g, "\n    ");
     add(
       page.file,
-      `<!doctype html>\n<html lang="pt-BR">\n  <head>\n    <meta charset="UTF-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <title>${htmlEscape(title)}</title>\n  </head>\n  <body>\n    <div id="root"></div>\n    <script type="module" src="/src/entries/${key}.tsx"></script>\n  </body>\n</html>\n`,
+      `<!doctype html>\n<html lang="pt-BR">\n  <head>\n    <meta charset="UTF-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <title>${htmlEscape(title)}</title>\n    ${fonts}\n  </head>\n  <body>\n    <div id="root"></div>\n    <script type="module" src="/src/entries/${key}.tsx"></script>\n  </body>\n</html>\n`,
     );
     entries.push({ key, html: page.file });
   }

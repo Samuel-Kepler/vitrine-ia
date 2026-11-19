@@ -180,6 +180,25 @@ cd examples/backend-cafeteria && docker compose up --build
 
 Diagnóstico do Sugerir com o provedor do `.env`: `RUN_LIVE=1 npx vitest run src/lib/infer/suggest.live.test.ts`.
 
+## Temas e variações
+
+A landing continua 100% A2UI, mas o catálogo ficou mais rico. A IA (ou você, no painel da direita) escolhe:
+
+- **Tema** (tipografia, cantos e sombras; a cor continua vindo da paleta), com pares de fontes escolhidos com a skill ui-ux-pro-max:
+  - **moderno** (Inter): uso geral;
+  - **elegante** (Playfair Display + Karla): restaurante, café, beleza;
+  - **editorial** (Libre Bodoni + Public Sans): moda, arte, consultoria;
+  - **suave** (Varela Round + Nunito Sans): infantil, pets, saúde;
+  - **tech** (Space Grotesk + DM Sans): tecnologia, startups.
+- **Hero:** centralizado, dividido (texto + imagem ou painel decorativo), imagem de fundo, gradiente animado ou minimalista.
+- **Benefícios:** cartão, ícone ao lado ou mínimo; e a **grade bento** (o primeiro item maior).
+- **Depoimentos:** cartão ou citação grande.
+- **Seção com tom gradiente**, para faixas de chamada para ação.
+
+No rascunho, o seletor **Estilo** de cada Hero, Benefício e Depoimento vem como *A IA escolhe*; o **Tema** fica em Página (clique fora dos blocos). O Reimaginar recebe uma direção de arte (qual tema e qual variação combinam com cada tipo de negócio, e como dar ritmo à página). Com várias páginas, o tema da primeira vale para as outras, como a paleta.
+
+As fontes vêm do Google Fonts: o Studio carrega todas para o preview; o HTML e o projeto React exportados levam só as do tema usado. Os componentes ficam em `src/lib/a2ui/landing-components.tsx` e os temas em `src/lib/a2ui/themes.ts` + `landing.css` (depois de mudar, `npm run gen:sources`).
+
 ## Gerar com IA
 
 No topo da paleta (aba Rascunho), o campo **Gerar com IA** monta a página a partir de um texto, sem arrastar nada. Exemplo: *padaria de bairro com cardápio, depoimentos e formulário de encomenda*.

@@ -4,16 +4,15 @@
 /* ---------- Landing gerada (componentes do catálogo A2UI) ---------- */
 
 .lp {
-  --lp-radius: 16px;
   /* A landing responde à própria largura (container queries @3xl/@5xl), não à
      janela: assim o preview de celular/tablet no Studio mostra o layout certo,
      e no HTML exportado (.lp ocupa a tela) o resultado é o mesmo. */
   container-type: inline-size;
   background: var(--lp-bg);
   color: var(--lp-fg);
-  font-family: var(--font-landing);
+  font-family: var(--lp-font-body);
   min-height: 100%;
-  --a2ui-font-family: var(--font-landing);
+  --a2ui-font-family: var(--lp-font-body);
 }
 /* Componentes básicos do A2UI (Card, TextField, Button, Text...) usam
    --a2ui-*; mapeamos para a paleta da landing, inclusive dentro de tons. */
@@ -122,7 +121,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: 999px;
+  border-radius: var(--lp-btn-radius);
   padding: 0.75rem 1.4rem;
   font-weight: 600;
   background: var(--lp-accent);
@@ -180,6 +179,7 @@
   background: var(--lp-bg);
   border: 1px solid color-mix(in srgb, var(--lp-fg) 10%, transparent);
   border-radius: var(--lp-radius);
+  box-shadow: var(--lp-shadow);
 }
 }
 
@@ -212,4 +212,166 @@
 }
 .lp-rise {
   animation: lp-rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* ---------- Temas: tipografia, cantos e sombras (a cor vem da paleta) ---------- */
+/* Base = moderno. Fontes carregadas do Google Fonts (ver themes.ts). */
+.lp,
+.lp-theme-moderno {
+  --lp-font-heading: "Inter", var(--font-landing);
+  --lp-font-body: "Inter", var(--font-landing);
+  --lp-heading-weight: 800;
+  --lp-heading-tracking: -0.025em;
+  --lp-radius: 16px;
+  --lp-btn-radius: 999px;
+  --lp-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+.lp-theme-elegante {
+  --lp-font-heading: "Playfair Display", Georgia, serif;
+  --lp-font-body: "Karla", var(--font-landing);
+  --lp-heading-weight: 600;
+  --lp-heading-tracking: -0.01em;
+  --lp-radius: 6px;
+  --lp-btn-radius: 3px;
+  --lp-shadow: none;
+}
+.lp-theme-editorial {
+  --lp-font-heading: "Libre Bodoni", Georgia, serif;
+  --lp-font-body: "Public Sans", var(--font-landing);
+  --lp-heading-weight: 600;
+  --lp-heading-tracking: -0.02em;
+  --lp-radius: 0px;
+  --lp-btn-radius: 0px;
+  --lp-shadow: none;
+}
+.lp-theme-suave {
+  --lp-font-heading: "Varela Round", var(--font-landing);
+  --lp-font-body: "Nunito Sans", var(--font-landing);
+  --lp-heading-weight: 400;
+  --lp-heading-tracking: 0;
+  --lp-radius: 28px;
+  --lp-btn-radius: 999px;
+  --lp-shadow: 0 14px 34px -22px var(--lp-accent);
+}
+.lp-theme-tech {
+  --lp-font-heading: "Space Grotesk", var(--font-landing);
+  --lp-font-body: "DM Sans", var(--font-landing);
+  --lp-heading-weight: 700;
+  --lp-heading-tracking: -0.035em;
+  --lp-radius: 12px;
+  --lp-btn-radius: 10px;
+  --lp-shadow: 0 0 0 1px color-mix(in srgb, var(--lp-fg) 6%, transparent);
+}
+.lp-theme-editorial .lp-card {
+  border-color: color-mix(in srgb, var(--lp-fg) 22%, transparent);
+}
+
+@layer components {
+  /* Título com a fonte, o peso e o espaçamento do tema. */
+  .lp-h {
+    font-family: var(--lp-font-heading);
+    font-weight: var(--lp-heading-weight);
+    letter-spacing: var(--lp-heading-tracking);
+  }
+  /* Só a fonte do título (subtítulos de card, citações). */
+  .lp-hf {
+    font-family: var(--lp-font-heading);
+  }
+  .lp-eyebrow {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--lp-accent-bg);
+    color: var(--lp-accent);
+  }
+  .lp-icon {
+    border-radius: calc(var(--lp-radius) * 0.75);
+  }
+  .lp-media {
+    border-radius: var(--lp-radius);
+    box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.35);
+  }
+  /* Hero "split" sem imagem: painel decorativo com a cor da paleta. */
+  .lp-deco {
+    border-radius: var(--lp-radius);
+    background:
+      radial-gradient(circle at 25% 30%, color-mix(in srgb, var(--lp-accent) 55%, transparent) 0 18%, transparent 19%),
+      radial-gradient(circle at 70% 65%, var(--lp-accent-bg) 0 32%, transparent 33%),
+      linear-gradient(135deg, var(--lp-accent-bg), color-mix(in srgb, var(--lp-accent) 30%, var(--lp-bg)));
+  }
+}
+
+/* Fundos de cor forte: texto e botões invertidos para manter o contraste. */
+.tone-gradient,
+.lp-hero-gradient {
+  background: linear-gradient(120deg, var(--lp-accent), color-mix(in srgb, var(--lp-accent) 55%, #000), color-mix(in srgb, var(--lp-accent) 75%, #fff));
+  background-size: 200% 200%;
+  color: var(--lp-accent-fg);
+  --lp-fg: var(--lp-accent-fg);
+  --lp-soft: color-mix(in srgb, var(--lp-accent-fg) 82%, transparent);
+  --lp-bg: color-mix(in srgb, var(--lp-accent-fg) 10%, transparent);
+  --lp-accent-bg: color-mix(in srgb, var(--lp-accent-fg) 18%, transparent);
+}
+.lp-hero-gradient {
+  animation: lp-gradient 14s ease infinite;
+}
+.lp-hero-image {
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+  --lp-fg: #fff;
+  --lp-soft: rgb(255 255 255 / 0.86);
+  --lp-accent-bg: rgb(255 255 255 / 0.16);
+}
+.lp-hero-image::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, rgb(0 0 0 / 0.72), rgb(0 0 0 / 0.28));
+}
+.tone-gradient .lp-btn,
+.lp-hero-gradient .lp-btn {
+  background: var(--lp-accent-fg);
+  color: var(--lp-accent);
+}
+.lp-hero-gradient .lp-eyebrow,
+.tone-gradient .lp-eyebrow,
+.lp-hero-image .lp-eyebrow {
+  color: var(--lp-fg);
+}
+@keyframes lp-gradient {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Grade bento: 1 coluna, 2 a partir de 576px, 3 com o primeiro item 2x2 a partir de 768px. */
+@container (min-width: 36rem) {
+  .lp-bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (min-width: 48rem) {
+  .lp-bento {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .lp-bento > :first-child {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-rise,
+  .lp-hero-gradient {
+    animation: none;
+  }
 }

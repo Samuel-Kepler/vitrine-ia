@@ -19,16 +19,22 @@ export function pageBrief(s: { brief: string; pages: { id: string; name: string 
 
 type ReimagineJson = ReimagineResult & { error?: string };
 
-/** Paleta já usada no site (express da página reimaginada): mantém as páginas com a mesma cor. */
-export function sitePalette(pages: { result: ReimagineResult | null }[]): string | undefined {
+/** Valor de Page(...) já usado no site (express da página reimaginada): mantém as páginas iguais. */
+function siteChoice(pages: { result: ReimagineResult | null }[], key: "palette" | "theme"): string | undefined {
+  const re = new RegExp(`${key}\\s*=\\s*"([\\w-]+)"`);
   for (const p of pages) {
-    const m = p.result?.express?.match(/palette\s*=\s*"([\w-]+)"/);
+    const m = p.result?.express?.match(re);
     if (m) return m[1];
   }
   return undefined;
 }
 
-async function requestReimagine(body: { draft: unknown; brief?: string; palette?: string; settings?: ProviderSettings }): Promise<ReimagineJson> {
+/** Paleta já usada no site: mantém as páginas com a mesma cor. */
+export const sitePalette = (pages: { result: ReimagineResult | null }[]) => siteChoice(pages, "palette");
+/** Tema já usado no site: mantém as páginas com a mesma tipografia. */
+export const siteTheme = (pages: { result: ReimagineResult | null }[]) => siteChoice(pages, "theme");
+
+async function requestReimagine(body: { draft: unknown; brief?: string; palette?: string; theme?: string; settings?: ProviderSettings }): Promise<ReimagineJson> {
   const res = await fetch("/api/reimagine", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   const json = (await res.json()) as ReimagineJson;
   if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`);
@@ -40,6 +46,11 @@ function paletteFor(s: ReturnType<typeof useStudio.getState>, exceptId?: string)
   return sitePalette(s.allPages().filter((p) => p.id !== exceptId));
 }
 
+function themeFor(s: ReturnType<typeof useStudio.getState>, exceptId?: string): string | undefined {
+  if (s.theme && s.theme !== "auto") return s.theme;
+  return siteTheme(s.allPages().filter((p) => p.id !== exceptId));
+}
+
 /** Chama /api/reimagine com o rascunho atual. `override` força um provedor (ex.: mock). */
 export async function runReimagine(override?: ProviderSettings): Promise<{ error?: string }> {
   const s = useStudio.getState();
@@ -49,6 +60,7 @@ export async function runReimagine(override?: ProviderSettings): Promise<{ error
       draft: s.tree,
       brief: pageBrief(s) || undefined,
       palette: paletteFor(s, s.pageId),
+      theme: themeFor(s, s.pageId),
       settings: cleanSettings({ ...s.settings, ...override }),
     });
     s.setResult(json);
@@ -71,6 +83,7 @@ export async function runReimagineAll(onProgress?: (done: number, total: number,
   const pages = s.allPages();
   const failed: string[] = [];
   let palette = s.palette === "auto" ? undefined : s.palette;
+  let theme = !s.theme || s.theme === "auto" ? undefined : s.theme;
   s.setBusy(true);
   try {
     for (let i = 0; i < pages.length; i++) {
@@ -81,10 +94,12 @@ export async function runReimagineAll(onProgress?: (done: number, total: number,
           draft: page.tree,
           brief: pageBrief({ ...s, pageId: page.id }) || undefined,
           palette,
+          theme,
           settings: cleanSettings(s.settings),
         });
         useStudio.getState().setPageResult(page.id, json);
         palette ??= sitePalette([{ result: json }]);
+        theme ??= siteTheme([{ result: json }]);
         if (json.fallback) failed.push(`${page.name} (versão automática: ${json.error ?? "IA indisponível"})`);
       } catch (err) {
         failed.push(`${page.name}: ${err instanceof Error ? err.message : String(err)}`);

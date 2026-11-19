@@ -9,8 +9,9 @@ export const ICONS: Record<string, typeof Sparkles> = { sparkles: Sparkles, zap:
 
 type Children = { children?: ReactNode };
 
-export function Page({ palette = "ocean", children }: { palette?: string } & Children) {
-  return <div className={`lp lp-${palette}`}>{children}</div>;
+/** Raiz: paleta (cores) + tema (tipografia, cantos, sombras). */
+export function Page({ palette = "ocean", theme = "moderno", children }: { palette?: string; theme?: string } & Children) {
+  return <div className={`lp lp-${palette} lp-theme-${theme}`}>{children}</div>;
 }
 
 // Fecha o menu do celular ao escolher um link.
@@ -21,7 +22,7 @@ export function Navbar({ brand, links = [], hrefs = [], cta, onCta }: { brand?: 
   return (
     <header className="sticky top-0 z-10 border-b border-black/5 backdrop-blur" style={{ background: "color-mix(in srgb, var(--lp-bg) 88%, transparent)" }}>
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-5 py-3 @3xl:gap-6 @3xl:px-6 @3xl:py-4">
-        <span className="min-w-0 truncate text-lg font-extrabold tracking-tight">{brand}</span>
+        <span className="lp-h min-w-0 truncate text-lg">{brand}</span>
         <div className="ml-auto flex shrink-0 items-center gap-2 @3xl:gap-6">
           <nav className="hidden gap-6 text-sm @3xl:flex" style={{ color: "var(--lp-soft)" }}>
             {links.map((l, i) => (
@@ -67,34 +68,75 @@ export function Navbar({ brand, links = [], hrefs = [], cta, onCta }: { brand?: 
   );
 }
 
-export function Hero({ title, subtitle, cta, onCta, image, eyebrow }: { title?: string; subtitle?: string; cta?: string; onCta?: () => void; image?: string; eyebrow?: string }) {
+type HeroProps = { title?: string; subtitle?: string; cta?: string; onCta?: () => void; image?: string; eyebrow?: string; variant?: string };
+
+/**
+ * Hero em 5 variações: centered, split (texto + imagem), image-bg (imagem atrás
+ * do texto), gradient (fundo de cor animado) e minimal (tipografia grande).
+ * Sem variant: split se houver imagem, centered se não.
+ */
+export function Hero({ title, subtitle, cta, onCta, image, eyebrow, variant }: HeroProps) {
+  const v = variant ?? (image ? "split" : "centered");
+  const button = cta ? (
+    <button className="lp-btn w-full text-base @md:w-auto" onClick={() => onCta?.()}>
+      {cta}
+    </button>
+  ) : null;
+  const tag = eyebrow ? <span className="lp-eyebrow mb-5">{eyebrow}</span> : null;
+
+  if (v === "image-bg" || v === "gradient") {
+    const photo = v === "image-bg" && image;
+    return (
+      <section className={`relative overflow-hidden ${photo ? "lp-hero-image" : "lp-hero-gradient"}`} style={photo ? { backgroundImage: `url(${JSON.stringify(image)})` } : undefined}>
+        <div className="relative mx-auto max-w-6xl px-5 py-20 @md:py-28 @3xl:px-6 @3xl:py-36">
+          <div className="lp-rise max-w-3xl">
+            {tag}
+            <h1 className="lp-h text-balance text-[2.25rem] leading-[1.05] @md:text-5xl @3xl:text-6xl @5xl:text-7xl">{title}</h1>
+            {subtitle ? <p className="mt-5 max-w-2xl text-pretty text-base leading-relaxed @md:text-lg @3xl:text-xl" style={{ color: "var(--lp-soft)" }}>{subtitle}</p> : null}
+            {button ? <div className="mt-8 flex flex-col gap-3 @md:flex-row @3xl:mt-10">{button}</div> : null}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (v === "minimal") {
+    return (
+      <section className="border-b border-black/5">
+        <div className="lp-rise mx-auto max-w-6xl px-5 pb-12 pt-16 @3xl:px-6 @3xl:pb-20 @3xl:pt-28">
+          {tag}
+          <h1 className="lp-h max-w-5xl text-balance text-[2.5rem] leading-[1.02] @md:text-6xl @5xl:text-8xl">{title}</h1>
+          <div className="mt-8 flex flex-col gap-6 @3xl:mt-12 @3xl:flex-row @3xl:items-end @3xl:justify-between">
+            {subtitle ? <p className="max-w-xl text-pretty text-base leading-relaxed @md:text-lg" style={{ color: "var(--lp-soft)" }}>{subtitle}</p> : <span />}
+            {button}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const split = v === "split";
   return (
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 opacity-60" style={{ background: "radial-gradient(60% 60% at 80% 0%, var(--lp-accent-bg), transparent 70%)" }} />
-      <div className={`relative mx-auto grid max-w-6xl items-center gap-8 px-5 py-14 @md:py-20 @3xl:gap-12 @3xl:px-6 @3xl:py-24 ${image ? "@3xl:grid-cols-2" : ""}`}>
-        <div className={`lp-rise ${image ? "" : "mx-auto max-w-3xl text-center"}`}>
-          {eyebrow ? (
-            <span className="mb-5 inline-block rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider" style={{ background: "var(--lp-accent-bg)", color: "var(--lp-accent)" }}>
-              {eyebrow}
-            </span>
-          ) : null}
-          <h1 className="text-balance text-[2rem] font-extrabold leading-[1.08] tracking-tight @md:text-4xl @3xl:text-5xl @5xl:text-6xl">{title}</h1>
+      <div className={`relative mx-auto grid max-w-6xl items-center gap-8 px-5 py-14 @md:py-20 @3xl:gap-12 @3xl:px-6 @3xl:py-24 ${split ? "@3xl:grid-cols-2" : ""}`}>
+        <div className={`lp-rise ${split ? "" : "mx-auto max-w-3xl text-center"}`}>
+          {tag}
+          <h1 className="lp-h text-balance text-[2rem] leading-[1.08] @md:text-4xl @3xl:text-5xl @5xl:text-6xl">{title}</h1>
           {subtitle ? (
             <p className="mt-4 text-pretty text-base leading-relaxed @md:text-lg @3xl:mt-6 @3xl:text-xl" style={{ color: "var(--lp-soft)" }}>
               {subtitle}
             </p>
           ) : null}
-          {cta ? (
-            <div className={`mt-8 flex flex-col gap-3 @md:flex-row @3xl:mt-10 ${image ? "" : "justify-center"}`}>
-              <button className="lp-btn w-full text-base @md:w-auto" onClick={() => onCta?.()}>
-                {cta}
-              </button>
-            </div>
-          ) : null}
+          {button ? <div className={`mt-8 flex flex-col gap-3 @md:flex-row @3xl:mt-10 ${split ? "" : "justify-center"}`}>{button}</div> : null}
         </div>
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="lp-rise aspect-[4/3] w-full rounded-3xl object-cover shadow-2xl" />
+        {split ? (
+          image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image} alt="" className="lp-rise lp-media aspect-[4/3] w-full object-cover" />
+          ) : (
+            <div className="lp-rise lp-deco aspect-[4/3] w-full" aria-hidden />
+          )
         ) : null}
       </div>
     </section>
@@ -104,7 +146,7 @@ export function Hero({ title, subtitle, cta, onCta, image, eyebrow }: { title?: 
 export function Heading({ text, level = "2", align }: { text?: string; level?: string; align?: string }) {
   const cls = level === "1" ? "text-3xl @md:text-4xl @3xl:text-5xl" : level === "2" ? "text-2xl @md:text-3xl @3xl:text-4xl" : "text-lg @3xl:text-2xl";
   const Tag = `h${level === "1" || level === "3" ? level : "2"}` as "h1" | "h2" | "h3";
-  return <Tag className={`${cls} text-balance font-bold tracking-tight ${align === "center" ? "text-center" : ""}`}>{text}</Tag>;
+  return <Tag className={`${cls} lp-h text-balance ${align === "center" ? "text-center" : ""}`}>{text}</Tag>;
 }
 
 export function Section({ tone = "default", children }: { tone?: string } & Children) {
@@ -116,18 +158,48 @@ export function Section({ tone = "default", children }: { tone?: string } & Chil
 }
 
 const COLS: Record<string, string> = { "2": "@xl:grid-cols-2", "3": "@xl:grid-cols-2 @3xl:grid-cols-3", "4": "@xl:grid-cols-2 @5xl:grid-cols-4" };
-export function Grid({ columns = "3", children }: { columns?: string } & Children) {
+/** Grade de colunas iguais, ou bento (o primeiro item ocupa 2x2 a partir de 768px). */
+export function Grid({ columns = "3", variant, children }: { columns?: string; variant?: string } & Children) {
+  if (variant === "bento") return <div className="lp-bento grid gap-4 @3xl:gap-6">{children}</div>;
   return <div className={`grid gap-4 @3xl:gap-6 ${COLS[columns] ?? COLS["3"]}`}>{children}</div>;
 }
 
-export function Feature({ icon = "sparkles", title, text }: { icon?: string; title?: string; text?: string }) {
+/** Benefício: card (padrão), icon-left (ícone ao lado, sem caixa) ou minimal (só um traço em cima). */
+export function Feature({ icon = "sparkles", title, text, variant = "card" }: { icon?: string; title?: string; text?: string; variant?: string }) {
   const Icon = ICONS[icon] ?? Sparkles;
+  const badge = (
+    <div className="lp-icon inline-flex size-11 shrink-0 items-center justify-center" style={{ background: "var(--lp-accent-bg)", color: "var(--lp-accent)" }}>
+      <Icon size={22} />
+    </div>
+  );
+  if (variant === "icon-left") {
+    return (
+      <div className="flex h-full gap-4 py-2">
+        {badge}
+        <div>
+          <h3 className="lp-hf text-lg font-semibold">{title}</h3>
+          <p className="mt-1 leading-relaxed" style={{ color: "var(--lp-soft)" }}>
+            {text}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  if (variant === "minimal") {
+    return (
+      <div className="h-full border-t-2 pt-5" style={{ borderColor: "var(--lp-accent)" }}>
+        <Icon size={22} style={{ color: "var(--lp-accent)" }} />
+        <h3 className="lp-hf mt-3 text-lg font-semibold">{title}</h3>
+        <p className="mt-2 leading-relaxed" style={{ color: "var(--lp-soft)" }}>
+          {text}
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="lp-card h-full p-5 @3xl:p-6">
-      <div className="mb-4 inline-flex size-11 items-center justify-center rounded-xl" style={{ background: "var(--lp-accent-bg)", color: "var(--lp-accent)" }}>
-        <Icon size={22} />
-      </div>
-      <h3 className="text-lg font-semibold">{title}</h3>
+      <div className="mb-4">{badge}</div>
+      <h3 className="lp-hf text-lg font-semibold">{title}</h3>
       <p className="mt-2 leading-relaxed" style={{ color: "var(--lp-soft)" }}>
         {text}
       </p>
@@ -135,7 +207,20 @@ export function Feature({ icon = "sparkles", title, text }: { icon?: string; tit
   );
 }
 
-export function Testimonial({ quote, author, role }: { quote?: string; author?: string; role?: string }) {
+/** Depoimento: card (padrão) ou quote (citação grande centralizada). */
+export function Testimonial({ quote, author, role, variant = "card" }: { quote?: string; author?: string; role?: string; variant?: string }) {
+  if (variant === "quote") {
+    return (
+      <figure className="mx-auto max-w-3xl py-4 text-center">
+        <Quote size={34} className="mx-auto" style={{ color: "var(--lp-accent)" }} />
+        <blockquote className="lp-hf mt-5 text-balance text-2xl leading-snug @3xl:text-3xl">“{quote}”</blockquote>
+        <figcaption className="mt-6 text-sm">
+          <strong>{author}</strong>
+          {role ? <span style={{ color: "var(--lp-soft)" }}> · {role}</span> : null}
+        </figcaption>
+      </figure>
+    );
+  }
   return (
     <figure className="lp-card h-full p-5 @3xl:p-6">
       <Quote size={22} style={{ color: "var(--lp-accent)" }} />
@@ -152,7 +237,7 @@ export function PricingCard({ name, price, period, features = [], cta, onCta, hi
   return (
     <div className="lp-card flex h-full flex-col p-6 @3xl:p-7" style={highlighted ? { borderColor: "var(--lp-accent)", boxShadow: "0 20px 50px -25px var(--lp-accent)" } : undefined}>
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{name}</h3>
+        <h3 className="lp-hf text-lg font-semibold">{name}</h3>
         {highlighted ? (
           <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "var(--lp-accent)", color: "var(--lp-accent-fg)" }}>
             Popular
@@ -160,7 +245,7 @@ export function PricingCard({ name, price, period, features = [], cta, onCta, hi
         ) : null}
       </div>
       <p className="mt-4">
-        <span className="text-3xl font-extrabold tracking-tight @3xl:text-4xl">{price}</span>
+        <span className="lp-h text-3xl @3xl:text-4xl">{price}</span>
         {period ? <span style={{ color: "var(--lp-soft)" }}> {period}</span> : null}
       </p>
       <ul className="mt-6 flex-1 space-y-2.5">
@@ -197,8 +282,9 @@ export function Footer({ text, links = [], hrefs = [] }: { text?: string; links?
 
 // ---------- Básicos (no Studio vêm do catálogo padrão do A2UI; aqui, versões simples) ----------
 
-export function Column({ children }: Children) {
-  return <div className="flex flex-col gap-6">{children}</div>;
+/** Coluna. flush = sem espaço entre os filhos (a coluna raiz da página: as seções encostam). */
+export function Column({ flush, children }: { flush?: boolean } & Children) {
+  return <div className={flush ? "flex flex-col" : "flex flex-col gap-6"}>{children}</div>;
 }
 
 export function Row({ children }: Children) {
@@ -211,7 +297,7 @@ export function Text({ children }: Children) {
 
 export function Button({ variant = "primary", type = "button", onClick, children }: { variant?: string; type?: "button" | "submit"; onClick?: () => void } & Children) {
   return (
-    <button type={type} onClick={onClick} className={`lp-btn ${variant === "primary" ? "" : "lp-btn-ghost"}`}>
+    <button type={type} onClick={onClick} className={`lp-btn self-start ${variant === "primary" ? "" : "lp-btn-ghost"}`}>
       {children}
     </button>
   );

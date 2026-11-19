@@ -3,13 +3,14 @@
 // via @a2ui/agent) e pelo navegador (renderer em ./views.tsx).
 import { z } from "zod";
 import { Catalog, CommonSchemas, basicCatalog } from "@a2ui/web_core/v1_0";
+import { FEATURE_VARIANTS, GRID_VARIANTS, HERO_VARIANTS, TESTIMONIAL_VARIANTS, THEMES } from "./themes";
 
 export const CATALOG_ID = "https://vitrine.studio/catalogs/landing/v1/catalog.json";
 export const SURFACE_ID = "landing";
 
 export const PALETTES = ["ocean", "sunset", "forest", "grape", "mono"] as const;
 export const ICONS = ["sparkles", "zap", "shield", "heart", "clock", "star", "rocket", "check"] as const;
-export const TONES = ["default", "muted", "accent", "dark"] as const;
+export const TONES = ["default", "muted", "accent", "dark", "gradient"] as const;
 
 const S = CommonSchemas;
 
@@ -19,6 +20,10 @@ export const PageApi = {
   schema: z.object({
     child: S.ComponentId.describe("Id of a Column holding all page sections in order."),
     palette: z.enum(PALETTES).optional().describe("Color palette of the whole page."),
+    theme: z
+      .enum(THEMES)
+      .optional()
+      .describe("Visual theme (typography, corners, shadows): moderno (general), elegante (serif; food, beauty, hospitality), editorial (big sober type; fashion, art, consulting), suave (rounded; kids, pets, health), tech (geometric; tech, startups)."),
   }),
 };
 
@@ -43,6 +48,10 @@ export const HeroApi = {
     onCta: S.Action.optional(),
     image: S.DynamicString.optional().describe("Image URL (https). Omit if unknown."),
     eyebrow: S.DynamicString.optional().describe("Small label above the headline."),
+    variant: z
+      .enum(HERO_VARIANTS)
+      .optional()
+      .describe("Layout: centered (default), split (text + image side by side), image-bg (image behind text; needs image), gradient (bold animated color background), minimal (big left-aligned type, no decoration)."),
   }),
 };
 
@@ -61,7 +70,7 @@ export const SectionApi = {
   description: "Full-width page band with padding and a background tone. Wrap each logical part of the page.",
   schema: z.object({
     child: S.ComponentId.describe("Id of the single child, usually a Column."),
-    tone: z.enum(TONES).optional(),
+    tone: z.enum(TONES).optional().describe("Background: default, muted, accent, dark, gradient (accent gradient; use at most once, e.g. a call-to-action band)."),
   }),
 };
 
@@ -71,6 +80,7 @@ export const GridApi = {
   schema: z.object({
     children: S.ChildList,
     columns: z.enum(["2", "3", "4"]).optional(),
+    variant: z.enum(GRID_VARIANTS).optional().describe("even (default) or bento (first item larger; good for 3-5 features)."),
   }),
 };
 
@@ -81,6 +91,7 @@ export const FeatureApi = {
     icon: z.enum(ICONS).optional(),
     title: S.DynamicString,
     text: S.DynamicString,
+    variant: z.enum(FEATURE_VARIANTS).optional().describe("card (default), icon-left (lighter list look), minimal (no box). Use the same variant for siblings."),
   }),
 };
 
@@ -91,6 +102,7 @@ export const TestimonialApi = {
     quote: S.DynamicString,
     author: S.DynamicString,
     role: S.DynamicString.optional(),
+    variant: z.enum(TESTIMONIAL_VARIANTS).optional().describe("card (default) or quote (large centered quote; best for a single testimonial)."),
   }),
 };
 
