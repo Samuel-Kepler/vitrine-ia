@@ -44,7 +44,7 @@ export function PageBar() {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
-    <div className="flex h-10 shrink-0 items-center gap-1 overflow-x-auto border-b border-line bg-canvas px-3 text-xs" role="tablist" aria-label="Páginas" data-testid="page-bar">
+    <div className="flex h-11 shrink-0 items-center gap-1 overflow-x-auto border-b border-line bg-canvas px-3 text-sm" role="tablist" aria-label="Páginas" data-testid="page-bar">
       <span className="mr-1 label-mono">Páginas</span>
       {pages.map((p, i) => {
         const active = p.id === pageId;
@@ -73,22 +73,22 @@ export function PageBar() {
               onDoubleClick={() => active && setRenaming(true)}
               data-testid={`page-tab-${p.slug}`}
               title={i === 0 ? "Página inicial (index.html)" : `${p.slug}.html`}
-              className={`flex items-center gap-1.5 px-2.5 py-1 ${active ? "font-semibold text-ink" : "text-gray-600 hover:text-ink"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 ${active ? "font-semibold text-ink" : "text-gray-600 hover:text-ink"}`}
             >
-              <FileText size={13} /> {p.name}
+              <FileText size={15} /> {p.name}
               {p.result ? null : <span className="size-1.5 rounded-full bg-amber-400" title="Ainda não reimaginada" />}
             </button>
             {active && !confirmDelete ? (
               <>
                 <button className={btn} title="Renomear" aria-label="Renomear página" onClick={() => setRenaming(true)}>
-                  <Pencil size={12} />
+                  <Pencil size={14} />
                 </button>
                 <button className={btn} title="Duplicar" aria-label="Duplicar página" onClick={() => duplicatePage(p.id)}>
-                  <Copy size={12} />
+                  <Copy size={14} />
                 </button>
                 {pages.length > 1 ? (
                   <button className={btn} title="Apagar" aria-label="Apagar página" onClick={() => setConfirmDelete(true)}>
-                    <Trash2 size={12} />
+                    <Trash2 size={14} />
                   </button>
                 ) : null}
               </>
@@ -124,8 +124,8 @@ export function PageBar() {
           }}
         />
       ) : (
-        <button onClick={() => setAdding(true)} data-testid="page-add" className="ml-1 flex items-center gap-1 rounded-md px-2 py-1 text-brand hover:bg-brand-soft">
-          <Plus size={13} /> Nova página
+        <button onClick={() => setAdding(true)} data-testid="page-add" className="ml-1 flex items-center gap-1 rounded-md px-2.5 py-1.5 text-brand hover:bg-brand-soft">
+          <Plus size={15} /> Nova página
         </button>
       )}
       <span className="ml-auto whitespace-nowrap pl-3 text-muted">Menu e rodapé valem para todas as páginas.</span>

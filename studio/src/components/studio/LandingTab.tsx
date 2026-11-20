@@ -88,7 +88,7 @@ export function LandingTab() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-4 py-2 text-xs">
+      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-4 py-2.5 text-sm">
         <span className="rounded-full bg-canvas px-2.5 py-1 font-medium" data-testid="result-provider">
           {result.provider} · {result.modelId}
         </span>
@@ -108,30 +108,30 @@ export function LandingTab() {
             onClick={() => setShowReview((v) => !v)}
             data-testid="toggle-ai-review"
             aria-pressed={showReview}
-            className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 ${showReview ? "border-brand bg-brand-soft text-brand" : "border-line hover:bg-gray-50"}`}
+            className={`flex items-center gap-1.5 rounded-md border px-3 py-2 ${showReview ? "border-brand bg-brand-soft text-brand" : "border-line hover:bg-gray-50"}`}
           >
-            <ScanSearch size={14} /> Revisão{review ? ` · ${review.score}` : ""}
+            <ScanSearch size={16} /> Revisão{review ? ` · ${review.score}` : ""}
           </button>
           <button
             onClick={playTour}
-            className="flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 hover:bg-gray-50"
+            className="flex items-center gap-1.5 rounded-md border border-line px-3 py-2 hover:bg-gray-50"
             title="Recarrega a página e rola do topo ao fim para ver as animações (role ou clique para parar)"
             data-testid="play-animations"
           >
-            <Play size={14} /> Ver animação
+            <Play size={16} /> Ver animação
           </button>
           <button
-            className="flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 hover:bg-gray-50"
+            className="flex items-center gap-1.5 rounded-md border border-line px-3 py-2 hover:bg-gray-50"
             onClick={() => download("landing.a2ui.json", JSON.stringify(resolveAssets(result.messages, useStudio.getState().assets), null, 2), "application/json")}
           >
-            <FileJson size={14} /> A2UI JSON
+            <FileJson size={16} /> A2UI JSON
           </button>
           <button
-            className="flex items-center gap-1.5 rounded-md bg-ink px-2.5 py-1.5 text-white hover:opacity-90"
+            className="flex items-center gap-1.5 rounded-md bg-ink px-3 py-2 text-white hover:opacity-90"
             onClick={() => frameRef.current && download("landing.html", exportStandaloneHtml(frameRef.current), "text/html")}
             data-testid="export-html"
           >
-            <Download size={14} /> HTML
+            <Download size={16} /> HTML
           </button>
         </div>
       </div>

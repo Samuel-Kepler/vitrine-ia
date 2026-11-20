@@ -28,6 +28,7 @@ import { AiReviewPanel } from "@/components/review/AiReviewPanel";
 import { LayoutButton } from "@/components/flow/LayoutButton";
 import { layoutDb } from "@/lib/layout/auto";
 import { ImportDialog } from "./ImportDialog";
+import { ResizableAside } from "@/components/studio/ResizableAside";
 
 const input = "w-full rounded-md border border-line bg-white px-2 py-1 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 let seq = 0;
@@ -160,7 +161,7 @@ function Inner() {
 
   return (
     <>
-      <aside className="flex w-56 shrink-0 flex-col gap-3 overflow-y-auto border-r border-line bg-panel p-3" aria-label="Ferramentas do banco">
+      <ResizableAside side="left" storageKey="studio.left" defaultWidth={288} className="flex shrink-0 flex-col gap-3 overflow-y-auto border-r border-line bg-panel p-3" aria-label="Ferramentas do banco">
         <button onClick={addTable} data-testid="add-table" className="flex items-center justify-center gap-2 rounded-lg bg-ink py-2 text-sm font-medium text-white hover:opacity-90">
           <Plus size={16} /> Nova tabela
         </button>
@@ -171,7 +172,7 @@ function Inner() {
           Para relacionar, arraste da bolinha <b>direita</b> da tabela filha (que recebe a chave estrangeira) até a bolinha <b>esquerda</b> da tabela pai.
         </p>
         <p className="text-xs text-muted">As colunas de chave estrangeira (azuis) são criadas pelas relações. Muitos-para-muitos gera a tabela de junção sozinho.</p>
-      </aside>
+      </ResizableAside>
 
       <div className="relative flex-1">
         <ReactFlow
@@ -201,7 +202,7 @@ function Inner() {
         ) : null}
       </div>
 
-      <aside className="w-96 shrink-0 overflow-y-auto border-l border-line bg-panel" aria-label="Propriedades do banco">
+      <ResizableAside side="right" storageKey="studio.right" defaultWidth={336} className="shrink-0 overflow-y-auto border-l border-line bg-panel" aria-label="Propriedades do banco">
         {flowSel?.kind === "node" && db.tables.some((t) => t.id === flowSel.id) ? (
           <TableEditor id={flowSel.id} />
         ) : flowSel?.kind === "edge" && db.relations.some((r) => r.id === flowSel.id) ? (
@@ -215,7 +216,7 @@ function Inner() {
             <FlowSidebarFooter generateLabel="Gerar schema (SQL, Prisma, Drizzle, DBML)" disabled={db.tables.length === 0} disabledHint="Crie ao menos uma tabela." onGenerate={() => setShowFiles(true)} />
           </div>
         )}
-      </aside>
+      </ResizableAside>
       {showImport ? <ImportDialog onClose={() => setShowImport(false)} /> : null}
       {showFiles ? <FilesPanel title="Schema do banco" files={files} zipName="banco.zip" onClose={() => setShowFiles(false)} /> : null}
     </>

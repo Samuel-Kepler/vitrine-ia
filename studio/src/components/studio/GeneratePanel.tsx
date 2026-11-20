@@ -69,11 +69,11 @@ export function GeneratePanel() {
   };
 
   return (
-    <section className="mx-3 mt-3 rounded-lg border border-line bg-canvas/60 p-2.5" data-testid="generate-panel">
-      <h3 className="flex items-center gap-1.5 pb-1.5 label-mono !text-brand">
-        <Sparkles size={13} /> Gerar com IA
+    <section className="mx-3 mt-3 rounded-lg border border-line bg-canvas/60 p-3.5" data-testid="generate-panel">
+      <h3 className="flex items-center gap-1.5 pb-2 label-mono !text-brand">
+        <Sparkles size={14} /> Gerar com IA
       </h3>
-      <div className="mb-1.5 grid grid-cols-2 rounded-md border border-line bg-white p-0.5 text-[11px]" role="radiogroup" aria-label="Gerar o quê">
+      <div className="mb-2 grid grid-cols-2 rounded-md border border-line bg-white p-0.5 text-xs" role="radiogroup" aria-label="Gerar o quê">
         {(
           [
             ["page", "Esta página"],
@@ -87,28 +87,28 @@ export function GeneratePanel() {
             aria-checked={scope === v}
             data-testid={`generate-scope-${v}`}
             onClick={() => setScope(v)}
-            className={`rounded-[3px] py-1 transition-colors ${scope === v ? "bg-ink font-medium text-white" : "text-gray-600 hover:text-ink"}`}
+            className={`rounded-[3px] py-1.5 transition-colors ${scope === v ? "bg-ink font-medium text-white" : "text-gray-600 hover:text-ink"}`}
           >
             {label}
           </button>
         ))}
       </div>
-      {scope === "site" ? <p className="mb-1.5 text-[10.5px] text-muted">Cria de 2 a 6 páginas e substitui as atuais (dá para desfazer).</p> : null}
+      {scope === "site" ? <p className="mb-2 text-[11px] text-muted">Cria de 2 a 6 páginas e substitui as atuais (dá para desfazer).</p> : null}
       <textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && prompt.trim().length >= 3 && !loading) run();
         }}
-        rows={4}
+        rows={6}
         maxLength={2000}
         data-testid="generate-prompt"
         placeholder={scope === "site" ? "Descreva o site. Ex.: estúdio de pilates com aulas, planos, equipe e contato" : "Descreva a página. Ex.: padaria de bairro com cardápio, depoimentos e formulário de encomenda"}
-        className="w-full resize-y rounded-md border border-line bg-white p-2 text-xs outline-none focus:border-brand"
+        className="block min-h-36 w-full resize-y rounded-md border border-line bg-white p-2.5 text-sm leading-relaxed outline-none focus:border-brand"
       />
       {scope === "page" && hasBlocks ? (
-        <div className="mt-1.5">
-          <div className="grid grid-cols-2 rounded-md border border-line bg-white p-0.5 text-[11px]" role="radiogroup" aria-label="O que fazer com a página atual">
+        <div className="mt-2">
+          <div className="grid grid-cols-2 rounded-md border border-line bg-white p-0.5 text-xs" role="radiogroup" aria-label="O que fazer com a página atual">
             {(
               [
                 ["replace", "Substituir"],
@@ -121,7 +121,7 @@ export function GeneratePanel() {
                 role="radio"
                 aria-checked={mode === v}
                 onClick={() => setMode(v)}
-                className={`rounded-[3px] py-1 transition-colors ${mode === v ? "bg-ink font-medium text-white" : "text-gray-600 hover:text-ink"}`}
+                className={`rounded-[3px] py-1.5 transition-colors ${mode === v ? "bg-ink font-medium text-white" : "text-gray-600 hover:text-ink"}`}
               >
                 {label}
               </button>
@@ -135,9 +135,9 @@ export function GeneratePanel() {
         onClick={run}
         disabled={loading || prompt.trim().length < 3}
         data-testid="generate-run"
-        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-brand py-1.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50"
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-brand py-2.5 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-50"
       >
-        {loading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+        {loading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
         {loading ? (scope === "site" ? "Gerando o site…" : "Gerando…") : scope === "site" ? "Gerar site" : "Gerar layout"}
       </button>
       {error ? <p className="mt-2 rounded-md bg-red-50 p-2 text-[11px] text-red-800">{error}</p> : null}

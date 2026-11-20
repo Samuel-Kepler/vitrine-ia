@@ -29,6 +29,7 @@ import { FlowSidebarFooter } from "@/components/flow/FlowSidebarFooter";
 import { AiReviewPanel } from "@/components/review/AiReviewPanel";
 import { LayoutButton } from "@/components/flow/LayoutButton";
 import { layoutArch } from "@/lib/layout/auto";
+import { ResizableAside } from "@/components/studio/ResizableAside";
 
 export const ARCH_ICONS: Record<ArchKind, typeof Server> = {
   web: Globe,
@@ -155,7 +156,7 @@ function Inner() {
 
   return (
     <>
-      <aside className="flex w-56 shrink-0 flex-col overflow-y-auto border-r border-line bg-panel p-3" aria-label="Blocos de arquitetura">
+      <ResizableAside side="left" storageKey="studio.left" defaultWidth={288} className="flex shrink-0 flex-col overflow-y-auto border-r border-line bg-panel p-3" aria-label="Blocos de arquitetura">
         <p className="pb-3 text-xs text-muted">Arraste para o canvas e ligue as bolinhas: da direita (quem chama) para a esquerda (quem é chamado).</p>
         <div className="grid grid-cols-2 gap-1.5">
           {ARCH_KINDS.map((k) => {
@@ -176,7 +177,7 @@ function Inner() {
             );
           })}
         </div>
-      </aside>
+      </ResizableAside>
 
       <div
         className="relative flex-1"
@@ -217,7 +218,7 @@ function Inner() {
         ) : null}
       </div>
 
-      <aside className="w-80 shrink-0 overflow-y-auto border-l border-line bg-panel" aria-label="Propriedades da arquitetura">
+      <ResizableAside side="right" storageKey="studio.right" defaultWidth={336} className="shrink-0 overflow-y-auto border-l border-line bg-panel" aria-label="Propriedades da arquitetura">
         {flowSel?.kind === "node" && arch.nodes.some((n) => n.id === flowSel.id) ? (
           <NodeEditor id={flowSel.id} />
         ) : flowSel?.kind === "edge" && arch.edges.some((e) => e.id === flowSel.id) ? (
@@ -236,7 +237,7 @@ function Inner() {
             />
           </div>
         )}
-      </aside>
+      </ResizableAside>
       {showFiles ? <FilesPanel title="Moldes do backend" files={files} zipName="backend.zip" onClose={() => setShowFiles(false)} /> : null}
     </>
   );

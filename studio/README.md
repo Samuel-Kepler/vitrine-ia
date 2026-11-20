@@ -9,7 +9,7 @@ Vive dentro do repositório [`vitrine-ia`](..) (inspiração: multi-provedor, mo
 ```bash
 npm install
 cp .env.example .env      # opcional: sem chave nenhuma o app usa o modelo mock
-npm run dev               # http://localhost:3200 (porta fixa; a API gerada usa 3001)
+npm run dev               # http://localhost:3200/studio (porta fixa; a API gerada usa 3001)
 ```
 
 Funciona igual no Windows (os scripts não usam variáveis no estilo `VAR=x cmd`).
@@ -45,7 +45,7 @@ npm install
 npm run dev
 ```
 
-Abra **http://localhost:3200**. A porta é fixa: a 3001 fica livre para a API gerada.
+Abra **http://localhost:3200/studio** (a raiz `/` é a página de apresentação). A porta é fixa: a 3001 fica livre para a API gerada.
 
 ### 3. Rascunho da Cafeteria e Reimaginar
 

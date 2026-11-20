@@ -6,6 +6,7 @@ import { RECIPES } from "@/lib/draft/recipes";
 import { BlockIcon } from "./icons";
 import { endDrag, startDrag } from "./dnd";
 import { GeneratePanel } from "./GeneratePanel";
+import { ResizableAside } from "./ResizableAside";
 
 const ORDER: BlockGroup[] = ["secoes", "conteudo", "layout", "livre"];
 
@@ -15,7 +16,7 @@ export function Palette() {
   const removeSaved = useStudio((s) => s.removeSaved);
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-line bg-panel" aria-label="Paleta de componentes">
+    <ResizableAside side="left" storageKey="studio.left" defaultWidth={288} className="flex shrink-0 flex-col overflow-y-auto border-r border-line bg-panel" aria-label="Paleta de componentes">
       <GeneratePanel />
       <p className="px-4 pt-4 text-xs text-muted">Ou arraste blocos para o canvas (ou clique para adicionar).</p>
       {ORDER.map((group) => (
@@ -33,7 +34,7 @@ export function Palette() {
                   onClick={() => addByClick({ kind: "new", type: b.type as BlockType })}
                   title={b.hint}
                   data-testid={`palette-${b.type}`}
-                  className="flex cursor-grab flex-col items-start gap-1 rounded-lg border border-line bg-white px-2.5 py-2 text-left text-xs transition hover:border-brand hover:bg-brand-soft active:cursor-grabbing"
+                  className="flex cursor-grab flex-col items-start gap-1.5 rounded-lg border border-line bg-white px-3 py-2.5 text-left text-sm transition hover:border-brand hover:bg-brand-soft active:cursor-grabbing"
                 >
                   <BlockIcon type={b.type} size={16} className="text-brand" />
                   <span className="font-medium">{b.label}</span>
@@ -54,9 +55,9 @@ export function Palette() {
                 onClick={() => addByClick({ kind: "recipe", recipeId: r.id })}
                 title={r.hint}
                 data-testid={`recipe-${r.id}`}
-                className="flex w-full cursor-grab items-start gap-2 rounded-lg border border-line bg-white px-2.5 py-2 text-left text-xs hover:border-brand hover:bg-brand-soft active:cursor-grabbing"
+                className="flex w-full cursor-grab items-start gap-2 rounded-lg border border-line bg-white px-3 py-2.5 text-left text-sm hover:border-brand hover:bg-brand-soft active:cursor-grabbing"
               >
-                <LayoutTemplate size={15} className="mt-0.5 shrink-0 text-brand" />
+                <LayoutTemplate size={16} className="mt-0.5 shrink-0 text-brand" />
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{r.name}</span>
                   <span className="block truncate text-[11px] text-muted">{r.hint}</span>
@@ -79,9 +80,9 @@ export function Palette() {
                   onDragStart={(e) => startDrag(e, { kind: "saved", savedId: c.id })}
                   onDragEnd={endDrag}
                   onClick={() => addByClick({ kind: "saved", savedId: c.id })}
-                  className="flex flex-1 cursor-grab items-center gap-2 rounded-lg border border-line bg-white px-2.5 py-2 text-left text-xs hover:border-brand hover:bg-brand-soft"
+                  className="flex flex-1 cursor-grab items-center gap-2 rounded-lg border border-line bg-white px-3 py-2.5 text-left text-sm hover:border-brand hover:bg-brand-soft"
                 >
-                  <Boxes size={15} className="text-brand" />
+                  <Boxes size={16} className="text-brand" />
                   <span className="truncate font-medium">{c.name}</span>
                 </button>
                 <button
@@ -96,6 +97,6 @@ export function Palette() {
           </ul>
         )}
       </section>
-    </aside>
+    </ResizableAside>
   );
 }

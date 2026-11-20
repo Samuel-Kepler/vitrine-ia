@@ -1,13 +1,11 @@
-"use client";
-import dynamic from "next/dynamic";
+import type { Metadata } from "next";
+import { Home } from "@/components/home/Home";
 
-// O editor vive só no navegador: estado em localStorage e renderer A2UI
-// (que acessa HTMLElement ao ser importado).
-const Studio = dynamic(() => import("@/components/studio/Studio"), {
-  ssr: false,
-  loading: () => <div className="flex h-screen items-center justify-center text-sm text-gray-500">Abrindo o Vitrine Studio…</div>,
-});
+export const metadata: Metadata = {
+  title: "Vitrine Studio",
+  description: "Arraste blocos ou descreva a página, e a IA transforma o rascunho em landing page (A2UI). Depois gere o backend, o banco e exporte o projeto.",
+};
 
 export default function Page() {
-  return <Studio />;
+  return <Home />;
 }

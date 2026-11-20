@@ -11,6 +11,7 @@ import { SketchDialog } from "./SketchDialog";
 import { useState } from "react";
 import { Images, Loader2, PencilLine } from "lucide-react";
 import { autoFillPhotos } from "./photos-client";
+import { ResizableAside } from "./ResizableAside";
 
 const input =
   "w-full rounded-md border border-line bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -20,9 +21,9 @@ export function Inspector() {
   const node = useStudio((s) => (s.selectedId ? findNode(s.tree, s.selectedId) : undefined));
 
   return (
-    <aside className="w-80 shrink-0 overflow-y-auto border-l border-line bg-panel" aria-label="Propriedades">
+    <ResizableAside side="right" storageKey="studio.right" defaultWidth={336} className="shrink-0 overflow-y-auto border-l border-line bg-panel" aria-label="Propriedades">
       {node && selectedId ? <NodeEditor id={selectedId} /> : <PageSettings />}
-    </aside>
+    </ResizableAside>
   );
 }
 
@@ -53,9 +54,9 @@ function NodeEditor({ id }: { id: string }) {
         <button
           onClick={() => setDrawing(true)}
           data-testid="open-sketch"
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-brand py-2 text-sm font-medium text-brand hover:bg-brand-soft"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-brand py-2.5 text-sm font-medium text-brand hover:bg-brand-soft"
         >
-          <PencilLine size={15} /> {hasSketch ? "Editar desenho e transformar" : "Desenhar e transformar com IA"}
+          <PencilLine size={16} /> {hasSketch ? "Editar desenho e transformar" : "Desenhar e transformar com IA"}
         </button>
       ) : null}
 
@@ -137,7 +138,7 @@ function IconBtn({ label, onClick, danger, children }: { label: string; onClick:
       onClick={onClick}
       title={label}
       aria-label={label}
-      className={`flex items-center justify-center rounded-md border border-line py-2 ${danger ? "hover:border-red-300 hover:bg-red-50 hover:text-red-600" : "hover:bg-gray-50"}`}
+      className={`flex items-center justify-center rounded-md border border-line py-2.5 ${danger ? "hover:border-red-300 hover:bg-red-50 hover:text-red-600" : "hover:bg-gray-50"}`}
     >
       {children}
     </button>
@@ -231,10 +232,10 @@ function AutoPhotos() {
         type="button"
         onClick={() => void run()}
         disabled={!!busy}
-        className="flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-white px-2 py-1.5 text-xs font-medium hover:bg-gray-50 disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-white px-2 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-60"
         data-testid="auto-photos"
       >
-        {busy ? <Loader2 size={13} className="animate-spin" /> : <Images size={13} />} {busy ? `Fotos: ${busy}` : "Preencher fotos vazias"}
+        {busy ? <Loader2 size={15} className="animate-spin" /> : <Images size={15} />} {busy ? `Fotos: ${busy}` : "Preencher fotos vazias"}
       </button>
       <p className="mt-1.5 text-[11px] text-muted">Hero, imagens e galerias sem foto recebem fotos de banco gratuito. Fotos da equipe ficam de fora: use as pessoas reais.</p>
       <label className="mt-2 flex items-center gap-2 text-[11px] text-gray-700">

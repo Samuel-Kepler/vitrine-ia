@@ -64,9 +64,9 @@ export function Header({
             data-testid={`mode-${m.id}`}
             aria-pressed={mode === m.id}
             title={m.hint}
-            className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs ${mode === m.id ? "bg-white font-semibold shadow-sm" : "text-gray-600 hover:text-ink"}`}
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm ${mode === m.id ? "bg-white font-semibold shadow-sm" : "text-gray-600 hover:text-ink"}`}
           >
-            <m.icon size={13} /> {m.label}
+            <m.icon size={15} /> {m.label}
           </button>
         ))}
       </nav>
@@ -79,11 +79,11 @@ export function Header({
             aria-selected={tab === t.id}
             disabled={t.id !== "canvas" && t.id !== "react" && !hasResult}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition disabled:opacity-40 ${
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-sm transition disabled:opacity-40 ${
               tab === t.id ? "bg-brand-soft font-medium text-brand" : "text-gray-600 hover:bg-gray-100"
             }`}
           >
-            <t.icon size={15} /> {t.label}
+            <t.icon size={16} /> {t.label}
           </button>
         ))}
       </div>
@@ -102,11 +102,11 @@ export function Header({
         <ExportProject />
         <button
           onClick={onOpenSettings}
-          className="ml-1 flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+          className="ml-1 flex items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
           title="Escolher provedor de IA"
           data-testid="open-settings"
         >
-          <Settings size={14} />
+          <Settings size={16} />
           <span className="max-w-56 truncate">{providerLabel}</span>
         </button>
         {mode === "ui" ? (
@@ -116,7 +116,7 @@ export function Header({
               disabled={busy}
               data-testid="reimagine"
               title={pageCount > 1 ? "Reimaginar a página aberta" : "Reimaginar"}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold transition hover:brightness-110 disabled:opacity-70"
+              className="flex items-center gap-2 whitespace-nowrap px-4 py-2.5 text-sm font-semibold transition hover:brightness-110 disabled:opacity-70"
             >
               {busy ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
               {busy ? (progress ? `Reimaginando ${progress}…` : "Reimaginando…") : "Reimaginar"}
@@ -127,7 +127,7 @@ export function Header({
                 disabled={busy}
                 data-testid="reimagine-all"
                 title={`Reimaginar as ${pageCount} páginas, uma de cada vez, com a mesma paleta`}
-                className="border-l border-white/20 px-3 text-xs font-medium transition hover:brightness-110 disabled:opacity-70"
+                className="border-l border-white/20 px-3 text-sm font-medium transition hover:brightness-110 disabled:opacity-70"
               >
                 Todas ({pageCount})
               </button>
