@@ -64,6 +64,8 @@ interface StudioState {
   busy: boolean;
   tab: StudioTab;
   settings: ProviderSettings;
+  /** Preenche fotos vazias antes de reimaginar. */
+  autoPhotos: boolean;
   mode: StudioMode;
   arch: ArchGraph;
   db: ErModel;
@@ -122,6 +124,7 @@ interface StudioState {
   setPageResult: (id: string, r: ReimagineResult | null) => void;
   setBusy: (b: boolean) => void;
   setSettings: (s: ProviderSettings) => void;
+  setAutoPhotos: (on: boolean) => void;
   reset: (tree?: DraftNode[]) => void;
   /** Imagens enviadas do computador: id -> data URL. No rascunho fica https://asset.invalid/<id>. */
   assets: Record<string, string>;
@@ -169,6 +172,7 @@ export const useStudio = create<StudioState>()(
         busy: false,
         tab: "canvas",
         settings: {},
+        autoPhotos: true,
         mode: "ui",
         arch: { nodes: [], edges: [] },
         db: { tables: [], relations: [] },
@@ -336,6 +340,7 @@ export const useStudio = create<StudioState>()(
         },
         setBusy: (busy) => set({ busy }),
         setSettings: (settings) => set({ settings }),
+        setAutoPhotos: (autoPhotos) => set({ autoPhotos }),
         reset: (tree) => set({ tree: tree ?? [], selectedId: null }),
         assets: {},
         addAsset: (dataUrl) => {
@@ -385,6 +390,7 @@ export const useStudio = create<StudioState>()(
         saved: s.saved,
         result: s.result,
         settings: s.settings,
+        autoPhotos: s.autoPhotos,
         mode: s.mode,
         arch: s.arch,
         db: s.db,

@@ -72,6 +72,22 @@ describe("fontes e CSS dos temas", () => {
   });
 });
 
+describe("paletas no CSS da landing", () => {
+  const varsOf = (css: string, name: string) => {
+    const block = css.match(new RegExp(`\\.${name}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+    return [...block.matchAll(/(--lp-[\w-]+)\s*:/g)].map((m) => m[1]).sort();
+  };
+  it("noir, espresso e rose existem e têm as mesmas variáveis que sunset", () => {
+    const css = readFileSync("src/lib/a2ui/landing.css", "utf8");
+    const base = varsOf(css, "lp-sunset");
+    expect(base.length).toBeGreaterThan(0);
+    for (const p of ["lp-noir", "lp-espresso", "lp-rose"]) {
+      expect(css, p).toContain(`.${p} {`);
+      expect(varsOf(css, p), p).toEqual(base);
+    }
+  });
+});
+
 describe("prompt do Reimaginar", () => {
   it("pede tema e traz a direção de arte", () => {
     const sys = systemPrompt("");

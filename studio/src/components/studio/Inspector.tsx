@@ -208,6 +208,7 @@ function PageSettings() {
 function AutoPhotos() {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const autoPhotos = useStudio((s) => s.autoPhotos);
   const run = async () => {
     setBusy("buscando…");
     setMsg(null);
@@ -236,6 +237,10 @@ function AutoPhotos() {
         {busy ? <Loader2 size={13} className="animate-spin" /> : <Images size={13} />} {busy ? `Fotos: ${busy}` : "Preencher fotos vazias"}
       </button>
       <p className="mt-1.5 text-[11px] text-muted">Hero, imagens e galerias sem foto recebem fotos de banco gratuito. Fotos da equipe ficam de fora: use as pessoas reais.</p>
+      <label className="mt-2 flex items-center gap-2 text-[11px] text-gray-700">
+        <input type="checkbox" checked={autoPhotos} onChange={(e) => useStudio.getState().setAutoPhotos(e.target.checked)} data-testid="auto-photos-on-reimagine" />
+        Preencher fotos ao reimaginar
+      </label>
       {msg ? <p className={`mt-1.5 text-[11px] ${msg.ok ? "text-gray-700" : "text-red-700"}`}>{msg.text}</p> : null}
     </div>
   );

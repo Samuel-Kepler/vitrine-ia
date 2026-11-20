@@ -12,6 +12,7 @@ import { LandingTab } from "./LandingTab";
 import { CodeTab } from "./CodeTab";
 import { SettingsDialog, type ServerStatus } from "./SettingsDialog";
 import { runReimagine, runReimagineAll } from "./reimagine-client";
+import { autoPhotosBeforeReimagine } from "./photos-client";
 
 // React Flow só no navegador e só quando o modo é aberto.
 const ArchCanvas = dynamic(() => import("@/components/arch/ArchCanvas"), { ssr: false });
@@ -55,8 +56,10 @@ export default function Studio() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const [notice, setNotice] = useState<string | null>(null);
   const reimagineNow = async () => {
     setError(null);
+    setNotice(await autoPhotosBeforeReimagine([useStudio.getState().pageId]).then((n) => n ?? null));
     const r = await runReimagine();
     if (r.error) setError(r.error);
   };
@@ -64,6 +67,7 @@ export default function Studio() {
   const [progress, setProgress] = useState<string | null>(null);
   const reimagineAll = async () => {
     setError(null);
+    setNotice(await autoPhotosBeforeReimagine(useStudio.getState().allPages().map((p) => p.id)).then((n) => n ?? null));
     const r = await runReimagineAll((done, total, name) => setProgress(done < total ? `${done + 1}/${total} · ${name}` : null));
     setProgress(null);
     if (r.error) setError(r.error);
@@ -78,6 +82,14 @@ export default function Studio() {
           <span className="flex-1">{error}</span>
           <button onClick={() => setError(null)} aria-label="Fechar aviso">
             <X size={16} />
+          </button>
+        </div>
+      ) : null}
+      {notice && !error ? (
+        <div className="flex items-start gap-2 border-b border-line bg-panel px-4 py-1.5 text-xs text-gray-700" role="status">
+          <span className="flex-1">{notice}</span>
+          <button onClick={() => setNotice(null)} aria-label="Fechar aviso">
+            <X size={14} />
           </button>
         </div>
       ) : null}

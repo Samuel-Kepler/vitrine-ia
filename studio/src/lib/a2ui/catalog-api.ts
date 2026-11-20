@@ -9,7 +9,7 @@ import { UNSAFE_MEDIA_URL_MESSAGE, isSafeMediaUrl } from "@/lib/security/url";
 export const CATALOG_ID = "https://vitrine.studio/catalogs/landing/v1/catalog.json";
 export const SURFACE_ID = "landing";
 
-export const PALETTES = ["ocean", "sunset", "forest", "grape", "mono"] as const;
+export const PALETTES = ["ocean", "sunset", "forest", "grape", "mono", "noir", "espresso", "rose"] as const;
 export const ICONS = ["sparkles", "zap", "shield", "heart", "clock", "star", "rocket", "check"] as const;
 export const TONES = ["default", "muted", "accent", "dark", "gradient"] as const;
 

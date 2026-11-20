@@ -23,6 +23,8 @@ export function systemPrompt(catalogSnippet: string): string {
 Regras do resultado:
 - Responda com UMA frase curta em português e depois UM único bloco <a2ui> ... </a2ui> com a página inteira.
 - root = Page(child=<coluna com as seções>, palette="<${PALETTES.join("|")}>", theme="<${THEMES.join("|")}>", motion="<${MOTIONS.join("|")}>").
+- Paleta pelo tipo de negócio: barbearia, bar, tatuagem, noite ou premium → noir; café, padaria, restaurante ou confeitaria → espresso; beleza, estética, unhas, casamento ou floricultura → rose; saúde, natureza, orgânicos ou pet → forest; tecnologia, SaaS ou startup → ocean ou grape; varejo ou geral → sunset ou ocean. Use mono só se o usuário pedir minimalista ou preto e branco.
+- Se o Hero do rascunho tiver imagem, use variant image-bg ou split (nunca gradient com foto disponível).
 - Cada parte da página fica dentro de Section(child=Column(...), tone=...). Alterne os tons (default, muted, accent, dark) para dar ritmo. Navbar, Hero e Footer podem ficar direto na coluna da página.
 - Use Heading para títulos (Text não tem tamanho de título). Use Grid para benefícios, planos e depoimentos.
 ${ART_DIRECTION}

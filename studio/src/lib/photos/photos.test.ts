@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createNode } from "@/lib/draft/tree";
 import { fetchPhoto, isValidPhotoId, MAX_PHOTO_BYTES, photoSource, searchPhotos } from "./photos";
-import { fallbackQueries, photoQueries, photoSlots } from "./auto";
+import { fallbackQueries, photoQueries, photoSlots, shouldAutoFillPhotos } from "./auto";
 
 const OV_ID = "560cadfd-c4dc-44f6-ba6d-7a3af6e9a307";
 type Call = { url: string; headers: Record<string, string> };
@@ -94,6 +94,22 @@ describe("photoSlots", () => {
     const team = node("team", { photo: "" });
     const slots = photoSlots([hero, centered, img, gallery, team]);
     expect(slots.map((s) => `${s.key}${s.index ?? ""}:${s.text}`)).toEqual(["image:Café fresco. Torra semanal", "url:Balcão da loja", "images1:Torra", "images2:Grãos", "images3:Mesa"]);
+  });
+
+  it("hero com estilo padrão (auto) sem imagem é espaço; com imagem ou estilo sem foto não", () => {
+    const auto = node("hero", { title: "Café", image: "" });
+    expect(auto.props.variant).toBe("auto");
+    expect(photoSlots([auto]).map((s) => s.key)).toEqual(["image"]);
+    expect(photoSlots([node("hero", { title: "Café", image: "https://a/1.jpg" })])).toEqual([]);
+    expect(photoSlots([node("hero", { title: "Café", image: "", variant: "gradient" })])).toEqual([]);
+  });
+
+  it("antes de reimaginar: só com a opção ligada e espaço vazio", () => {
+    const empty = [node("image", { url: "" })];
+    expect(shouldAutoFillPhotos(empty, true)).toBe(true);
+    expect(shouldAutoFillPhotos(empty, false)).toBe(false);
+    expect(shouldAutoFillPhotos([node("image", { url: "https://a/1.jpg" })], true)).toBe(false);
+    expect(shouldAutoFillPhotos([], true)).toBe(false);
   });
 
   it("galeria sem legendas pede 3 fotos; fotos da equipe nunca", () => {

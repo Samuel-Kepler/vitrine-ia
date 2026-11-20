@@ -141,6 +141,11 @@ const GENERIC = new Set([
  * as 2 últimas palavras, as 2 primeiras, cada palavra específica e o termo amplo do negócio.
  * Sem repetição (sem diferenciar maiúsculas) e sem buscas só de palavras genéricas.
  */
+/** Antes de reimaginar: preenche só se a opção estiver ligada e houver espaço vazio. */
+export function shouldAutoFillPhotos(draft: DraftNode[], enabled: boolean): boolean {
+  return enabled && photoSlots(draft).length > 0;
+}
+
 export function fallbackQueries(query: string, broad?: string): string[] {
   const words = query.trim().split(/\s+/).filter(Boolean);
   if (!words.length) return [];

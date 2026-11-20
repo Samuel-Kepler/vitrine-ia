@@ -113,6 +113,41 @@
   --lp-dark-bg: #111111;
   --lp-dark-fg: #f4f4f4;
 }
+/* Escura: fundo quase preto, texto off-white, dourado. Botão com texto escuro sobre o dourado. */
+.lp-noir {
+  color-scheme: dark;
+  --lp-bg: #121212;
+  --lp-fg: #f5f1e8;
+  --lp-soft: #b5ad9c;
+  --lp-muted-bg: #1c1b19;
+  --lp-accent: #d4a24c;
+  --lp-accent-fg: #121212;
+  --lp-accent-bg: #2e2512;
+  --lp-dark-bg: #000000;
+  --lp-dark-fg: #f5f1e8;
+}
+.lp-espresso {
+  --lp-bg: #f6efe4;
+  --lp-fg: #3b2418;
+  --lp-soft: #7a5c4a;
+  --lp-muted-bg: #ece2d3;
+  --lp-accent: #b5582e;
+  --lp-accent-fg: #ffffff;
+  --lp-accent-bg: #f3dcc8;
+  --lp-dark-bg: #3b2418;
+  --lp-dark-fg: #f6efe4;
+}
+.lp-rose {
+  --lp-bg: #fdf6f7;
+  --lp-fg: #4a1d3a;
+  --lp-soft: #7a5468;
+  --lp-muted-bg: #f8e6ea;
+  --lp-accent: #c2415d;
+  --lp-accent-fg: #ffffff;
+  --lp-accent-bg: #fbdde4;
+  --lp-dark-bg: #4a1d3a;
+  --lp-dark-fg: #fdf0f3;
+}
 
 /* Em @layer components: utilidades do Tailwind (hidden, @md:hidden, w-full) vencem. */
 @layer components {
@@ -592,4 +627,10 @@
   to {
     transform: translateX(-50%);
   }
+}
+
+/* Paleta escura: as divisórias claras do Tailwind (border-black/*) somem no fundo preto. */
+.lp-noir .border-black\/5,
+.lp-noir .border-black\/10 {
+  border-color: rgb(255 255 255 / 0.1);
 }
