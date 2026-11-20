@@ -6,6 +6,7 @@ import { z } from "zod/v4";
 import { BLOCKS, type BlockType } from "./blocks";
 import { createNode, type DraftNode } from "./tree";
 import { chromeOf } from "./pages";
+import { recipeHints } from "./recipes";
 
 /** Blocos que podem ficar direto na página. */
 export const TOP_TYPES = ["navbar", "hero", "section", "form", "footer", "custom"] as const satisfies readonly BlockType[];
@@ -56,6 +57,8 @@ Regras:
 - Os blocos dentro de children têm SÓ type e props: nunca coloque children dentro de um filho (não há aninhamento além de section → filhos).
 - Agrupe: features (2 a 4), testimonials (2 a 3) e pricing (2 a 3) ficam dentro de uma section com heading.
 - Os links do navbar são os nomes das seções principais (curtos).
+- Seções bem montadas que você pode seguir (adapte ao pedido; não precisa usar todas):
+${recipeHints()}
 ${contentRules(year)}`;
 }
 

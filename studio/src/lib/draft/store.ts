@@ -1,4 +1,5 @@
 "use client";
+import { findRecipe } from "./recipes";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { temporal } from "zundo";
@@ -41,7 +42,11 @@ export interface SavedComponent {
   node: DraftNode;
 }
 
-export type DragPayload = { kind: "new"; type: BlockType } | { kind: "saved"; savedId: string } | { kind: "move"; id: string };
+export type DragPayload =
+  | { kind: "new"; type: BlockType }
+  | { kind: "saved"; savedId: string }
+  | { kind: "recipe"; recipeId: string }
+  | { kind: "move"; id: string };
 
 export type StudioTab = "canvas" | "landing" | "code" | "react";
 export type StudioMode = "ui" | "arch" | "db";
@@ -131,6 +136,7 @@ interface StudioState {
 
 function nodeFromPayload(state: StudioState, payload: Exclude<DragPayload, { kind: "move" }>): DraftNode | undefined {
   if (payload.kind === "new") return createNode(payload.type);
+  if (payload.kind === "recipe") return findRecipe(payload.recipeId)?.build();
   const saved = state.saved.find((s) => s.id === payload.savedId);
   return saved ? cloneWithNewIds(saved.node) : undefined;
 }

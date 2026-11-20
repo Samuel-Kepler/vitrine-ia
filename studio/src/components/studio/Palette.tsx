@@ -1,7 +1,8 @@
 "use client";
-import { Boxes, Trash2 } from "lucide-react";
+import { Boxes, LayoutTemplate, Trash2 } from "lucide-react";
 import { BLOCKS, GROUP_LABELS, type BlockGroup, type BlockType } from "@/lib/draft/blocks";
 import { useStudio } from "@/lib/draft/store";
+import { RECIPES } from "@/lib/draft/recipes";
 import { BlockIcon } from "./icons";
 import { endDrag, startDrag } from "./dnd";
 import { GeneratePanel } from "./GeneratePanel";
@@ -41,6 +42,30 @@ export function Palette() {
           </div>
         </section>
       ))}
+      <section className="px-3 pt-4">
+        <h3 className="px-1 pb-2 label-mono">Receitas de seção</h3>
+        <ul className="space-y-1.5">
+          {RECIPES.map((r) => (
+            <li key={r.id}>
+              <button
+                draggable
+                onDragStart={(e) => startDrag(e, { kind: "recipe", recipeId: r.id })}
+                onDragEnd={endDrag}
+                onClick={() => addByClick({ kind: "recipe", recipeId: r.id })}
+                title={r.hint}
+                data-testid={`recipe-${r.id}`}
+                className="flex w-full cursor-grab items-start gap-2 rounded-lg border border-line bg-white px-2.5 py-2 text-left text-xs hover:border-brand hover:bg-brand-soft active:cursor-grabbing"
+              >
+                <LayoutTemplate size={15} className="mt-0.5 shrink-0 text-brand" />
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{r.name}</span>
+                  <span className="block truncate text-[11px] text-muted">{r.hint}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
       <section className="px-3 pb-6 pt-4">
         <h3 className="px-1 pb-2 label-mono">Meus componentes</h3>
         {saved.length === 0 ? (
