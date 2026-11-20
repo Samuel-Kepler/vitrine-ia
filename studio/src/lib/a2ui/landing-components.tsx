@@ -371,9 +371,9 @@ export function FormCard({ endpoint, children }: { endpoint?: string } & Childre
 // ---------- Seções extras (números, perguntas, passos, equipe, contato, logos, galeria) ----------
 
 /** Número de destaque: só com números reais do negócio. */
-export function Stat({ value, label }: { value?: string; label?: string }) {
+export function Stat({ value, label, variant = "plain" }: { value?: string; label?: string; variant?: string }) {
   return (
-    <div className="text-center">
+    <div className={variant === "card" ? "lp-card h-full p-6 text-center" : "text-center"}>
       <p className="lp-h text-4xl @3xl:text-5xl" style={{ color: "var(--lp-accent)" }}>
         {value}
       </p>
@@ -426,7 +426,33 @@ const initials = (name = "") =>
     .join("") || "?";
 
 /** Item de cardápio: foto opcional, nome, preço alinhado à direita e descrição curta. */
-export function MenuItem({ name, price, description, photo }: { name?: string; price?: string; description?: string; photo?: string }) {
+export function MenuItem({ name, price, description, photo, variant = "list" }: { name?: string; price?: string; description?: string; photo?: string; variant?: string }) {
+  if (variant === "card")
+    return (
+      <div className="lp-card flex h-full flex-col overflow-hidden">
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt={name ?? ""} className="aspect-[4/3] w-full object-cover" />
+        ) : (
+          <div className="lp-deco aspect-[4/3] w-full" aria-hidden />
+        )}
+        <div className="flex flex-1 flex-col p-5">
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="lp-hf text-lg font-semibold">{name}</h3>
+            {price ? (
+              <span className="lp-hf shrink-0 font-semibold" style={{ color: "var(--lp-accent)" }}>
+                {price}
+              </span>
+            ) : null}
+          </div>
+          {description ? (
+            <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--lp-soft)" }}>
+              {description}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    );
   return (
     <div className="flex h-full items-start gap-4">
       {photo ? (
@@ -539,20 +565,30 @@ export function LogoStrip({ title, names = [], variant = "static" }: { title?: s
 }
 
 /** Galeria: fotos em grade; sem URL, um espaço reservado com a legenda. */
-export function Gallery({ images = [], captions = [] }: { images?: string[]; captions?: string[] }) {
+export function Gallery({ images = [], captions = [], variant = "grid" }: { images?: string[]; captions?: string[]; variant?: string }) {
   const count = Math.max(images.length, captions.length, 3);
+  // grid: grade regular; mosaic: a primeira foto ocupa 2x2; strip: fileira que rola na horizontal (só CSS).
+  const wrap =
+    variant === "strip"
+      ? "-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 @3xl:gap-4"
+      : variant === "mosaic"
+        ? "grid grid-flow-dense gap-3 @md:grid-cols-2 @3xl:grid-cols-4 @3xl:gap-4"
+        : "grid gap-3 @md:grid-cols-2 @3xl:grid-cols-3 @3xl:gap-4";
   return (
-    <div className="grid gap-3 @md:grid-cols-2 @3xl:grid-cols-3 @3xl:gap-4">
+    <div className={wrap}>
       {Array.from({ length: count }, (_, i) => {
         const src = images[i];
         const caption = captions[i];
+        const big = variant === "mosaic" && i === 0;
+        const fig = variant === "strip" ? "w-64 shrink-0 snap-start @3xl:w-80" : big ? "@md:col-span-2 @md:row-span-2" : "";
+        const ratio = big ? "aspect-[4/3] @md:aspect-auto @md:h-full" : "aspect-[4/3]";
         return (
-          <figure key={i} className="overflow-hidden" style={{ borderRadius: "var(--lp-radius)" }}>
+          <figure key={i} className={`overflow-hidden ${fig}`} style={{ borderRadius: "var(--lp-radius)" }}>
             {src ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={src} alt={caption ?? ""} className="lp-img aspect-[4/3] w-full object-cover" />
+              <img src={src} alt={caption ?? ""} className={`lp-img ${ratio} w-full object-cover`} />
             ) : (
-              <div className="lp-deco flex aspect-[4/3] w-full items-end p-3" role="img" aria-label={caption ?? "foto"}>
+              <div className={`lp-deco flex ${ratio} w-full items-end p-3`} role="img" aria-label={caption ?? "foto"}>
                 <span className="rounded-md px-2 py-1 text-xs" style={{ background: "var(--lp-bg)", color: "var(--lp-soft)" }}>
                   {caption ?? "[foto]"}
                 </span>

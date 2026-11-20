@@ -74,6 +74,9 @@ export const FEATURE_VARIANTS = ["card", "icon-left", "minimal"] as const;
 export const GRID_VARIANTS = ["even", "bento"] as const;
 export const TESTIMONIAL_VARIANTS = ["card", "quote"] as const;
 export const LOGO_VARIANTS = ["static", "marquee"] as const;
+export const GALLERY_VARIANTS = ["grid", "mosaic", "strip"] as const;
+export const STAT_VARIANTS = ["plain", "card"] as const;
+export const MENU_VARIANTS = ["list", "card"] as const;
 
 /** Movimento da página: none (parado), calm (seções surgem ao rolar), lively (+ sequência, flutuação, faixa rolando). */
 export const MOTIONS = ["none", "calm", "lively"] as const;

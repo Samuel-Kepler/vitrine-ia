@@ -3,7 +3,7 @@
 // via @a2ui/agent) e pelo navegador (renderer em ./views.tsx).
 import { z } from "zod";
 import { Catalog, CommonSchemas, basicCatalog } from "@a2ui/web_core/v1_0";
-import { FEATURE_VARIANTS, GRID_VARIANTS, HERO_VARIANTS, LOGO_VARIANTS, MOTIONS, SECTION_ANIMATIONS, TESTIMONIAL_VARIANTS, THEMES } from "./themes";
+import { FEATURE_VARIANTS, GALLERY_VARIANTS, GRID_VARIANTS, MENU_VARIANTS, STAT_VARIANTS, HERO_VARIANTS, LOGO_VARIANTS, MOTIONS, SECTION_ANIMATIONS, TESTIMONIAL_VARIANTS, THEMES } from "./themes";
 import { UNSAFE_MEDIA_URL_MESSAGE, isSafeMediaUrl } from "@/lib/security/url";
 
 export const CATALOG_ID = "https://vitrine.studio/catalogs/landing/v1/catalog.json";
@@ -143,7 +143,11 @@ export const PricingCardApi = {
 export const StatApi = {
   name: "Stat",
   description: "Highlighted number with a short label (put 2-4 in a Grid). Only with real data from the user/brief; otherwise use bracket placeholders like [número].",
-  schema: z.object({ value: S.DynamicString.describe('e.g. "12 anos", "+500"'), label: S.DynamicString }),
+  schema: z.object({
+    value: S.DynamicString.describe('e.g. "12 anos", "+500"'),
+    label: S.DynamicString,
+    variant: z.enum(STAT_VARIANTS).optional().describe("plain (default) or card (number inside a box; good on muted sections). Same variant for siblings."),
+  }),
 };
 
 export const MenuItemApi = {
@@ -154,6 +158,7 @@ export const MenuItemApi = {
     price: S.DynamicString.optional().describe('e.g. "R$ 12"'),
     description: S.DynamicString.optional(),
     photo: SafeImageUrl.optional().describe("Photo URL (https) given by the user. Omit if unknown."),
+    variant: z.enum(MENU_VARIANTS).optional().describe("list (default; name, dotted line, price) or card (box with photo on top; best when items have photos)."),
   }),
 };
 
@@ -205,7 +210,11 @@ export const LogoStripApi = {
 export const GalleryApi = {
   name: "Gallery",
   description: "Photo grid. Only image URLs the user gave; without URLs it shows placeholders with the captions.",
-  schema: z.object({ images: z.array(SafeImageUrlLiteral).describe("Image URLs (https)"), captions: z.array(z.string()).optional() }),
+  schema: z.object({
+    images: z.array(SafeImageUrlLiteral).describe("Image URLs (https)"),
+    captions: z.array(z.string()).optional(),
+    variant: z.enum(GALLERY_VARIANTS).optional().describe("grid (default), mosaic (first photo larger) or strip (horizontal row that scrolls; good with 5+ photos)."),
+  }),
 };
 
 export const FooterApi = {

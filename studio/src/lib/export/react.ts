@@ -123,7 +123,7 @@ function emit(ctx: Ctx, id: string, depth: number, inForm = false): string {
     case "PricingCard":
       return tag("PricingCard", { name: str(c.name), price: str(c.price), period: str(c.period), features: strList(c.features), cta: str(c.cta), highlighted: c.highlighted === true });
     case "Stat":
-      return tag("Stat", { value: str(c.value), label: str(c.label) });
+      return tag("Stat", { value: str(c.value), label: str(c.label), variant: str(c.variant) });
     case "FaqItem":
       return tag("FaqItem", { question: str(c.question), answer: str(c.answer) });
     case "Step":
@@ -131,13 +131,13 @@ function emit(ctx: Ctx, id: string, depth: number, inForm = false): string {
     case "TeamMember":
       return tag("TeamMember", { name: str(c.name), role: str(c.role), bio: str(c.bio), photo: str(c.photo) });
     case "MenuItem":
-      return tag("MenuItem", { name: str(c.name), price: str(c.price), description: str(c.description), photo: str(c.photo) });
+      return tag("MenuItem", { name: str(c.name), price: str(c.price), description: str(c.description), photo: str(c.photo), variant: str(c.variant) });
     case "ContactInfo":
       return tag("ContactInfo", { hours: strList(c.hours), address: str(c.address), phone: str(c.phone), email: str(c.email), whatsapp: str(c.whatsapp) });
     case "LogoStrip":
       return tag("LogoStrip", { title: str(c.title), names: strList(c.names), variant: str(c.variant) });
     case "Gallery":
-      return tag("Gallery", { images: strList(c.images), captions: strList(c.captions) });
+      return tag("Gallery", { images: strList(c.images), captions: strList(c.captions), variant: str(c.variant) });
     case "Card": {
       if (hasTextField(ctx, c.id)) {
         ctx.hasForm = true;

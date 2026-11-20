@@ -72,7 +72,7 @@ export const RECIPES: SectionRecipe[] = [
     hint: "3 números e uma citação grande",
     build: section("default", [
       heading("Em números"),
-      ...times<Child>(3, () => ["stat", { value: "[número]", label: "[o que esse número mostra]" }]),
+      ...times<Child>(3, () => ["stat", { value: "[número]", label: "[o que esse número mostra]", variant: "card" }]),
       ["testimonial", { quote: "[depoimento de um cliente]", author: "[nome do cliente]", role: "[cidade ou profissão]", variant: "quote" }],
     ]),
   },
@@ -134,7 +134,7 @@ export const RECIPES: SectionRecipe[] = [
     id: "galeria",
     name: "Galeria de fotos",
     hint: "Grade com 6 fotos",
-    build: section("default", [heading("Galeria"), ["gallery", { images: "", captions: times(6, (i) => `[foto ${i}]`).join("\n") }]]),
+    build: section("default", [heading("Galeria"), ["gallery", { images: "", captions: times(6, (i) => `[foto ${i}]`).join("\n"), variant: "mosaic" }]]),
   },
   {
     id: "clientes",

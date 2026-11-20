@@ -36,6 +36,9 @@ function safeUrl(u: string | undefined): string | undefined {
   }
 }
 
+/** `, variant="x"` quando o usuário escolheu um estilo; "auto" fica com a IA (ou o padrão do componente). */
+const variantOf = (p: Record<string, string>) => (p.variant && p.variant !== "auto" ? `, variant="${p.variant.replace(/[^a-z-]/g, "")}"` : "");
+
 const GRIDDABLE = new Set(["feature", "pricing", "testimonial", "stat", "step", "team", "menuitem"]);
 const PAGE_LEVEL = new Set(["navbar", "hero", "section", "footer"]);
 
@@ -166,7 +169,7 @@ class Emitter {
         return this.line(v, `Card(child=${col})`);
       }
       case "stat":
-        return this.line(v, `Stat(value=${str(p.value)}, label=${str(p.label)})`);
+        return this.line(v, `Stat(value=${str(p.value)}, label=${str(p.label)}${variantOf(p)})`);
       case "faq":
         return this.line(v, `FaqItem(question=${str(p.question)}, answer=${str(p.answer)})`);
       case "step":
@@ -179,7 +182,7 @@ class Emitter {
       case "menuitem": {
         const opt = (k: string, val?: string) => (val?.trim() ? `, ${k}=${str(val.trim())}` : "");
         const photo = safeUrl(p.photo);
-        return this.line(v, `MenuItem(name=${str(p.name)}${opt("price", p.price)}${opt("description", p.description)}${photo ? `, photo=${str(photo)}` : ""})`);
+        return this.line(v, `MenuItem(name=${str(p.name)}${opt("price", p.price)}${opt("description", p.description)}${photo ? `, photo=${str(photo)}` : ""}${variantOf(p)})`);
       }
       case "contact": {
         const opt = (k: string, val?: string) => (val?.trim() ? `, ${k}=${str(val.trim())}` : "");
@@ -194,7 +197,7 @@ class Emitter {
       case "gallery": {
         const images = lines(p.images).map((u) => safeUrl(u)).filter((u): u is string => !!u).map(str).join(", ");
         const captions = lines(p.captions).map(str).join(", ");
-        return this.line(v, `Gallery(images=[${images}], captions=[${captions}])`);
+        return this.line(v, `Gallery(images=[${images}], captions=[${captions}]${variantOf(p)})`);
       }
       case "footer": {
         const links = lines(p.links).map(str).join(", ");

@@ -73,6 +73,9 @@ const TONES = [
 const AUTO = { value: "auto", label: "A IA escolhe" };
 const HERO_STYLES = [AUTO, { value: "centered", label: "Centralizado" }, { value: "split", label: "Dividido (texto + imagem)" }, { value: "image-bg", label: "Imagem de fundo" }, { value: "gradient", label: "Gradiente" }, { value: "minimal", label: "Minimalista" }];
 const FEATURE_STYLES = [AUTO, { value: "card", label: "Cartão" }, { value: "icon-left", label: "Ícone ao lado" }, { value: "minimal", label: "Mínimo" }];
+const STAT_STYLES = [AUTO, { value: "plain", label: "Simples" }, { value: "card", label: "Em cartão" }];
+const MENU_STYLES = [AUTO, { value: "list", label: "Lista com preço" }, { value: "card", label: "Cartão com foto" }];
+const GALLERY_STYLES = [AUTO, { value: "grid", label: "Grade" }, { value: "mosaic", label: "Mosaico" }, { value: "strip", label: "Faixa rolando" }];
 const TESTIMONIAL_STYLES = [AUTO, { value: "card", label: "Cartão" }, { value: "quote", label: "Citação grande" }];
 
 export const BLOCKS: Record<BlockType, BlockDef> = {
@@ -267,10 +270,11 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
     label: "Número",
     group: "conteudo",
     hint: "Número de destaque (use 2 a 4 seguidos)",
-    defaults: { value: "[número]", label: "[o que esse número mostra]" },
+    defaults: { value: "[número]", label: "[o que esse número mostra]", variant: "auto" },
     fields: [
       { key: "value", label: "Número", kind: "text", placeholder: "Ex.: 12 anos" },
       { key: "label", label: "Legenda", kind: "text" },
+      { key: "variant", label: "Estilo", kind: "select", options: STAT_STYLES },
     ],
   },
   faq: {
@@ -313,12 +317,13 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
     label: "Item de cardápio",
     group: "conteudo",
     hint: "Produto com descrição, preço e foto (use vários seguidos)",
-    defaults: { name: "[produto]", description: "[descrição curta]", price: "[preço]", photo: "" },
+    defaults: { name: "[produto]", description: "[descrição curta]", price: "[preço]", photo: "", variant: "auto" },
     fields: [
       { key: "name", label: "Nome", kind: "text" },
       { key: "description", label: "Descrição", kind: "textarea" },
       { key: "price", label: "Preço", kind: "text", placeholder: "Ex.: R$ 12" },
       { key: "photo", label: "Foto (URL)", kind: "text", placeholder: "https://..." },
+      { key: "variant", label: "Estilo", kind: "select", options: MENU_STYLES },
     ],
   },
   contact: {
@@ -352,10 +357,11 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
     label: "Galeria",
     group: "secoes",
     hint: "Grade de fotos",
-    defaults: { images: "", captions: "[foto 1]\n[foto 2]\n[foto 3]" },
+    defaults: { images: "", captions: "[foto 1]\n[foto 2]\n[foto 3]", variant: "auto" },
     fields: [
       { key: "images", label: "Fotos (URLs, uma por linha)", kind: "lines" },
       { key: "captions", label: "Legendas (uma por linha)", kind: "lines" },
+      { key: "variant", label: "Estilo", kind: "select", options: GALLERY_STYLES },
     ],
   },
   footer: {

@@ -61,16 +61,16 @@ const PricingCardView = createComponentImplementation(PricingCardApi as Any, ({ 
 
 const FooterView = createComponentImplementation(FooterApi as Any, ({ props }: Any) => <Footer text={props.text} links={props.links} />);
 
-const StatView = createComponentImplementation(StatApi as Any, ({ props }: Any) => <Stat value={props.value} label={props.label} />);
+const StatView = createComponentImplementation(StatApi as Any, ({ props }: Any) => <Stat value={props.value} label={props.label} variant={props.variant} />);
 const FaqItemView = createComponentImplementation(FaqItemApi as Any, ({ props }: Any) => <FaqItem question={props.question} answer={props.answer} />);
 const StepView = createComponentImplementation(StepApi as Any, ({ props }: Any) => <Step index={props.index} title={props.title} text={props.text} />);
 const TeamMemberView = createComponentImplementation(TeamMemberApi as Any, ({ props }: Any) => <TeamMember name={props.name} role={props.role} bio={props.bio} photo={props.photo} />);
-const MenuItemView = createComponentImplementation(MenuItemApi as Any, ({ props }: Any) => <MenuItem name={props.name} price={props.price} description={props.description} photo={props.photo} />);
+const MenuItemView = createComponentImplementation(MenuItemApi as Any, ({ props }: Any) => <MenuItem name={props.name} price={props.price} description={props.description} photo={props.photo} variant={props.variant} />);
 const ContactInfoView = createComponentImplementation(ContactInfoApi as Any, ({ props }: Any) => (
   <ContactInfo hours={props.hours} address={props.address} phone={props.phone} email={props.email} whatsapp={props.whatsapp} />
 ));
 const LogoStripView = createComponentImplementation(LogoStripApi as Any, ({ props }: Any) => <LogoStrip title={props.title} names={props.names} variant={props.variant} />);
-const GalleryView = createComponentImplementation(GalleryApi as Any, ({ props }: Any) => <Gallery images={props.images} captions={props.captions} />);
+const GalleryView = createComponentImplementation(GalleryApi as Any, ({ props }: Any) => <Gallery images={props.images} captions={props.captions} variant={props.variant} />);
 
 export const landingCatalog = buildCatalog(
   [PageView, NavbarView, HeroView, HeadingView, SectionView, GridView, FeatureView, TestimonialView, PricingCardView, StatView, FaqItemView, StepView, TeamMemberView, MenuItemView, ContactInfoView, LogoStripView, GalleryView, FooterView] as Any,
