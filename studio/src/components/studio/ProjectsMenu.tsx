@@ -228,13 +228,13 @@ export function ProjectsMenu() {
     }
   };
 
-  const item = "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs hover:bg-gray-50 disabled:opacity-50";
+  const item = "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs hover:bg-canvas disabled:opacity-50";
 
   return (
     <div className="relative" ref={box}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex max-w-52 items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-xs hover:bg-gray-50"
+        className="flex max-w-52 items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-xs hover:bg-canvas"
         aria-expanded={open}
         aria-haspopup="dialog"
         title="Projetos: criar, abrir, salvar, importar site"
@@ -242,14 +242,14 @@ export function ProjectsMenu() {
       >
         {busy ? <Loader2 size={13} className="animate-spin" /> : <FolderOpen size={13} />}
         <span className="truncate font-medium">{current?.name ?? "Projeto"}</span>
-        <ChevronDown size={12} className="shrink-0 text-gray-500" />
+        <ChevronDown size={12} className="shrink-0 text-muted" />
       </button>
 
       {open || error || notes.length || busy ? (
         <div
           role="dialog"
           aria-label="Projetos"
-          className={`absolute left-0 top-full z-50 mt-1.5 w-[22rem] rounded-xl border border-line bg-white p-2 shadow-2xl ${open ? "" : "w-[22rem]"}`}
+          className={`absolute left-0 top-full z-50 mt-1.5 w-[22rem] rounded-xl border border-line bg-panel p-2 shadow-2xl ${open ? "" : "w-[22rem]"}`}
         >
           {open ? (
             <>
@@ -271,7 +271,7 @@ export function ProjectsMenu() {
               <p className="px-2.5 pb-1 pt-2 label-mono">Neste navegador · salvo automaticamente</p>
               <ul className="max-h-72 overflow-y-auto" data-testid="project-list">
                 {sortedProjects(idx).map((p) => (
-                  <li key={p.id} className={`group flex items-center gap-1 rounded-md pr-1 ${p.id === idx.currentId ? "bg-brand-soft" : "hover:bg-gray-50"}`}>
+                  <li key={p.id} className={`group flex items-center gap-1 rounded-md pr-1 ${p.id === idx.currentId ? "bg-brand-soft" : "hover:bg-canvas"}`}>
                     {editing === p.id ? (
                       <form
                         className="flex flex-1 items-center gap-1 px-1.5 py-1"
@@ -289,7 +289,7 @@ export function ProjectsMenu() {
                           className="min-w-0 flex-1 rounded border border-line px-1.5 py-0.5 text-xs outline-none focus:border-brand"
                           aria-label="Nome do projeto"
                         />
-                        <button type="submit" className="rounded p-1 hover:bg-white" aria-label="Salvar nome">
+                        <button type="submit" className="rounded p-1 hover:bg-panel" aria-label="Salvar nome">
                           <Check size={13} />
                         </button>
                       </form>
@@ -304,20 +304,20 @@ export function ProjectsMenu() {
                         <button className="rounded bg-red-600 px-1.5 py-0.5 text-white" onClick={() => remove(p.id)} data-testid="project-delete-confirm">
                           apagar
                         </button>
-                        <button className="rounded p-0.5 hover:bg-white" onClick={() => setConfirmDelete(null)} aria-label="Cancelar">
+                        <button className="rounded p-0.5 hover:bg-panel" onClick={() => setConfirmDelete(null)} aria-label="Cancelar">
                           <X size={12} />
                         </button>
                       </span>
                     ) : editing !== p.id ? (
                       <span className="flex opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-                        <button className="rounded p-1 hover:bg-white" onClick={() => (setEditing(p.id), setNameDraft(p.name))} title="Renomear" aria-label={`Renomear ${p.name}`}>
+                        <button className="rounded p-1 hover:bg-panel" onClick={() => (setEditing(p.id), setNameDraft(p.name))} title="Renomear" aria-label={`Renomear ${p.name}`}>
                           <Pencil size={12} />
                         </button>
-                        <button className="rounded p-1 hover:bg-white" onClick={() => duplicate(p.id)} title="Duplicar" aria-label={`Duplicar ${p.name}`}>
+                        <button className="rounded p-1 hover:bg-panel" onClick={() => duplicate(p.id)} title="Duplicar" aria-label={`Duplicar ${p.name}`}>
                           <Copy size={12} />
                         </button>
                         {idx.list.length > 1 ? (
-                          <button className="rounded p-1 text-red-700 hover:bg-white" onClick={() => setConfirmDelete(p.id)} title="Apagar" aria-label={`Apagar ${p.name}`}>
+                          <button className="rounded p-1 text-red-700 dark:text-red-300 hover:bg-panel" onClick={() => setConfirmDelete(p.id)} title="Apagar" aria-label={`Apagar ${p.name}`}>
                             <Trash2 size={12} />
                           </button>
                         ) : null}
@@ -330,12 +330,12 @@ export function ProjectsMenu() {
           ) : null}
 
           {busy ? (
-            <p className="flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700">
+            <p className="flex items-center gap-2 px-2.5 py-2 text-xs text-ink">
               <Loader2 size={13} className="animate-spin" /> {busy}
             </p>
           ) : null}
           {error ? (
-            <p className="m-1 flex items-start gap-2 rounded-md bg-red-50 p-2 text-xs text-red-800" role="alert">
+            <p className="m-1 flex items-start gap-2 rounded-md bg-red-50 dark:bg-red-950/40 p-2 text-xs text-red-800 dark:text-red-200" role="alert">
               <span className="flex-1">{error}</span>
               <button onClick={() => setError(null)} aria-label="Fechar aviso">
                 <X size={12} />
@@ -343,7 +343,7 @@ export function ProjectsMenu() {
             </p>
           ) : null}
           {notes.length ? (
-            <div className="m-1 rounded-md bg-amber-50 p-2 text-xs text-amber-900" data-testid="project-notes">
+            <div className="m-1 rounded-md bg-amber-50 dark:bg-amber-950/40 p-2 text-xs text-amber-900 dark:text-amber-100" data-testid="project-notes">
               <div className="flex">
                 <ul className="flex-1 list-disc space-y-0.5 pl-4">
                   {notes.map((n, i) => (

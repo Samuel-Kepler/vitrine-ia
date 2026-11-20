@@ -44,7 +44,7 @@ export const ARCH_ICONS: Record<ArchKind, typeof Server> = {
   auth: KeyRound,
 };
 
-const input = "w-full rounded-md border border-line bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
+const input = "w-full rounded-md border border-line bg-panel px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 let seq = 0;
 const nid = (p: string) => `${p}${Date.now().toString(36)}${(seq++).toString(36)}`;
 
@@ -54,13 +54,13 @@ function ArchNodeView({ data, selected }: NodeProps) {
   const Icon = ARCH_ICONS[node.kind];
   const routes = (node.props.routes ?? "").split("\n").filter((r) => r.trim() && r.trim() !== "GET /health");
   return (
-    <div className={`w-52 overflow-hidden rounded-lg border border-line bg-white shadow-sm ${selected ? "ring-2 ring-brand" : ""}`} style={{ borderTop: `3px solid ${def.color}` }}>
+    <div className={`w-52 overflow-hidden rounded-lg border border-line bg-panel shadow-sm ${selected ? "ring-2 ring-brand" : ""}`} style={{ borderTop: `3px solid ${def.color}` }}>
       <Handle type="target" position={Position.Left} className="!size-2.5 !border-2 !border-white !bg-ink" />
       <div className="flex items-center gap-2 border-b border-line px-3 py-2">
         <Icon size={14} style={{ color: def.color }} />
         <span className="truncate text-[13px] font-semibold text-ink">{node.name}</span>
       </div>
-      <div className="px-3 py-2 text-[11px] text-gray-600">
+      <div className="px-3 py-2 text-[11px] text-muted">
         <p className="label-mono">{def.label}</p>
         {routes.slice(0, 4).map((r) => (
           <p key={r} className="truncate font-mono">
@@ -169,7 +169,7 @@ function Inner() {
                 onClick={() => addNode(k)}
                 title={ARCH[k].hint}
                 data-testid={`arch-palette-${k}`}
-                className="flex cursor-grab flex-col items-start gap-1 rounded-lg border border-line bg-white px-2.5 py-2 text-left text-xs hover:border-brand hover:bg-brand-soft"
+                className="flex cursor-grab flex-col items-start gap-1 rounded-lg border border-line bg-panel px-2.5 py-2 text-left text-xs hover:border-brand hover:bg-brand-soft"
               >
                 <Icon size={16} style={{ color: ARCH[k].color }} />
                 <span className="font-medium">{ARCH[k].label}</span>
@@ -211,7 +211,7 @@ function Inner() {
         </ReactFlow>
         {arch.nodes.length === 0 ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <p className="max-w-sm rounded-lg bg-white/90 p-4 text-center text-sm text-muted shadow-sm">
+            <p className="max-w-sm rounded-lg bg-panel/90 p-4 text-center text-sm text-muted shadow-sm">
               Arraste blocos da esquerda ou clique em <b>Sugerir da landing</b> para a IA propor a arquitetura a partir do seu rascunho.
             </p>
           </div>
@@ -297,7 +297,7 @@ function NodeEditor({ id }: { id: string }) {
         <p className="mt-2 text-[11px] text-muted">Rota com nome de tabela (ex.: POST /leads) + ligação “grava” no Postgres = handler com SQL pronto.</p>
       ) : null}
       <button
-        className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-md border border-line py-2 text-sm hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+        className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-md border border-line py-2 text-sm hover:border-red-300 dark:hover:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400"
         onClick={() => {
           setArch((g) => ({ nodes: g.nodes.filter((n) => n.id !== id), edges: g.edges.filter((e) => e.source !== id && e.target !== id) }));
           setFlowSel(null);
@@ -332,11 +332,11 @@ function EdgeEditor({ id }: { id: string }) {
         </select>
       </label>
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <button className="rounded-md border border-line py-2 text-sm hover:bg-gray-50" onClick={() => patch({ source: edge.target, target: edge.source })}>
+        <button className="rounded-md border border-line py-2 text-sm hover:bg-canvas" onClick={() => patch({ source: edge.target, target: edge.source })}>
           Inverter
         </button>
         <button
-          className="rounded-md border border-line py-2 text-sm hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+          className="rounded-md border border-line py-2 text-sm hover:border-red-300 dark:hover:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400"
           onClick={() => {
             setArch((g) => ({ ...g, edges: g.edges.filter((e) => e.id !== id) }));
             setFlowSel(null);

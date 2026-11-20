@@ -100,7 +100,7 @@ export function ExportProject() {
         disabled={!enabled || busy}
         data-testid="export-project"
         title={error ?? (enabled ? "Baixar o site (todas as páginas) + backend + banco num .zip" : "Nada para exportar ainda: desenhe a landing, a arquitetura ou o banco.")}
-        className={`ml-1 flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs disabled:opacity-40 ${error ? "border-red-300 text-red-700" : "border-line text-gray-700 hover:bg-gray-50"}`}
+        className={`ml-1 flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs disabled:opacity-40 ${error ? "border-red-300 dark:border-red-800 text-red-700 dark:text-red-300" : "border-line text-ink hover:bg-canvas"}`}
       >
         {busy ? <Loader2 size={14} className="animate-spin" /> : <PackageOpen size={14} />}
         {job ? `Exportando ${job.index + 1}/${job.items.length}…` : preparing ? "Preparando…" : error ? "Exportar (falhou, tente de novo)" : "Exportar projeto"}

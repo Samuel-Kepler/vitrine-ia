@@ -34,7 +34,7 @@ export function Palette() {
                   onClick={() => addByClick({ kind: "new", type: b.type as BlockType })}
                   title={b.hint}
                   data-testid={`palette-${b.type}`}
-                  className="flex cursor-grab flex-col items-start gap-1.5 rounded-lg border border-line bg-white px-3 py-2.5 text-left text-sm transition hover:border-brand hover:bg-brand-soft active:cursor-grabbing"
+                  className="flex cursor-grab flex-col items-start gap-1.5 rounded-lg border border-line bg-panel px-3 py-2.5 text-left text-sm transition hover:border-brand hover:bg-brand-soft active:cursor-grabbing"
                 >
                   <BlockIcon type={b.type} size={16} className="text-brand" />
                   <span className="font-medium">{b.label}</span>
@@ -55,7 +55,7 @@ export function Palette() {
                 onClick={() => addByClick({ kind: "recipe", recipeId: r.id })}
                 title={r.hint}
                 data-testid={`recipe-${r.id}`}
-                className="flex w-full cursor-grab items-start gap-2 rounded-lg border border-line bg-white px-3 py-2.5 text-left text-sm hover:border-brand hover:bg-brand-soft active:cursor-grabbing"
+                className="flex w-full cursor-grab items-start gap-2 rounded-lg border border-line bg-panel px-3 py-2.5 text-left text-sm hover:border-brand hover:bg-brand-soft active:cursor-grabbing"
               >
                 <LayoutTemplate size={16} className="mt-0.5 shrink-0 text-brand" />
                 <span className="min-w-0">
@@ -80,14 +80,14 @@ export function Palette() {
                   onDragStart={(e) => startDrag(e, { kind: "saved", savedId: c.id })}
                   onDragEnd={endDrag}
                   onClick={() => addByClick({ kind: "saved", savedId: c.id })}
-                  className="flex flex-1 cursor-grab items-center gap-2 rounded-lg border border-line bg-white px-3 py-2.5 text-left text-sm hover:border-brand hover:bg-brand-soft"
+                  className="flex flex-1 cursor-grab items-center gap-2 rounded-lg border border-line bg-panel px-3 py-2.5 text-left text-sm hover:border-brand hover:bg-brand-soft"
                 >
                   <Boxes size={16} className="text-brand" />
                   <span className="truncate font-medium">{c.name}</span>
                 </button>
                 <button
                   onClick={() => removeSaved(c.id)}
-                  className="rounded p-1.5 text-muted opacity-0 hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
+                  className="rounded p-1.5 text-muted opacity-0 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 group-hover:opacity-100"
                   aria-label={`Apagar ${c.name}`}
                 >
                   <Trash2 size={14} />

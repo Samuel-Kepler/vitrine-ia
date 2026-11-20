@@ -15,7 +15,7 @@ export function LayoutButton({ onLayout, disabled }: { onLayout: () => void; dis
           onLayout();
           requestAnimationFrame(() => requestAnimationFrame(() => void fitView({ padding: 0.15, duration: 300 })));
         }}
-        className="flex items-center gap-1.5 rounded-md border border-line bg-white px-2.5 py-1.5 text-xs text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-40"
+        className="flex items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 py-1.5 text-xs text-ink shadow-sm hover:bg-canvas disabled:opacity-40"
       >
         <LayoutGrid size={14} /> Organizar
       </button>

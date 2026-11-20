@@ -78,7 +78,7 @@ export function LandingTab() {
   if (!result) {
     return (
       <div className="flex flex-1 items-center justify-center bg-canvas p-6" data-testid="landing-empty">
-        <p className="max-w-sm rounded-lg bg-white p-5 text-center text-sm text-muted shadow-sm">
+        <p className="max-w-sm rounded-lg bg-panel p-5 text-center text-sm text-muted shadow-sm">
           A página <b className="text-ink">{pageName}</b> ainda não foi reimaginada. Monte o rascunho e clique em <b className="text-ink">Reimaginar</b>.
         </p>
       </div>
@@ -97,9 +97,9 @@ export function LandingTab() {
           {result.usage?.inputTokens ? ` · ${result.usage.inputTokens} → ${result.usage.outputTokens} tokens` : ""}
         </span>
         {result.fallback ? (
-          <span className="rounded-full bg-amber-100 px-2.5 py-1 font-medium text-amber-800">versão automática (sem IA)</span>
+          <span className="rounded-full bg-amber-100 dark:bg-amber-950/60 px-2.5 py-1 font-medium text-amber-800 dark:text-amber-200">versão automática (sem IA)</span>
         ) : (
-          <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-medium text-emerald-800">A2UI validado</span>
+          <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-1 font-medium text-emerald-800 dark:text-emerald-200">A2UI validado</span>
         )}
         <div className="ml-auto flex items-center gap-1">
           <DeviceToolbar value={viewport} onChange={setViewport} scale={scale} />
@@ -108,26 +108,26 @@ export function LandingTab() {
             onClick={() => setShowReview((v) => !v)}
             data-testid="toggle-ai-review"
             aria-pressed={showReview}
-            className={`flex items-center gap-1.5 rounded-md border px-3 py-2 ${showReview ? "border-brand bg-brand-soft text-brand" : "border-line hover:bg-gray-50"}`}
+            className={`flex items-center gap-1.5 rounded-md border px-3 py-2 ${showReview ? "border-brand bg-brand-soft text-brand" : "border-line hover:bg-canvas"}`}
           >
             <ScanSearch size={16} /> Revisão{review ? ` · ${review.score}` : ""}
           </button>
           <button
             onClick={playTour}
-            className="flex items-center gap-1.5 rounded-md border border-line px-3 py-2 hover:bg-gray-50"
+            className="flex items-center gap-1.5 rounded-md border border-line px-3 py-2 hover:bg-canvas"
             title="Recarrega a página e rola do topo ao fim para ver as animações (role ou clique para parar)"
             data-testid="play-animations"
           >
             <Play size={16} /> Ver animação
           </button>
           <button
-            className="flex items-center gap-1.5 rounded-md border border-line px-3 py-2 hover:bg-gray-50"
+            className="flex items-center gap-1.5 rounded-md border border-line px-3 py-2 hover:bg-canvas"
             onClick={() => download("landing.a2ui.json", JSON.stringify(resolveAssets(result.messages, useStudio.getState().assets), null, 2), "application/json")}
           >
             <FileJson size={16} /> A2UI JSON
           </button>
           <button
-            className="flex items-center gap-1.5 rounded-md bg-ink px-3 py-2 text-white hover:opacity-90"
+            className="flex items-center gap-1.5 rounded-md bg-ink px-3 py-2 text-on-solid hover:opacity-90"
             onClick={() => frameRef.current && download("landing.html", exportStandaloneHtml(frameRef.current), "text/html")}
             data-testid="export-html"
           >
@@ -137,7 +137,7 @@ export function LandingTab() {
       </div>
 
       {result.error || result.warnings.length ? (
-        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+        <div className="border-b border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-4 py-2 text-xs text-amber-900 dark:text-amber-100">
           <p className="flex items-center gap-1.5 font-medium">
             <AlertTriangle size={14} /> {result.error ?? "A IA precisou de correções."}
           </p>
@@ -153,11 +153,11 @@ export function LandingTab() {
           ) : null}
         </div>
       ) : result.note ? (
-        <p className="border-b border-line bg-panel px-4 py-2 text-xs text-gray-600">{result.note}</p>
+        <p className="border-b border-line bg-panel px-4 py-2 text-xs text-muted">{result.note}</p>
       ) : null}
 
       {result.facts?.length ? (
-        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900" data-testid="fact-warnings">
+        <div className="border-b border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-4 py-2 text-xs text-amber-900 dark:text-amber-100" data-testid="fact-warnings">
           <p className="flex items-center gap-1.5 font-medium">
             <AlertTriangle size={14} /> A página cita {result.facts.length} {result.facts.length > 1 ? "itens" : "item"} que não {result.facts.length > 1 ? "estavam" : "estava"} no rascunho nem no briefing. Confira antes de publicar.
           </p>
@@ -178,12 +178,12 @@ export function LandingTab() {
           <SurfaceView key={replay} messages={result.messages} onAction={setLastAction} />
         </DeviceStage>
         {lastAction ? (
-          <div className="fixed bottom-4 right-4 z-30 max-w-sm rounded-lg bg-ink p-3 text-xs text-white shadow-lg" role="status">
+          <div className="fixed bottom-4 right-4 z-30 max-w-sm rounded-lg bg-ink p-3 text-xs text-on-solid shadow-lg" role="status">
             <p className="font-semibold">Ação A2UI: {lastAction.name}</p>
             {lastAction.context && Object.keys(lastAction.context).length ? (
-              <pre className="mt-1 whitespace-pre-wrap text-white/70">{JSON.stringify(lastAction.context, null, 2)}</pre>
+              <pre className="mt-1 whitespace-pre-wrap text-on-solid/70">{JSON.stringify(lastAction.context, null, 2)}</pre>
             ) : null}
-            <button className="mt-2 text-white/60 underline" onClick={() => setLastAction(null)}>
+            <button className="mt-2 text-on-solid/60 underline" onClick={() => setLastAction(null)}>
               fechar
             </button>
           </div>

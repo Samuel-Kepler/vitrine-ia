@@ -78,7 +78,7 @@ export function ReactChat({ onClose, onOpenFile }: { onClose: () => void; onOpen
       <div className="flex items-center gap-2 border-b border-line px-3 py-2">
         <Bot size={15} className="text-brand" />
         <span className="label-mono">Chat de código</span>
-        <button onClick={onClose} className="ml-auto rounded p-1 text-gray-500 hover:bg-gray-100" aria-label="Fechar chat">
+        <button onClick={onClose} className="ml-auto rounded p-1 text-muted hover:bg-line" aria-label="Fechar chat">
           <X size={14} />
         </button>
       </div>
@@ -88,14 +88,14 @@ export function ReactChat({ onClose, onOpenFile }: { onClose: () => void; onOpen
           <div className="space-y-2 text-muted">
             <p>Peça ajustes no código do site. A IA edita só os arquivos necessários e o preview atualiza sozinho.</p>
             {EXAMPLES.map((e) => (
-              <button key={e} onClick={() => send(e)} className="block w-full rounded-md border border-line bg-white px-2.5 py-1.5 text-left text-gray-700 hover:border-brand">
+              <button key={e} onClick={() => send(e)} className="block w-full rounded-md border border-line bg-panel px-2.5 py-1.5 text-left text-ink hover:border-brand">
                 {e}
               </button>
             ))}
           </div>
         ) : null}
         {msgs.map((m, i) => (
-          <div key={i} className={m.role === "user" ? "ml-6 rounded-lg bg-ink px-3 py-2 text-white" : `mr-2 rounded-lg border px-3 py-2 ${m.error ? "border-red-200 bg-red-50 text-red-800" : "border-line bg-white text-gray-800"}`}>
+          <div key={i} className={m.role === "user" ? "ml-6 rounded-lg bg-ink px-3 py-2 text-on-solid" : `mr-2 rounded-lg border px-3 py-2 ${m.error ? "border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-200" : "border-line bg-panel text-ink"}`}>
             <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
             {m.changed?.length ? (
               <ul className="mt-2 space-y-0.5">
@@ -145,9 +145,9 @@ export function ReactChat({ onClose, onOpenFile }: { onClose: () => void; onOpen
           maxLength={4000}
           placeholder="Ex.: troque o botão do hero por um link para o WhatsApp"
           data-testid="react-chat-input"
-          className="w-full resize-none rounded-md border border-line bg-white p-2 text-xs outline-none focus:border-brand"
+          className="w-full resize-none rounded-md border border-line bg-panel p-2 text-xs outline-none focus:border-brand"
         />
-        <button type="submit" disabled={sending || text.trim().length < 2} data-testid="react-chat-send" className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-md bg-brand py-1.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-50">
+        <button type="submit" disabled={sending || text.trim().length < 2} data-testid="react-chat-send" className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-md bg-brand py-1.5 text-xs font-semibold text-on-solid hover:brightness-110 disabled:opacity-50">
           {sending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Enviar
         </button>
         <p className="mt-1 text-[10px] text-muted">Enter envia, Shift+Enter quebra linha. Usa o provedor da engrenagem.</p>

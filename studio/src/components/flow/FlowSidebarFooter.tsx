@@ -25,12 +25,12 @@ export function FlowSidebarFooter({ generateLabel, onGenerate, disabled, disable
         {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Sugerir da landing
       </button>
       <p className="text-[11px] text-muted">Lê o rascunho da aba UI e propõe arquitetura e banco juntos. Substitui o que está nos dois canvases.</p>
-      {msg ? <p className="rounded-md bg-amber-50 p-2 text-xs text-amber-900">{msg}</p> : null}
+      {msg ? <p className="rounded-md bg-amber-50 dark:bg-amber-950/40 p-2 text-xs text-amber-900 dark:text-amber-100">{msg}</p> : null}
       {notes.length ? (
-        <div className="rounded-md bg-canvas p-2.5 text-xs text-gray-700">
+        <div className="rounded-md bg-canvas p-2.5 text-xs text-ink">
           <ul className="list-disc space-y-1 pl-4">
             {notes.map((n, i) => (
-              <li key={i} className={i === 0 && n.includes(" falhou: ") ? "font-medium text-amber-800" : undefined} data-testid={i === 0 ? "suggest-source" : undefined}>
+              <li key={i} className={i === 0 && n.includes(" falhou: ") ? "font-medium text-amber-800 dark:text-amber-200" : undefined} data-testid={i === 0 ? "suggest-source" : undefined}>
                 {n}
               </li>
             ))}
@@ -46,7 +46,7 @@ export function FlowSidebarFooter({ generateLabel, onGenerate, disabled, disable
         disabled={disabled}
         onClick={onGenerate}
         data-testid="generate-files"
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand py-2 text-sm font-semibold text-on-solid hover:brightness-110 disabled:opacity-50"
       >
         <FileCode2 size={15} /> {generateLabel}
       </button>

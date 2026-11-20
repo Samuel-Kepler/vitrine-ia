@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 // (que acessa HTMLElement ao ser importado).
 const Studio = dynamic(() => import("@/components/studio/Studio"), {
   ssr: false,
-  loading: () => <div className="flex h-screen items-center justify-center text-sm text-gray-500">Abrindo o Vitrine Studio…</div>,
+  loading: () => <div className="flex h-screen items-center justify-center text-sm text-muted">Abrindo o Vitrine Studio…</div>,
 });
 
 export default function Page() {

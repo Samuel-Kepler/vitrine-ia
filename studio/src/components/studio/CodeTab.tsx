@@ -25,13 +25,13 @@ export function CodeTab() {
           <button
             key={v.id}
             onClick={() => setView(v.id)}
-            className={`rounded-md px-3 py-1.5 text-xs ${view === v.id ? "bg-brand-soft font-medium text-brand" : "text-gray-600 hover:bg-gray-100"}`}
+            className={`rounded-md px-3 py-1.5 text-xs ${view === v.id ? "bg-brand-soft font-medium text-brand" : "text-muted hover:bg-line"}`}
           >
             {v.label}
           </button>
         ))}
         <button
-          className="ml-auto flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-xs hover:bg-gray-50"
+          className="ml-auto flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 text-xs hover:bg-canvas"
           onClick={async () => {
             await navigator.clipboard.writeText(text);
             setCopied(true);

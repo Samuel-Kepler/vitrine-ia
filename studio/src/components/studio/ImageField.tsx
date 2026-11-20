@@ -6,7 +6,7 @@ import { compressImage, dataUrlKb, IMAGE_ACCEPT, isAssetUrl, resolveAssets } fro
 import { importStock, searchStock, SOURCE_LABEL, type Photo, type PhotoSource } from "./photos-client";
 
 const input =
-  "w-full rounded-md border border-line bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
+  "w-full rounded-md border border-line bg-panel px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 
 /** Campos de imagem dos blocos: hero.image, image.url, team.photo (uma) e gallery.images (várias). */
 export const IMAGE_KEYS = new Set(["image", "url", "photo", "images"]);
@@ -46,7 +46,7 @@ function Thumb({ src, label, onRemove }: { src: string; label: string; onRemove:
       <button
         type="button"
         onClick={onRemove}
-        className="absolute right-1 top-1 rounded bg-white/90 p-0.5 opacity-0 shadow transition group-hover:opacity-100 focus:opacity-100"
+        className="absolute right-1 top-1 rounded bg-panel/90 p-0.5 opacity-0 shadow transition group-hover:opacity-100 focus:opacity-100"
         aria-label={`Remover ${label}`}
       >
         <X size={12} />
@@ -95,7 +95,7 @@ function StockPicker({ id, suggest, onPick, keepOpen }: { id: string; suggest?: 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-1.5 flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs hover:bg-gray-50"
+        className="mt-1.5 flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs hover:bg-canvas"
         data-testid={`${id}-stock`}
       >
         <Images size={13} /> Banco de fotos grátis
@@ -111,10 +111,10 @@ function StockPicker({ id, suggest, onPick, keepOpen }: { id: string; suggest?: 
         }}
       >
         <input className={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="ex.: coffee shop counter" aria-label="Buscar foto" autoFocus />
-        <button type="submit" className="rounded-md border border-line bg-white px-2 hover:bg-gray-50 disabled:opacity-50" disabled={busy === "search"} aria-label="Buscar">
+        <button type="submit" className="rounded-md border border-line bg-panel px-2 hover:bg-canvas disabled:opacity-50" disabled={busy === "search"} aria-label="Buscar">
           {busy === "search" ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
         </button>
-        <button type="button" className="rounded-md px-1 text-muted hover:text-gray-900" onClick={() => setOpen(false)} aria-label="Fechar banco de fotos">
+        <button type="button" className="rounded-md px-1 text-muted hover:text-ink" onClick={() => setOpen(false)} aria-label="Fechar banco de fotos">
           <X size={13} />
         </button>
       </form>
@@ -146,7 +146,7 @@ function StockPicker({ id, suggest, onPick, keepOpen }: { id: string; suggest?: 
         )
       ) : null}
       {source ? <p className="mt-1 text-[10px] text-muted">{SOURCE_LABEL[source]}</p> : null}
-      {error ? <p className="mt-1 text-[11px] text-red-700">{error}</p> : null}
+      {error ? <p className="mt-1 text-[11px] text-red-700 dark:text-red-300">{error}</p> : null}
     </div>
   );
 }
@@ -158,14 +158,14 @@ export function SingleImageField({ id, label, value, onChange, suggest }: { id: 
   const fromComputer = isAssetUrl(value);
   return (
     <div className="block">
-      <span className="mb-1 block text-xs font-medium text-gray-700">{label}</span>
+      <span className="mb-1 block text-xs font-medium text-ink">{label}</span>
       {value ? <Thumb src={value} label={label} onRemove={() => onChange("")} /> : null}
       <div className="mt-1.5 flex gap-1.5">
         <button
           type="button"
           onClick={() => file.current?.click()}
           disabled={busy}
-          className="flex shrink-0 items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-50"
+          className="flex shrink-0 items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs hover:bg-canvas disabled:opacity-50"
           data-testid={`${id}-upload`}
         >
           {busy ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />} {value ? "Trocar" : "Do computador"}
@@ -180,7 +180,7 @@ export function SingleImageField({ id, label, value, onChange, suggest }: { id: 
           aria-label={`${label}: URL`}
         />
       </div>
-      {error ? <p className="mt-1 text-[11px] text-red-700">{error}</p> : null}
+      {error ? <p className="mt-1 text-[11px] text-red-700 dark:text-red-300">{error}</p> : null}
       <StockPicker id={id} suggest={suggest} onPick={onChange} />
       <input
         ref={file}
@@ -209,7 +209,7 @@ export function GalleryImagesField({ id, label, value, onChange, suggest }: { id
   const set = (next: string[]) => onChange(next.join("\n"));
   return (
     <div className="block">
-      <span className="mb-1 block text-xs font-medium text-gray-700">{label}</span>
+      <span className="mb-1 block text-xs font-medium text-ink">{label}</span>
       {list.length ? (
         <div className="grid grid-cols-3 gap-1.5">
           {list.map((src, i) => (
@@ -224,7 +224,7 @@ export function GalleryImagesField({ id, label, value, onChange, suggest }: { id
           type="button"
           onClick={() => file.current?.click()}
           disabled={busy}
-          className="flex shrink-0 items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs hover:bg-gray-50 disabled:opacity-50"
+          className="flex shrink-0 items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs hover:bg-canvas disabled:opacity-50"
           data-testid={`${id}-upload`}
         >
           {busy ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />} Adicionar
@@ -242,7 +242,7 @@ export function GalleryImagesField({ id, label, value, onChange, suggest }: { id
           <input id={id} className={input} value={url} placeholder="ou cole uma URL e Enter" onChange={(e) => setUrl(e.target.value)} aria-label={`${label}: adicionar URL`} />
         </form>
       </div>
-      {error ? <p className="mt-1 text-[11px] text-red-700">{error}</p> : null}
+      {error ? <p className="mt-1 text-[11px] text-red-700 dark:text-red-300">{error}</p> : null}
       {/* Galeria: o painel fica aberto para escolher várias (um download por vez). */}
       <StockPicker id={id} suggest={suggest} keepOpen onPick={(u) => set([...list, u])} />
       <input

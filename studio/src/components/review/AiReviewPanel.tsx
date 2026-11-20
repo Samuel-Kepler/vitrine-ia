@@ -5,7 +5,7 @@ import { useStudio } from "@/lib/draft/store";
 import { inputKey, type AiReviewResult, type ReviewMode, type ReviewState } from "@/lib/review/ai-input";
 
 const ICON = { error: AlertCircle, warning: AlertTriangle, info: Info } as const;
-const COLOR = { error: "text-red-600", warning: "text-amber-600", info: "text-sky-600" } as const;
+const COLOR = { error: "text-red-600 dark:text-red-400", warning: "text-amber-600 dark:text-amber-400", info: "text-sky-600 dark:text-sky-400" } as const;
 const ORDER = { error: 0, warning: 1, info: 2 } as const;
 
 export function scoreTone(score: number) {
@@ -123,24 +123,24 @@ export function AiReviewPanel({
         onClick={run}
         disabled={loading}
         data-testid="ai-review-run"
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-ink py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-ink py-2 text-sm font-medium text-on-solid hover:opacity-90 disabled:opacity-60"
       >
         {loading ? <Loader2 size={15} className="animate-spin" /> : <ScanSearch size={15} />}
         {loading ? "Revisando…" : review ? "Revisar de novo" : "Revisar com IA"}
       </button>
-      {error ? <p className="rounded-md bg-red-50 p-2 text-xs text-red-800">{error}</p> : null}
+      {error ? <p className="rounded-md bg-red-50 dark:bg-red-950/40 p-2 text-xs text-red-800 dark:text-red-200">{error}</p> : null}
       {review ? (
         <div className={`space-y-3 ${stale ? "opacity-60" : ""}`}>
-          {stale ? <p className="rounded-md bg-amber-50 p-2 text-xs text-amber-900">O conteúdo mudou desde esta revisão.</p> : null}
+          {stale ? <p className="rounded-md bg-amber-50 dark:bg-amber-950/40 p-2 text-xs text-amber-900 dark:text-amber-100">O conteúdo mudou desde esta revisão.</p> : null}
           <div className="flex items-center gap-3">
             <ScoreRing score={review.score} />
             <div>
               {before !== null && !improving ? (
-                <p className="text-xs font-medium text-gray-600" data-testid="ai-review-delta">
+                <p className="text-xs font-medium text-muted" data-testid="ai-review-delta">
                   Nota: {before} → {review.score}
                 </p>
               ) : null}
-              <p className="text-sm text-gray-700">{review.summary}</p>
+              <p className="text-sm text-ink">{review.summary}</p>
             </div>
           </div>
           {onImprove && !stale && feedbackFrom(review).length ? (
@@ -161,12 +161,12 @@ export function AiReviewPanel({
                 const Icon = ICON[i.severity];
                 return (
                   <li key={k}>
-                    <button className="flex w-full items-start gap-2 rounded-md p-1.5 text-left text-xs hover:bg-gray-50" onClick={() => i.targetId && onPick?.(i.targetId)}>
+                    <button className="flex w-full items-start gap-2 rounded-md p-1.5 text-left text-xs hover:bg-canvas" onClick={() => i.targetId && onPick?.(i.targetId)}>
                       <Icon size={15} className={`mt-px shrink-0 ${COLOR[i.severity]}`} />
                       <span>
                         <span className="font-medium">{i.title}</span>
                         {i.target && !i.targetId ? <span className="text-muted"> · {i.target}</span> : null}
-                        {i.suggestion ? <span className="mt-0.5 block text-gray-600">{i.suggestion}</span> : null}
+                        {i.suggestion ? <span className="mt-0.5 block text-muted">{i.suggestion}</span> : null}
                         <span className="mt-0.5 inline-flex items-center gap-1 label-mono">
                           {i.source === "ia" ? <Bot size={10} /> : null}
                           {i.source === "ia" ? "IA" : `regra ${i.code ?? ""}`}
@@ -178,7 +178,7 @@ export function AiReviewPanel({
               })}
             </ul>
           ) : null}
-          <p className={`text-[11px] ${review.fallback && review.provider !== "mock" ? "font-medium text-amber-800" : "text-muted"}`} data-testid="ai-review-source">
+          <p className={`text-[11px] ${review.fallback && review.provider !== "mock" ? "font-medium text-amber-800 dark:text-amber-200" : "text-muted"}`} data-testid="ai-review-source">
             {sourceText(review)}
           </p>
         </div>

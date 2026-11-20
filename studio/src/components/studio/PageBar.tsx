@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Check, Copy, FileText, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useStudio } from "@/lib/draft/store";
 
-const btn = "rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-ink";
+const btn = "rounded p-1 text-muted hover:bg-line hover:text-ink";
 
 function NameInput({ initial, onDone, testId }: { initial: string; onDone: (name: string | null) => void; testId: string }) {
   const [v, setV] = useState(initial);
@@ -62,7 +62,7 @@ export function PageBar() {
           );
         }
         return (
-          <div key={p.id} className={`flex items-center gap-0.5 rounded-md ${active ? "bg-white shadow-sm" : ""}`}>
+          <div key={p.id} className={`flex items-center gap-0.5 rounded-md ${active ? "bg-panel shadow-sm" : ""}`}>
             <button
               role="tab"
               aria-selected={active}
@@ -73,7 +73,7 @@ export function PageBar() {
               onDoubleClick={() => active && setRenaming(true)}
               data-testid={`page-tab-${p.slug}`}
               title={i === 0 ? "Página inicial (index.html)" : `${p.slug}.html`}
-              className={`flex items-center gap-1.5 px-3 py-1.5 ${active ? "font-semibold text-ink" : "text-gray-600 hover:text-ink"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 ${active ? "font-semibold text-ink" : "text-muted hover:text-ink"}`}
             >
               <FileText size={15} /> {p.name}
               {p.result ? null : <span className="size-1.5 rounded-full bg-amber-400" title="Ainda não reimaginada" />}
@@ -94,7 +94,7 @@ export function PageBar() {
               </>
             ) : null}
             {active && confirmDelete ? (
-              <span className="flex items-center gap-1 pr-1 text-red-700">
+              <span className="flex items-center gap-1 pr-1 text-red-700 dark:text-red-300">
                 Apagar “{p.name}”?
                 <button
                   className="rounded bg-red-600 px-1.5 py-0.5 text-white"
@@ -106,7 +106,7 @@ export function PageBar() {
                 >
                   sim
                 </button>
-                <button className="rounded px-1.5 py-0.5 hover:bg-gray-100" onClick={() => setConfirmDelete(false)}>
+                <button className="rounded px-1.5 py-0.5 hover:bg-line" onClick={() => setConfirmDelete(false)}>
                   não
                 </button>
               </span>

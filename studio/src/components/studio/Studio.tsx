@@ -78,7 +78,7 @@ export default function Studio() {
       <Header onReimagine={reimagineNow} onReimagineAll={reimagineAll} progress={progress} onOpenSettings={() => setSettingsOpen(true)} serverDefault={status ? `${status.defaultKind} · ${status.defaultModel}` : undefined} />
       {mode === "ui" ? <PageBar /> : null}
       {error ? (
-        <div className="flex items-start gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800" role="alert">
+        <div className="flex items-start gap-2 border-b border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-4 py-2 text-sm text-red-800 dark:text-red-200" role="alert">
           <span className="flex-1">{error}</span>
           <button onClick={() => setError(null)} aria-label="Fechar aviso">
             <X size={16} />
@@ -86,7 +86,7 @@ export default function Studio() {
         </div>
       ) : null}
       {notice && !error ? (
-        <div className="flex items-start gap-2 border-b border-line bg-panel px-4 py-1.5 text-xs text-gray-700" role="status">
+        <div className="flex items-start gap-2 border-b border-line bg-panel px-4 py-1.5 text-xs text-ink" role="status">
           <span className="flex-1">{notice}</span>
           <button onClick={() => setNotice(null)} aria-label="Fechar aviso">
             <X size={14} />

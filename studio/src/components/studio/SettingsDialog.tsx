@@ -13,7 +13,7 @@ export interface ServerStatus {
 }
 
 const input =
-  "w-full rounded-md border border-line bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
+  "w-full rounded-md border border-line bg-panel px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 const LOCAL: ProviderKind[] = ["ollama", "openai-compatible"];
 const CLOUD_WITH_KEY: ProviderKind[] = ["groq", "google", "anthropic", "openai-compatible"];
 
@@ -48,10 +48,10 @@ export function SettingsDialog({ open, onClose, status }: { open: boolean; onClo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-label="Provedor de IA" className="w-full max-w-lg rounded-xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label="Provedor de IA" className="w-full max-w-lg rounded-xl bg-panel p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center">
           <h2 className="font-semibold">Provedor de IA</h2>
-          <button className="ml-auto rounded p-1 hover:bg-gray-100" onClick={onClose} aria-label="Fechar">
+          <button className="ml-auto rounded p-1 hover:bg-line" onClick={onClose} aria-label="Fechar">
             <X size={18} />
           </button>
         </div>
@@ -113,8 +113,8 @@ export function SettingsDialog({ open, onClose, status }: { open: boolean; onClo
                   <option key={m} value={m} />
                 ))}
               </datalist>
-              {probe.error ? <p className="mt-1 text-xs text-red-600">{probe.error}</p> : null}
-              {models.length ? <p className="mt-1 text-xs text-emerald-700">{models.length} modelo(s) encontrados.</p> : null}
+              {probe.error ? <p className="mt-1 text-xs text-red-600 dark:text-red-400">{probe.error}</p> : null}
+              {models.length ? <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">{models.length} modelo(s) encontrados.</p> : null}
             </label>
 
             {CLOUD_WITH_KEY.includes(kind) ? (
@@ -134,23 +134,23 @@ export function SettingsDialog({ open, onClose, status }: { open: boolean; onClo
         ) : null}
 
         {kind === "ollama" ? (
-          <p className="mt-3 rounded-md bg-canvas p-2.5 text-xs text-gray-600">
+          <p className="mt-3 rounded-md bg-canvas p-2.5 text-xs text-muted">
             Ollama: instale em ollama.com, rode <code>ollama pull qwen2.5-coder:7b</code> e deixe o app aberto. O contexto é ajustado para 16k tokens.
           </p>
         ) : kind === "openai-compatible" ? (
-          <p className="mt-3 rounded-md bg-canvas p-2.5 text-xs text-gray-600">
+          <p className="mt-3 rounded-md bg-canvas p-2.5 text-xs text-muted">
             LM Studio: <code>http://localhost:1234/v1</code> · llama.cpp: <code>http://127.0.0.1:8080/v1</code> · OpenRouter: <code>https://openrouter.ai/api/v1</code>
           </p>
         ) : kind === "mock" ? (
-          <p className="mt-3 rounded-md bg-canvas p-2.5 text-xs text-gray-600">Sem IA: gera a landing direto do rascunho. Bom para testar a interface.</p>
+          <p className="mt-3 rounded-md bg-canvas p-2.5 text-xs text-muted">Sem IA: gera a landing direto do rascunho. Bom para testar a interface.</p>
         ) : null}
 
         <div className="mt-5 flex justify-end gap-2">
-          <button className="rounded-md px-3 py-1.5 text-sm hover:bg-gray-100" onClick={onClose}>
+          <button className="rounded-md px-3 py-1.5 text-sm hover:bg-line" onClick={onClose}>
             Cancelar
           </button>
           <button
-            className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white"
+            className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-on-solid"
             data-testid="save-settings"
             onClick={() => {
               setSettings(draft);

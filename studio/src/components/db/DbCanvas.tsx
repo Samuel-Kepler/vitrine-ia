@@ -30,7 +30,7 @@ import { layoutDb } from "@/lib/layout/auto";
 import { ImportDialog } from "./ImportDialog";
 import { ResizableAside } from "@/components/studio/ResizableAside";
 
-const input = "w-full rounded-md border border-line bg-white px-2 py-1 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
+const input = "w-full rounded-md border border-line bg-panel px-2 py-1 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 let seq = 0;
 const nid = (p: string) => `${p}${Date.now().toString(36)}${(seq++).toString(36)}`;
 
@@ -39,16 +39,16 @@ type TableData = { table: Table; fks: { name: string; type: string; ref: string 
 function TableNodeView({ data, selected }: NodeProps) {
   const { table, fks } = data as TableData;
   return (
-    <div className={`w-60 overflow-hidden rounded-lg border border-line bg-white text-xs shadow-sm ${selected ? "ring-2 ring-brand" : ""}`} style={{ borderTop: "3px solid #059669" }}>
+    <div className={`w-60 overflow-hidden rounded-lg border border-line bg-panel text-xs shadow-sm ${selected ? "ring-2 ring-brand" : ""}`} style={{ borderTop: "3px solid #059669" }}>
       <Handle type="target" position={Position.Left} className="!size-2.5 !border-2 !border-white !bg-ink" />
       <div className="flex items-center gap-2 border-b border-line px-3 py-2">
-        <Table2 size={14} className="text-emerald-700" />
+        <Table2 size={14} className="text-emerald-700 dark:text-emerald-300" />
         <span className="font-mono text-[12.5px] font-semibold text-ink">{snake(table.name)}</span>
       </div>
-      <ul className="divide-y divide-gray-100">
+      <ul className="divide-y divide-line">
         {table.columns.map((c) => (
           <li key={c.id} className="flex items-center gap-1.5 px-3 py-1">
-            {c.pk ? <KeyRound size={11} className="text-amber-500" /> : <span className="w-[11px]" />}
+            {c.pk ? <KeyRound size={11} className="text-amber-500 dark:text-amber-400" /> : <span className="w-[11px]" />}
             <span className={c.pk ? "font-semibold" : ""}>{snake(c.name)}</span>
             <span className="ml-auto font-mono text-muted">
               {c.type}
@@ -57,7 +57,7 @@ function TableNodeView({ data, selected }: NodeProps) {
           </li>
         ))}
         {fks.map((f) => (
-          <li key={f.name} className="flex items-center gap-1.5 bg-sky-50/60 px-3 py-1 text-sky-800" title={`→ ${f.ref}`}>
+          <li key={f.name} className="flex items-center gap-1.5 bg-sky-50/60 dark:bg-sky-950/40 px-3 py-1 text-sky-800 dark:text-sky-200" title={`→ ${f.ref}`}>
             <Link2 size={11} />
             <span>{f.name}</span>
             <span className="ml-auto font-mono">{f.type}</span>
@@ -162,10 +162,10 @@ function Inner() {
   return (
     <>
       <ResizableAside side="left" storageKey="studio.left" defaultWidth={288} className="flex shrink-0 flex-col gap-3 overflow-y-auto border-r border-line bg-panel p-3" aria-label="Ferramentas do banco">
-        <button onClick={addTable} data-testid="add-table" className="flex items-center justify-center gap-2 rounded-lg bg-ink py-2 text-sm font-medium text-white hover:opacity-90">
+        <button onClick={addTable} data-testid="add-table" className="flex items-center justify-center gap-2 rounded-lg bg-ink py-2 text-sm font-medium text-on-solid hover:opacity-90">
           <Plus size={16} /> Nova tabela
         </button>
-        <button onClick={() => setShowImport(true)} data-testid="import-schema" className="flex items-center justify-center gap-2 rounded-lg border border-line bg-white py-2 text-sm hover:bg-gray-50">
+        <button onClick={() => setShowImport(true)} data-testid="import-schema" className="flex items-center justify-center gap-2 rounded-lg border border-line bg-panel py-2 text-sm hover:bg-canvas">
           <FileUp size={16} /> Importar DBML/SQL
         </button>
         <p className="text-xs text-muted">
@@ -195,7 +195,7 @@ function Inner() {
         </ReactFlow>
         {db.tables.length === 0 ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <p className="max-w-sm rounded-lg bg-white/90 p-4 text-center text-sm text-muted shadow-sm">
+            <p className="max-w-sm rounded-lg bg-panel/90 p-4 text-center text-sm text-muted shadow-sm">
               Crie tabelas à esquerda ou clique em <b>Sugerir da landing</b>: o formulário vira a tabela de leads, os planos viram plans e subscriptions…
             </p>
           </div>
@@ -257,7 +257,7 @@ function TableEditor({ id }: { id: string }) {
               <input type="checkbox" aria-label="Chave primária" checked={!!c.pk} onChange={(e) => patchCol(c.id, { pk: e.target.checked })} />
               <input type="checkbox" aria-label="Aceita nulo" checked={!!c.nullable} onChange={(e) => patchCol(c.id, { nullable: e.target.checked })} />
               <input type="checkbox" aria-label="Único" checked={!!c.unique} onChange={(e) => patchCol(c.id, { unique: e.target.checked })} />
-              <button className="text-muted hover:text-red-600" aria-label={`Apagar coluna ${c.name}`} onClick={() => patchTable({ columns: table.columns.filter((x) => x.id !== c.id) })}>
+              <button className="text-muted hover:text-red-600 dark:hover:text-red-400" aria-label={`Apagar coluna ${c.name}`} onClick={() => patchTable({ columns: table.columns.filter((x) => x.id !== c.id) })}>
                 <Trash2 size={14} />
               </button>
             </div>
@@ -277,7 +277,7 @@ function TableEditor({ id }: { id: string }) {
         <Plus size={14} /> coluna
       </button>
       <button
-        className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-md border border-line py-2 text-sm hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+        className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-md border border-line py-2 text-sm hover:border-red-300 dark:hover:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400"
         onClick={() => {
           setDb((m) => ({ tables: m.tables.filter((t) => t.id !== id), relations: m.relations.filter((r) => r.from !== id && r.to !== id) }));
           setFlowSel(null);
@@ -325,11 +325,11 @@ function RelationEditor({ id }: { id: string }) {
         </label>
       ) : null}
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <button className="flex items-center justify-center gap-1 rounded-md border border-line py-2 text-sm hover:bg-gray-50" onClick={() => patch({ from: rel.to, to: rel.from })}>
+        <button className="flex items-center justify-center gap-1 rounded-md border border-line py-2 text-sm hover:bg-canvas" onClick={() => patch({ from: rel.to, to: rel.from })}>
           <ArrowLeftRight size={14} /> Inverter
         </button>
         <button
-          className="rounded-md border border-line py-2 text-sm hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+          className="rounded-md border border-line py-2 text-sm hover:border-red-300 dark:hover:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400"
           onClick={() => {
             setDb((m) => ({ ...m, relations: m.relations.filter((r) => r.id !== id) }));
             setFlowSel(null);

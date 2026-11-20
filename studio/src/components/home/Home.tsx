@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Lock } from "lucide-react";
 import { STEPS, TOOLS } from "./tools";
+import { ThemeToggle } from "@/components/studio/ThemeToggle";
 
 const STUDIO_HREF = "/studio";
 
@@ -21,6 +22,7 @@ export function Home() {
             <a href="#ferramentas" className="hidden rounded-md px-3 py-1.5 text-muted hover:text-ink sm:inline-block">
               Ferramentas
             </a>
+            <ThemeToggle className="ml-2" />
             <Link href={STUDIO_HREF} className="ml-2 rounded-md bg-brand px-3.5 py-1.5 font-semibold text-panel transition hover:brightness-110">
               Abrir o Studio
             </Link>

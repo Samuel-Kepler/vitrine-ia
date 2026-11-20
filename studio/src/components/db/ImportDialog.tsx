@@ -28,11 +28,11 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6" onClick={onClose}>
-      <div role="dialog" aria-label="Importar schema" className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label="Importar schema" className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-panel shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-          <FileUp size={18} className="text-emerald-600" />
+          <FileUp size={18} className="text-emerald-600 dark:text-emerald-400" />
           <h2 className="font-semibold">Importar DBML ou SQL</h2>
-          <button onClick={onClose} className="ml-auto rounded p-1 hover:bg-gray-100" aria-label="Fechar">
+          <button onClick={onClose} className="ml-auto rounded p-1 hover:bg-line" aria-label="Fechar">
             <X size={18} />
           </button>
         </div>
@@ -42,7 +42,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
               Importado: <b>{done.tables}</b> {done.tables === 1 ? "tabela" : "tabelas"} e <b>{done.relations}</b> {done.relations === 1 ? "relação" : "relações"}.
             </p>
             {done.warnings.length ? (
-              <div className="rounded-md bg-amber-50 p-3 text-xs text-amber-900">
+              <div className="rounded-md bg-amber-50 dark:bg-amber-950/40 p-3 text-xs text-amber-900 dark:text-amber-100">
                 <p className="mb-1 font-medium">Ajustes feitos na importação ({done.warnings.length}):</p>
                 <ul className="list-disc space-y-0.5 pl-4">
                   {done.warnings.map((w, i) => (
@@ -57,11 +57,11 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
                   setDb(done.previous);
                   setDone(null);
                 }}
-                className="rounded-md border border-line px-3 py-1.5 hover:bg-gray-50"
+                className="rounded-md border border-line px-3 py-1.5 hover:bg-canvas"
               >
                 Desfazer importação
               </button>
-              <button onClick={onClose} className="ml-auto rounded-md bg-ink px-3 py-1.5 text-white hover:opacity-90">
+              <button onClick={onClose} className="ml-auto rounded-md bg-ink px-3 py-1.5 text-on-solid hover:opacity-90">
                 Pronto
               </button>
             </div>
@@ -79,9 +79,9 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
               placeholder={"Table users {\n  id uuid [pk]\n  email varchar [unique, not null]\n}"}
               className="min-h-64 flex-1 rounded-md border border-line p-2 font-mono text-xs outline-none focus:border-brand"
             />
-            {error ? <p className="rounded-md bg-red-50 p-2 text-xs text-red-800">{error}</p> : null}
+            {error ? <p className="rounded-md bg-red-50 dark:bg-red-950/40 p-2 text-xs text-red-800 dark:text-red-200">{error}</p> : null}
             <div className="flex items-center gap-2">
-              <label className="cursor-pointer rounded-md border border-line px-3 py-1.5 text-sm hover:bg-gray-50">
+              <label className="cursor-pointer rounded-md border border-line px-3 py-1.5 text-sm hover:bg-canvas">
                 Abrir arquivo…
                 <input
                   type="file"

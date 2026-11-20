@@ -298,7 +298,7 @@ export function SketchDialog({ id, onClose }: { id: string; onClose: () => void 
       title={`${label} (${key})`}
       aria-label={label}
       data-testid={`sketch-tool-${t}`}
-      className={`rounded-md p-2 ${tool === t ? "bg-ink text-white" : "text-gray-600 hover:bg-gray-100"}`}
+      className={`rounded-md p-2 ${tool === t ? "bg-ink text-on-solid" : "text-muted hover:bg-line"}`}
     >
       <Icon size={16} />
     </button>
@@ -319,7 +319,7 @@ export function SketchDialog({ id, onClose }: { id: string; onClose: () => void 
         onKeyDown={onKey}
         role="dialog"
         aria-label="Desenhar bloco"
-        className="flex max-h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl outline-none"
+        className="flex max-h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-panel shadow-2xl outline-none"
         onClick={(e) => e.stopPropagation()}
         data-testid="sketch-dialog"
       >
@@ -327,7 +327,7 @@ export function SketchDialog({ id, onClose }: { id: string; onClose: () => void 
           <Pencil size={16} className="text-brand" />
           <h2 className="font-semibold">Desenhar: {node?.props.name || "Bloco livre"}</h2>
           <span className="hidden text-xs text-muted md:inline">Caixas lado a lado viram cards, círculos viram foto ou ícone, linhas viram texto e o que você escrever é usado como está.</span>
-          <button onClick={onClose} className="ml-auto rounded p-1 hover:bg-gray-100" aria-label="Fechar">
+          <button onClick={onClose} className="ml-auto rounded p-1 hover:bg-line" aria-label="Fechar">
             <X size={18} />
           </button>
         </div>
@@ -349,21 +349,21 @@ export function SketchDialog({ id, onClose }: { id: string; onClose: () => void 
               ))}
               <span className="mx-1 h-5 w-px bg-line" />
               {WIDTHS.map((w) => (
-                <button key={w} onClick={() => pickWidth(w)} aria-label={`Espessura ${w}`} aria-pressed={width === w} className={`flex size-8 items-center justify-center rounded-md ${width === w ? "bg-gray-200" : "hover:bg-gray-100"}`}>
+                <button key={w} onClick={() => pickWidth(w)} aria-label={`Espessura ${w}`} aria-pressed={width === w} className={`flex size-8 items-center justify-center rounded-md ${width === w ? "bg-line" : "hover:bg-line"}`}>
                   <span className="rounded-full bg-ink" style={{ width: w + 2, height: w + 2 }} />
                 </button>
               ))}
               <span className="mx-1 h-5 w-px bg-line" />
-              <button onClick={undo} disabled={!past.length} title="Desfazer (Ctrl+Z)" aria-label="Desfazer" className="rounded-md p-2 text-gray-600 hover:bg-gray-100 disabled:opacity-30">
+              <button onClick={undo} disabled={!past.length} title="Desfazer (Ctrl+Z)" aria-label="Desfazer" className="rounded-md p-2 text-muted hover:bg-line disabled:opacity-30">
                 <Undo2 size={16} />
               </button>
-              <button onClick={redo} disabled={!future.length} title="Refazer (Ctrl+Y)" aria-label="Refazer" className="rounded-md p-2 text-gray-600 hover:bg-gray-100 disabled:opacity-30">
+              <button onClick={redo} disabled={!future.length} title="Refazer (Ctrl+Y)" aria-label="Refazer" className="rounded-md p-2 text-muted hover:bg-line disabled:opacity-30">
                 <Redo2 size={16} />
               </button>
-              <button onClick={remove} disabled={!sel} title="Apagar selecionado (Delete)" aria-label="Apagar selecionado" className="rounded-md p-2 text-gray-600 hover:bg-gray-100 disabled:opacity-30">
+              <button onClick={remove} disabled={!sel} title="Apagar selecionado (Delete)" aria-label="Apagar selecionado" className="rounded-md p-2 text-muted hover:bg-line disabled:opacity-30">
                 <Trash2 size={16} />
               </button>
-              <button onClick={clear} title="Limpar tudo" className="ml-1 rounded-md px-2 py-1.5 text-xs text-gray-600 hover:bg-gray-100">
+              <button onClick={clear} title="Limpar tudo" className="ml-1 rounded-md px-2 py-1.5 text-xs text-muted hover:bg-line">
                 Limpar
               </button>
             </div>
@@ -393,7 +393,7 @@ export function SketchDialog({ id, onClose }: { id: string; onClose: () => void 
                   onBlur={commitText}
                   placeholder="Digite e Enter"
                   data-testid="sketch-text-input"
-                  className="absolute min-w-40 rounded border border-brand bg-white px-1.5 py-0.5 text-sm outline-none"
+                  className="absolute min-w-40 rounded border border-brand bg-panel px-1.5 py-0.5 text-sm outline-none"
                   style={textPos()}
                 />
               ) : null}
@@ -402,7 +402,7 @@ export function SketchDialog({ id, onClose }: { id: string; onClose: () => void 
 
           <div className="flex w-full flex-col gap-3 lg:w-72">
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-gray-700">O que deve ter (opcional)</span>
+              <span className="mb-1 block text-xs font-medium text-ink">O que deve ter (opcional)</span>
               <textarea
                 value={description}
                 onChange={(e) => {
@@ -415,17 +415,17 @@ export function SketchDialog({ id, onClose }: { id: string; onClose: () => void 
                 className="w-full rounded-md border border-line p-2 text-sm outline-none focus:border-brand"
               />
             </label>
-            <button onClick={save} disabled={!dirty} className="rounded-md border border-line py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50">
+            <button onClick={save} disabled={!dirty} className="rounded-md border border-line py-1.5 text-sm hover:bg-canvas disabled:opacity-50">
               Salvar desenho
             </button>
-            <button onClick={transform} disabled={busy} data-testid="sketch-transform" className="flex items-center justify-center gap-2 rounded-md bg-brand py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60">
+            <button onClick={transform} disabled={busy} data-testid="sketch-transform" className="flex items-center justify-center gap-2 rounded-md bg-brand py-2 text-sm font-semibold text-on-solid hover:brightness-110 disabled:opacity-60">
               {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
               {busy ? "Lendo o desenho…" : "Transformar com IA"}
             </button>
-            {error ? <p className="rounded-md bg-red-50 p-2 text-xs text-red-800">{error}</p> : null}
+            {error ? <p className="rounded-md bg-red-50 dark:bg-red-950/40 p-2 text-xs text-red-800 dark:text-red-200">{error}</p> : null}
             {result ? (
               <div className="space-y-2 rounded-md border border-line p-3 text-xs" data-testid="sketch-result">
-                <p className={result.fallback && result.error ? "font-medium text-amber-800" : "text-muted"}>
+                <p className={result.fallback && result.error ? "font-medium text-amber-800 dark:text-amber-200" : "text-muted"}>
                   {result.provider === "mock"
                     ? "Fonte: modelo automático pela descrição (provedor mock, sem IA)."
                     : result.fallback
@@ -440,10 +440,10 @@ export function SketchDialog({ id, onClose }: { id: string; onClose: () => void 
                 </ul>
                 {result.notes.length ? <p className="text-muted">{result.notes.join(" ")}</p> : null}
                 <div className="flex gap-2 pt-1">
-                  <button onClick={apply} data-testid="sketch-apply" className="flex-1 rounded-md bg-ink py-1.5 font-medium text-white hover:opacity-90">
+                  <button onClick={apply} data-testid="sketch-apply" className="flex-1 rounded-md bg-ink py-1.5 font-medium text-on-solid hover:opacity-90">
                     Aplicar no canvas
                   </button>
-                  <button onClick={() => setResult(null)} className="rounded-md border border-line px-2.5 py-1.5 hover:bg-gray-50">
+                  <button onClick={() => setResult(null)} className="rounded-md border border-line px-2.5 py-1.5 hover:bg-canvas">
                     Descartar
                   </button>
                 </div>

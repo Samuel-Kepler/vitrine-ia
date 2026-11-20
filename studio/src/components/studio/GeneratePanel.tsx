@@ -73,7 +73,7 @@ export function GeneratePanel() {
       <h3 className="flex items-center gap-1.5 pb-2 label-mono !text-brand">
         <Sparkles size={14} /> Gerar com IA
       </h3>
-      <div className="mb-2 grid grid-cols-2 rounded-md border border-line bg-white p-0.5 text-xs" role="radiogroup" aria-label="Gerar o quê">
+      <div className="mb-2 grid grid-cols-2 rounded-md border border-line bg-panel p-0.5 text-xs" role="radiogroup" aria-label="Gerar o quê">
         {(
           [
             ["page", "Esta página"],
@@ -87,7 +87,7 @@ export function GeneratePanel() {
             aria-checked={scope === v}
             data-testid={`generate-scope-${v}`}
             onClick={() => setScope(v)}
-            className={`rounded-[3px] py-1.5 transition-colors ${scope === v ? "bg-ink font-medium text-white" : "text-gray-600 hover:text-ink"}`}
+            className={`rounded-[3px] py-1.5 transition-colors ${scope === v ? "bg-ink font-medium text-on-solid" : "text-muted hover:text-ink"}`}
           >
             {label}
           </button>
@@ -104,11 +104,11 @@ export function GeneratePanel() {
         maxLength={2000}
         data-testid="generate-prompt"
         placeholder={scope === "site" ? "Descreva o site. Ex.: estúdio de pilates com aulas, planos, equipe e contato" : "Descreva a página. Ex.: padaria de bairro com cardápio, depoimentos e formulário de encomenda"}
-        className="block min-h-36 w-full resize-y rounded-md border border-line bg-white p-2.5 text-sm leading-relaxed outline-none focus:border-brand"
+        className="block min-h-36 w-full resize-y rounded-md border border-line bg-panel p-2.5 text-sm leading-relaxed outline-none focus:border-brand"
       />
       {scope === "page" && hasBlocks ? (
         <div className="mt-2">
-          <div className="grid grid-cols-2 rounded-md border border-line bg-white p-0.5 text-xs" role="radiogroup" aria-label="O que fazer com a página atual">
+          <div className="grid grid-cols-2 rounded-md border border-line bg-panel p-0.5 text-xs" role="radiogroup" aria-label="O que fazer com a página atual">
             {(
               [
                 ["replace", "Substituir"],
@@ -121,7 +121,7 @@ export function GeneratePanel() {
                 role="radio"
                 aria-checked={mode === v}
                 onClick={() => setMode(v)}
-                className={`rounded-[3px] py-1.5 transition-colors ${mode === v ? "bg-ink font-medium text-white" : "text-gray-600 hover:text-ink"}`}
+                className={`rounded-[3px] py-1.5 transition-colors ${mode === v ? "bg-ink font-medium text-on-solid" : "text-muted hover:text-ink"}`}
               >
                 {label}
               </button>
@@ -135,16 +135,16 @@ export function GeneratePanel() {
         onClick={run}
         disabled={loading || prompt.trim().length < 3}
         data-testid="generate-run"
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-brand py-2.5 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-50"
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-brand py-2.5 text-sm font-semibold text-on-solid hover:brightness-110 disabled:opacity-50"
       >
         {loading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
         {loading ? (scope === "site" ? "Gerando o site…" : "Gerando…") : scope === "site" ? "Gerar site" : "Gerar layout"}
       </button>
-      {error ? <p className="mt-2 rounded-md bg-red-50 p-2 text-[11px] text-red-800">{error}</p> : null}
+      {error ? <p className="mt-2 rounded-md bg-red-50 dark:bg-red-950/40 p-2 text-[11px] text-red-800 dark:text-red-200">{error}</p> : null}
       {notes.length ? (
-        <ul className="mt-2 list-disc space-y-0.5 pl-4 text-[11px] text-gray-700" data-testid="generate-notes">
+        <ul className="mt-2 list-disc space-y-0.5 pl-4 text-[11px] text-ink" data-testid="generate-notes">
           {notes.map((n, i) => (
-            <li key={i} className={i === 0 && n.includes(" falhou: ") ? "font-medium text-amber-800" : undefined}>
+            <li key={i} className={i === 0 && n.includes(" falhou: ") ? "font-medium text-amber-800 dark:text-amber-200" : undefined}>
               {n}
             </li>
           ))}

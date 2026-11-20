@@ -10,6 +10,7 @@ import { reactProject } from "@/lib/export/react";
 import { previewHtml, transformProject } from "@/lib/react-preview/bundle";
 import { collectSitePages, siteBrand } from "./site-pages";
 import { downloadZip } from "./export";
+import { useResolvedTheme } from "./useTheme";
 import { exportAssetFiles, resolveAssets } from "@/lib/assets/assets";
 
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false, loading: () => <p className="p-4 text-xs text-muted">Carregando editor…</p> });
@@ -43,6 +44,7 @@ export default function ReactTab() {
   const [confirmRegen, setConfirmRegen] = useState(false);
   const iframe = useRef<HTMLIFrameElement>(null);
   const [chatOpen, setChatOpen] = useState(true);
+  const monacoTheme = useResolvedTheme() === "dark" ? "vs-dark" : "vs";
 
   const regenerate = useCallback(async () => {
     setBusy(true);
@@ -109,7 +111,7 @@ export default function ReactTab() {
     return (
       <div className="flex flex-1 items-center justify-center bg-canvas p-6 text-sm text-muted">
         {error ? (
-          <p className="rounded-md bg-red-50 p-3 text-red-800">
+          <p className="rounded-md bg-red-50 dark:bg-red-950/40 p-3 text-red-800 dark:text-red-200">
             Não deu para gerar o projeto: {error}{" "}
             <button className="underline" onClick={regenerate}>
               tentar de novo
@@ -128,15 +130,15 @@ export default function ReactTab() {
     <div className="flex min-h-0 flex-1 flex-col" data-testid="react-tab">
       <div className="flex flex-wrap items-center gap-2 border-b border-line bg-panel px-4 py-2 text-xs">
         <span className="label-mono">Vite + React + Tailwind</span>
-        {edited ? <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800">editado à mão</span> : <span className="text-muted">gerado do A2UI, sem IA</span>}
+        {edited ? <span className="rounded-full bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 font-medium text-amber-800 dark:text-amber-200">editado à mão</span> : <span className="text-muted">gerado do A2UI, sem IA</span>}
         <div className="ml-auto flex items-center gap-2">
           {confirmRegen ? (
-            <span className="flex items-center gap-1.5 text-amber-900">
+            <span className="flex items-center gap-1.5 text-amber-900 dark:text-amber-100">
               Regerar apaga suas edições.
               <button className="rounded bg-amber-600 px-2 py-1 text-white" onClick={regenerate} data-testid="react-regen-confirm">
                 regerar
               </button>
-              <button className="rounded px-2 py-1 hover:bg-gray-100" onClick={() => setConfirmRegen(false)}>
+              <button className="rounded px-2 py-1 hover:bg-line" onClick={() => setConfirmRegen(false)}>
                 cancelar
               </button>
             </span>
@@ -146,7 +148,7 @@ export default function ReactTab() {
               disabled={busy}
               title="Gera de novo a partir das páginas do Studio (use depois de Reimaginar)"
               data-testid="react-regen"
-              className="flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 hover:bg-gray-50 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1.5 hover:bg-canvas disabled:opacity-50"
             >
               {busy ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Regerar do Studio
             </button>
@@ -155,7 +157,7 @@ export default function ReactTab() {
             onClick={() => setChatOpen((v) => !v)}
             aria-pressed={chatOpen}
             data-testid="react-chat-toggle"
-            className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 ${chatOpen ? "border-brand bg-brand-soft text-brand" : "border-line hover:bg-gray-50"}`}
+            className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 ${chatOpen ? "border-brand bg-brand-soft text-brand" : "border-line hover:bg-canvas"}`}
           >
             <Bot size={14} /> Chat IA
           </button>
@@ -163,7 +165,7 @@ export default function ReactTab() {
             onClick={() =>
               downloadZip("vitrine-react.zip", exportAssetFiles(Object.entries(files).map(([path, content]) => ({ path: path.slice(1), content })), useStudio.getState().assets))
             }
-            className="flex items-center gap-1.5 rounded-md bg-ink px-2.5 py-1.5 text-white hover:opacity-90"
+            className="flex items-center gap-1.5 rounded-md bg-ink px-2.5 py-1.5 text-on-solid hover:opacity-90"
             data-testid="react-download"
           >
             <Download size={14} /> Baixar projeto React
@@ -177,7 +179,7 @@ export default function ReactTab() {
             <li key={p}>
               <button
                 onClick={() => setActive(p)}
-                className={`flex w-full items-center gap-1.5 truncate px-3 py-1.5 text-left font-mono ${p === current ? "bg-brand-soft text-brand" : "text-gray-700 hover:bg-gray-50"}`}
+                className={`flex w-full items-center gap-1.5 truncate px-3 py-1.5 text-left font-mono ${p === current ? "bg-brand-soft text-brand" : "text-ink hover:bg-canvas"}`}
                 title={p}
               >
                 <FileCode2 size={13} className="shrink-0" />
@@ -187,10 +189,11 @@ export default function ReactTab() {
           ))}
         </ul>
 
-        <div className="min-w-0 flex-1 border-r border-line bg-white">
+        <div className="min-w-0 flex-1 border-r border-line bg-panel">
           {current ? (
             <Editor
               key={current}
+              theme={monacoTheme}
               path={current}
               defaultLanguage={langOf(current)}
               language={langOf(current)}
@@ -210,7 +213,7 @@ export default function ReactTab() {
         <div className={`flex ${chatOpen ? "w-[36%]" : "w-[44%]"} min-w-[300px] flex-col bg-canvas`}>
           <div className="flex items-center gap-2 border-b border-line bg-panel px-3 py-1.5 text-xs">
             <span className="label-mono">Preview</span>
-            <select value={entry} onChange={(e) => setEntry(e.target.value)} className="rounded-md border border-line bg-white px-1.5 py-1" aria-label="Página do preview" data-testid="react-entry">
+            <select value={entry} onChange={(e) => setEntry(e.target.value)} className="rounded-md border border-line bg-panel px-1.5 py-1" aria-label="Página do preview" data-testid="react-entry">
               {entries.map((e) => (
                 <option key={e.key} value={e.key}>
                   {e.title} ({e.key}.html)
@@ -218,7 +221,7 @@ export default function ReactTab() {
               ))}
             </select>
             {runtimeError ? (
-              <span className="flex min-w-0 items-center gap-1 text-red-700" title={runtimeError}>
+              <span className="flex min-w-0 items-center gap-1 text-red-700 dark:text-red-300" title={runtimeError}>
                 <AlertTriangle size={13} className="shrink-0" /> <span className="truncate">erro no preview</span>
               </span>
             ) : null}

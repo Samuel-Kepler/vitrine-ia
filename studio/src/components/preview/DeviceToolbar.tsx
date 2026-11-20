@@ -19,7 +19,7 @@ export function DeviceToolbar({ value, onChange, scale }: { value: ViewportState
         aria-label="Ajustar à área"
         aria-pressed={value.device === FIT}
         onClick={() => set({ device: FIT })}
-        className={`rounded-md p-1.5 ${value.device === FIT ? "bg-brand-soft text-brand" : "text-gray-500 hover:bg-gray-100"}`}
+        className={`rounded-md p-1.5 ${value.device === FIT ? "bg-brand-soft text-brand" : "text-muted hover:bg-line"}`}
       >
         <Maximize2 size={15} />
       </button>
@@ -32,7 +32,7 @@ export function DeviceToolbar({ value, onChange, scale }: { value: ViewportState
             aria-label={g}
             aria-pressed={group === g}
             onClick={() => set({ device: QUICK[g], rotated: false })}
-            className={`rounded-md p-1.5 ${group === g ? "bg-brand-soft text-brand" : "text-gray-500 hover:bg-gray-100"}`}
+            className={`rounded-md p-1.5 ${group === g ? "bg-brand-soft text-brand" : "text-muted hover:bg-line"}`}
           >
             <Icon size={15} />
           </button>
@@ -43,7 +43,7 @@ export function DeviceToolbar({ value, onChange, scale }: { value: ViewportState
         onChange={(e) => set({ device: e.target.value, rotated: false, ...(e.target.value === CUSTOM && size ? { customWidth: size.width } : {}) })}
         aria-label="Tamanho de tela"
         data-testid="device-select"
-        className="ml-1 w-48 rounded-md border border-line bg-white px-1.5 py-1 text-xs"
+        className="ml-1 w-48 rounded-md border border-line bg-panel px-1.5 py-1 text-xs"
       >
         <option value={FIT}>Ajustar à área</option>
         {GROUPS.map((g) => (
@@ -69,7 +69,7 @@ export function DeviceToolbar({ value, onChange, scale }: { value: ViewportState
             onBlur={() => set({ customWidth: clampWidth(value.customWidth) })}
             aria-label="Largura em pixels"
             data-testid="device-width"
-            className="w-20 rounded-md border border-line bg-white px-1.5 py-1 font-mono text-xs text-ink"
+            className="w-20 rounded-md border border-line bg-panel px-1.5 py-1 font-mono text-xs text-ink"
           />
           px
         </label>
@@ -82,7 +82,7 @@ export function DeviceToolbar({ value, onChange, scale }: { value: ViewportState
         aria-hidden={!canRotate}
         tabIndex={canRotate ? 0 : -1}
         onClick={() => canRotate && set({ rotated: !value.rotated })}
-        className={`rounded-md p-1.5 ${canRotate ? "" : "invisible"} ${value.rotated ? "bg-brand-soft text-brand" : "text-gray-500 hover:bg-gray-100"}`}
+        className={`rounded-md p-1.5 ${canRotate ? "" : "invisible"} ${value.rotated ? "bg-brand-soft text-brand" : "text-muted hover:bg-line"}`}
       >
         <RotateCw size={15} />
       </button>

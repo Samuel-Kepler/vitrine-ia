@@ -46,7 +46,7 @@ export function Canvas() {
       >
         <div
           data-testid="canvas-page"
-          className="mx-auto my-8 min-h-[70vh] w-full max-w-4xl rounded-xl border border-line bg-white p-4 shadow-sm"
+          className="mx-auto my-8 min-h-[70vh] w-full max-w-4xl rounded-xl border border-line bg-panel p-4 shadow-sm"
           onDragOver={(e) => {
             e.preventDefault();
             setIndicator({ kind: "inside", parentId: null });
@@ -129,9 +129,9 @@ function BlockView({ node, direction, onDrop }: { node: DraftNode; direction: "r
     >
       {showBefore ? <div className={`drop-line ${lineCls} ${direction === "row" ? "-left-1.5" : "-top-1.5"}`} /> : null}
       <div
-        className={`group cursor-grab rounded-lg border bg-white transition active:cursor-grabbing ${
-          selected ? "border-brand ring-2 ring-brand/30" : "border-dashed border-gray-300 hover:border-brand/60"
-        } ${def.container ? "bg-gray-50/60 p-2" : "p-3"}`}
+        className={`group cursor-grab rounded-lg border bg-panel transition active:cursor-grabbing ${
+          selected ? "border-brand ring-2 ring-brand/30" : "border-dashed border-line hover:border-brand/60"
+        } ${def.container ? "bg-canvas/60 p-2" : "p-3"}`}
       >
         <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted">
           <BlockIcon type={node.type} size={13} />
@@ -186,7 +186,7 @@ function CustomPreview({ id, name, description }: { id: string; name?: string; d
 function CanvasImg({ src, className, fallback }: { src?: string; className: string; fallback: string }) {
   const real = useStudio((s) => (src ? resolveAssets(src, s.assets) : ""));
   if (!real || isAssetUrl(real) || !/^(https?:|data:image\/)/.test(real))
-    return <div className={`flex items-center justify-center rounded bg-gray-100 text-[10px] text-muted ${className}`}>{fallback}</div>;
+    return <div className={`flex items-center justify-center rounded bg-line text-[10px] text-muted ${className}`}>{fallback}</div>;
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={real} alt="" className={`rounded object-cover ${className}`} />;
 }
@@ -221,7 +221,7 @@ function Wireframe({ node }: { node: DraftNode }) {
     case "heading":
       return <p className={`font-bold ${p.level === "1" ? "text-xl" : p.level === "3" ? "text-sm" : "text-base"}`}>{p.text}</p>;
     case "text":
-      return <p className="line-clamp-3 text-sm text-gray-600">{p.text}</p>;
+      return <p className="line-clamp-3 text-sm text-muted">{p.text}</p>;
     case "button":
       return <span className="inline-block rounded-full bg-gray-800 px-3 py-1 text-xs text-white">{p.label}</span>;
     case "image":
@@ -235,7 +235,7 @@ function Wireframe({ node }: { node: DraftNode }) {
       );
     case "testimonial":
       return (
-        <p className="text-sm italic text-gray-600">
+        <p className="text-sm italic text-muted">
           “{p.quote}” <span className="not-italic text-muted">— {p.author}</span>
         </p>
       );
@@ -318,7 +318,7 @@ function Wireframe({ node }: { node: DraftNode }) {
         <div className="space-y-1">
           <p className="text-sm font-semibold">{p.title}</p>
           {lines(p.fields).map((f) => (
-            <div key={f} className="rounded border border-gray-200 px-2 py-1 text-xs text-muted">
+            <div key={f} className="rounded border border-line px-2 py-1 text-xs text-muted">
               {f}
             </div>
           ))}

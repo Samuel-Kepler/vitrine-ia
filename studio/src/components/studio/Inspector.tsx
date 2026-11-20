@@ -14,7 +14,7 @@ import { autoFillPhotos } from "./photos-client";
 import { ResizableAside } from "./ResizableAside";
 
 const input =
-  "w-full rounded-md border border-line bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
+  "w-full rounded-md border border-line bg-panel px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
 
 export function Inspector() {
   const selectedId = useStudio((s) => s.selectedId);
@@ -87,7 +87,7 @@ function NodeEditor({ id }: { id: string }) {
         <p className="mb-2 text-xs font-medium">Salvar como componente</p>
         <div className="flex gap-1.5">
           <input name="name" placeholder={`${def.label} personalizado`} className={input} />
-          <button className="rounded-md bg-brand px-2.5 text-white" aria-label="Salvar componente">
+          <button className="rounded-md bg-brand px-2.5 text-on-solid" aria-label="Salvar componente">
             <Save size={15} />
           </button>
         </div>
@@ -114,7 +114,7 @@ function Field({ field, value, onChange, context }: { field: FieldDef; value: st
   }
   return (
     <label htmlFor={id} className="block">
-      <span className="mb-1 block text-xs font-medium text-gray-700">{field.label}</span>
+      <span className="mb-1 block text-xs font-medium text-ink">{field.label}</span>
       {field.kind === "select" ? (
         <select id={id} className={input} value={value} onChange={(e) => onChange(e.target.value)}>
           {field.options!.map((o) => (
@@ -138,7 +138,7 @@ function IconBtn({ label, onClick, danger, children }: { label: string; onClick:
       onClick={onClick}
       title={label}
       aria-label={label}
-      className={`flex items-center justify-center rounded-md border border-line py-2.5 ${danger ? "hover:border-red-300 hover:bg-red-50 hover:text-red-600" : "hover:bg-gray-50"}`}
+      className={`flex items-center justify-center rounded-md border border-line py-2.5 ${danger ? "hover:border-red-300 dark:hover:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400" : "hover:bg-canvas"}`}
     >
       {children}
     </button>
@@ -156,7 +156,7 @@ function PageSettings() {
       <h2 className="mb-1 font-semibold">Página</h2>
       <p className="mb-4 text-xs text-muted">Nada selecionado. Estas informações guiam o Reimaginar.</p>
       <label className="block">
-        <span className="mb-1 block text-xs font-medium text-gray-700">Briefing do negócio</span>
+        <span className="mb-1 block text-xs font-medium text-ink">Briefing do negócio</span>
         <textarea
           className={`${input} min-h-28`}
           value={brief}
@@ -165,7 +165,7 @@ function PageSettings() {
         />
       </label>
       <label className="mt-3 block">
-        <span className="mb-1 block text-xs font-medium text-gray-700">Paleta</span>
+        <span className="mb-1 block text-xs font-medium text-ink">Paleta</span>
         <select className={input} value={palette} onChange={(e) => setPalette(e.target.value)}>
           <option value="auto">A IA escolhe</option>
           {PALETTES.map((p) => (
@@ -176,7 +176,7 @@ function PageSettings() {
         </select>
       </label>
       <label className="mt-3 block">
-        <span className="mb-1 block text-xs font-medium text-gray-700">Tema (tipografia e formas)</span>
+        <span className="mb-1 block text-xs font-medium text-ink">Tema (tipografia e formas)</span>
         <select className={input} value={theme ?? "auto"} onChange={(e) => setTheme(e.target.value)} data-testid="theme-select">
           <option value="auto">A IA escolhe</option>
           {THEMES.map((t) => (
@@ -187,7 +187,7 @@ function PageSettings() {
         </select>
       </label>
       <label className="mt-3 block">
-        <span className="mb-1 block text-xs font-medium text-gray-700">Movimento</span>
+        <span className="mb-1 block text-xs font-medium text-ink">Movimento</span>
         <select className={input} value={motion ?? "auto"} onChange={(e) => setMotion(e.target.value)} data-testid="motion-select">
           <option value="auto">A IA escolhe</option>
           {MOTIONS.map((m) => (
@@ -232,17 +232,17 @@ function AutoPhotos() {
         type="button"
         onClick={() => void run()}
         disabled={!!busy}
-        className="flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-white px-2 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium hover:bg-canvas disabled:opacity-60"
         data-testid="auto-photos"
       >
         {busy ? <Loader2 size={15} className="animate-spin" /> : <Images size={15} />} {busy ? `Fotos: ${busy}` : "Preencher fotos vazias"}
       </button>
       <p className="mt-1.5 text-[11px] text-muted">Hero, imagens e galerias sem foto recebem fotos de banco gratuito. Fotos da equipe ficam de fora: use as pessoas reais.</p>
-      <label className="mt-2 flex items-center gap-2 text-[11px] text-gray-700">
+      <label className="mt-2 flex items-center gap-2 text-[11px] text-ink">
         <input type="checkbox" checked={autoPhotos} onChange={(e) => useStudio.getState().setAutoPhotos(e.target.checked)} data-testid="auto-photos-on-reimagine" />
         Preencher fotos ao reimaginar
       </label>
-      {msg ? <p className={`mt-1.5 text-[11px] ${msg.ok ? "text-gray-700" : "text-red-700"}`}>{msg.text}</p> : null}
+      {msg ? <p className={`mt-1.5 text-[11px] ${msg.ok ? "text-ink" : "text-red-700 dark:text-red-300"}`}>{msg.text}</p> : null}
     </div>
   );
 }

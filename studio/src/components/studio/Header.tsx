@@ -3,6 +3,7 @@ import { useStore } from "zustand";
 import { Braces, Code2, Database, LayoutTemplate, Loader2, Network, PenTool, Redo2, Settings, Undo2, Wand2 } from "lucide-react";
 import { useStudio, type StudioMode, type StudioTab } from "@/lib/draft/store";
 import { PROVIDER_LABELS } from "@/lib/ai/settings";
+import { ThemeToggle } from "./ThemeToggle";
 import { ExportProject } from "./ExportProject";
 import { ProjectsMenu } from "./ProjectsMenu";
 
@@ -64,7 +65,7 @@ export function Header({
             data-testid={`mode-${m.id}`}
             aria-pressed={mode === m.id}
             title={m.hint}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm ${mode === m.id ? "bg-white font-semibold shadow-sm" : "text-gray-600 hover:text-ink"}`}
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm ${mode === m.id ? "bg-panel font-semibold shadow-sm" : "text-muted hover:text-ink"}`}
           >
             <m.icon size={15} /> {m.label}
           </button>
@@ -80,7 +81,7 @@ export function Header({
             disabled={t.id !== "canvas" && t.id !== "react" && !hasResult}
             onClick={() => setTab(t.id)}
             className={`flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-sm transition disabled:opacity-40 ${
-              tab === t.id ? "bg-brand-soft font-medium text-brand" : "text-gray-600 hover:bg-gray-100"
+              tab === t.id ? "bg-brand-soft font-medium text-brand" : "text-muted hover:bg-line"
             }`}
           >
             <t.icon size={16} /> {t.label}
@@ -91,18 +92,19 @@ export function Header({
       <div className="ml-auto flex items-center gap-1">
         {mode === "ui" ? (
           <>
-            <button className="rounded-md p-2 text-gray-600 hover:bg-gray-100 disabled:opacity-30" onClick={() => undo()} disabled={!pastStates.length} title="Desfazer" aria-label="Desfazer">
+            <button className="rounded-md p-2 text-muted hover:bg-line disabled:opacity-30" onClick={() => undo()} disabled={!pastStates.length} title="Desfazer" aria-label="Desfazer">
               <Undo2 size={17} />
             </button>
-            <button className="rounded-md p-2 text-gray-600 hover:bg-gray-100 disabled:opacity-30" onClick={() => redo()} disabled={!futureStates.length} title="Refazer" aria-label="Refazer">
+            <button className="rounded-md p-2 text-muted hover:bg-line disabled:opacity-30" onClick={() => redo()} disabled={!futureStates.length} title="Refazer" aria-label="Refazer">
               <Redo2 size={17} />
             </button>
           </>
         ) : null}
         <ExportProject />
+        <ThemeToggle />
         <button
           onClick={onOpenSettings}
-          className="ml-1 flex items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          className="ml-1 flex items-center gap-1.5 whitespace-nowrap rounded-md border border-line px-3 py-2 text-sm text-ink hover:bg-canvas"
           title="Escolher provedor de IA"
           data-testid="open-settings"
         >
@@ -110,7 +112,7 @@ export function Header({
           <span className="max-w-56 truncate">{providerLabel}</span>
         </button>
         {mode === "ui" ? (
-          <div className="ml-2 flex items-stretch overflow-hidden rounded-lg bg-brand text-white shadow-sm">
+          <div className="ml-2 flex items-stretch overflow-hidden rounded-lg bg-brand text-on-solid shadow-sm">
             <button
               onClick={onReimagine}
               disabled={busy}
