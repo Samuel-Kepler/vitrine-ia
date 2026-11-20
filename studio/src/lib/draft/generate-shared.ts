@@ -11,7 +11,7 @@ import { recipeHints } from "./recipes";
 /** Blocos que podem ficar direto na página. */
 export const TOP_TYPES = ["navbar", "hero", "section", "form", "footer", "custom"] as const satisfies readonly BlockType[];
 /** Blocos que vão dentro de uma seção. */
-export const CHILD_TYPES = ["heading", "text", "button", "image", "feature", "testimonial", "pricing", "stat", "faq", "step", "team", "contact", "logos", "gallery", "form", "custom"] as const satisfies readonly BlockType[];
+export const CHILD_TYPES = ["heading", "text", "button", "image", "feature", "testimonial", "pricing", "stat", "faq", "step", "team", "menuitem", "contact", "logos", "gallery", "form", "custom"] as const satisfies readonly BlockType[];
 
 const Prop = z.object({ key: z.string().max(40), value: z.string().max(600) });
 
@@ -140,7 +140,12 @@ const RULES: Rule[] = [
     build: () => section("Por que escolher a gente", ["sparkles", "heart", "star"].map((icon, i) => child("feature", { icon, title: `[diferencial ${i + 1}]`, text: "[por que isso importa para o cliente]" }))),
   },
   {
-    re: /card[aá]pio|menu|produto|cat[aá]logo|servi[cç]o/,
+    re: /card[aá]pio|menu|lanche|prato|bebida/,
+    link: "Cardápio",
+    build: () => section("Cardápio", [1, 2, 3, 4].map((i) => child("menuitem", { name: `[produto ${i}]`, description: "[descrição curta]", price: "[preço]", photo: "" }))),
+  },
+  {
+    re: /produto|cat[aá]logo|servi[cç]o/,
     link: "Produtos",
     build: () => section("[Produtos ou serviços]", ["check", "check", "check"].map((icon, i) => child("feature", { icon, title: `[item ${i + 1}]`, text: "[descrição curta]" }))),
   },

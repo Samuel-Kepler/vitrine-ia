@@ -130,6 +130,8 @@ function emit(ctx: Ctx, id: string, depth: number, inForm = false): string {
       return tag("Step", { index: str(c.index), title: str(c.title), text: str(c.text) });
     case "TeamMember":
       return tag("TeamMember", { name: str(c.name), role: str(c.role), bio: str(c.bio), photo: str(c.photo) });
+    case "MenuItem":
+      return tag("MenuItem", { name: str(c.name), price: str(c.price), description: str(c.description), photo: str(c.photo) });
     case "ContactInfo":
       return tag("ContactInfo", { hours: strList(c.hours), address: str(c.address), phone: str(c.phone), email: str(c.email), whatsapp: str(c.whatsapp) });
     case "LogoStrip":

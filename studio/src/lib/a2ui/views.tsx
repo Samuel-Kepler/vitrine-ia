@@ -19,12 +19,13 @@ import {
   FaqItemApi,
   StepApi,
   TeamMemberApi,
+  MenuItemApi,
   ContactInfoApi,
   LogoStripApi,
   GalleryApi,
   buildCatalog,
 } from "./catalog-api";
-import { ContactInfo, FaqItem, Feature, Footer, Gallery, Grid, Heading, Hero, LogoStrip, Navbar, Page, PricingCard, Section, Stat, Step, TeamMember, Testimonial } from "./landing-components";
+import { ContactInfo, FaqItem, Feature, Footer, Gallery, Grid, Heading, Hero, LogoStrip, MenuItem, Navbar, Page, PricingCard, Section, Stat, Step, TeamMember, Testimonial } from "./landing-components";
 
 type Any = any; // tipos do renderer são v0_9; o runtime v1.0 é compatível.
 type Build = (id: string, basePath?: string) => ReactNode;
@@ -64,6 +65,7 @@ const StatView = createComponentImplementation(StatApi as Any, ({ props }: Any) 
 const FaqItemView = createComponentImplementation(FaqItemApi as Any, ({ props }: Any) => <FaqItem question={props.question} answer={props.answer} />);
 const StepView = createComponentImplementation(StepApi as Any, ({ props }: Any) => <Step index={props.index} title={props.title} text={props.text} />);
 const TeamMemberView = createComponentImplementation(TeamMemberApi as Any, ({ props }: Any) => <TeamMember name={props.name} role={props.role} bio={props.bio} photo={props.photo} />);
+const MenuItemView = createComponentImplementation(MenuItemApi as Any, ({ props }: Any) => <MenuItem name={props.name} price={props.price} description={props.description} photo={props.photo} />);
 const ContactInfoView = createComponentImplementation(ContactInfoApi as Any, ({ props }: Any) => (
   <ContactInfo hours={props.hours} address={props.address} phone={props.phone} email={props.email} whatsapp={props.whatsapp} />
 ));
@@ -71,5 +73,5 @@ const LogoStripView = createComponentImplementation(LogoStripApi as Any, ({ prop
 const GalleryView = createComponentImplementation(GalleryApi as Any, ({ props }: Any) => <Gallery images={props.images} captions={props.captions} />);
 
 export const landingCatalog = buildCatalog(
-  [PageView, NavbarView, HeroView, HeadingView, SectionView, GridView, FeatureView, TestimonialView, PricingCardView, StatView, FaqItemView, StepView, TeamMemberView, ContactInfoView, LogoStripView, GalleryView, FooterView] as Any,
+  [PageView, NavbarView, HeroView, HeadingView, SectionView, GridView, FeatureView, TestimonialView, PricingCardView, StatView, FaqItemView, StepView, TeamMemberView, MenuItemView, ContactInfoView, LogoStripView, GalleryView, FooterView] as Any,
 );

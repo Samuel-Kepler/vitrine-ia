@@ -46,7 +46,7 @@ describe("receitas de seção", () => {
   });
 
   it("aparecem no prompt de geração", () => {
-    expect(recipeHints()).toContain("Cardápio com preços (tone default): heading, text, pricing×3");
+    expect(recipeHints()).toContain("Cardápio com preços (tone default): heading, text, menuitem×4");
     expect(generateSystem(2026)).toContain("Horário e localização");
   });
 });

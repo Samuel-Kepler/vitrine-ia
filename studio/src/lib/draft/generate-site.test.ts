@@ -63,10 +63,10 @@ describe("store.replaceSite", () => {
     const site = templateSite("café com cardápio e sobre");
     useStudio.getState().replaceSite(site.pages);
     const s = useStudio.getState();
-    expect(s.pages.map((p) => p.name)).toEqual(["Início", "Produtos", "Sobre", "Contato"]);
+    expect(s.pages.map((p) => p.name)).toEqual(["Início", "Cardápio", "Sobre", "Contato"]);
     expect(s.pageId).toBe(HOME_ID);
     expect(s.tree).toBe(site.pages[0].tree);
-    expect(s.pages.map((p) => p.slug)).toEqual(["inicio", "produtos", "sobre", "contato"]);
+    expect(s.pages.map((p) => p.slug)).toEqual(["inicio", "cardapio", "sobre", "contato"]);
   });
 });
 

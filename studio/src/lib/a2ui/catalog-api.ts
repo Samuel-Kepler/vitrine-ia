@@ -146,6 +146,17 @@ export const StatApi = {
   schema: z.object({ value: S.DynamicString.describe('e.g. "12 anos", "+500"'), label: S.DynamicString }),
 };
 
+export const MenuItemApi = {
+  name: "MenuItem",
+  description: "Menu/product item: name, short description, price and optional photo (put several in a Grid with columns \"2\"). Only items and prices the user gave; otherwise bracket placeholders like [produto 1], [preço].",
+  schema: z.object({
+    name: S.DynamicString,
+    price: S.DynamicString.optional().describe('e.g. "R$ 12"'),
+    description: S.DynamicString.optional(),
+    photo: SafeImageUrl.optional().describe("Photo URL (https) given by the user. Omit if unknown."),
+  }),
+};
+
 export const FaqItemApi = {
   name: "FaqItem",
   description: "Frequently asked question that expands on click. Stack several in a Column inside a Section.",
@@ -217,6 +228,7 @@ export const CUSTOM_APIS = [
   TestimonialApi,
   PricingCardApi,
   StatApi,
+  MenuItemApi,
   FaqItemApi,
   StepApi,
   TeamMemberApi,

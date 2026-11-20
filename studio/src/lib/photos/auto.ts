@@ -10,8 +10,8 @@ import { friendlyAIError } from "@/lib/ai/errors";
 
 export interface PhotoSlot {
   nodeId: string;
-  /** Prop do bloco: hero.image, image.url ou gallery.images (com index). */
-  key: "image" | "url" | "images";
+  /** Prop do bloco: hero.image, image.url, menuitem.photo ou gallery.images (com index). */
+  key: "image" | "url" | "photo" | "images";
   /** Posição na galeria (uma foto por linha). */
   index?: number;
   /** Contexto em português: título, legenda, descrição. */
@@ -38,6 +38,9 @@ export function photoSlots(draft: DraftNode[]): PhotoSlot[] {
         out.push({ nodeId: n.id, key: "image", text: [p.title, p.subtitle].filter(Boolean).join(". ") });
       } else if (n.type === "image" && !p.url?.trim()) {
         out.push({ nodeId: n.id, key: "url", text: p.alt || p.caption || "" });
+      } else if (n.type === "menuitem" && !p.photo?.trim() && p.name?.trim() && !/^\[.*\]$/.test(p.name.trim())) {
+        // Só com nome de produto de verdade; "[produto 1]" não vira busca.
+        out.push({ nodeId: n.id, key: "photo", text: [p.name, p.description].filter(Boolean).join(". ") });
       } else if (n.type === "gallery") {
         const have = lines(p.images).length;
         const captions = lines(p.captions);

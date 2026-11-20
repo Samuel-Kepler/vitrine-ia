@@ -36,11 +36,11 @@ export const RECIPES: SectionRecipe[] = [
   {
     id: "cardapio-precos",
     name: "Cardápio com preços",
-    hint: "Título e 3 itens com preço",
+    hint: "Título e 4 itens com preço",
     build: section("default", [
       heading("Cardápio"),
       text("[uma frase sobre o cardápio]"),
-      ...times<Child>(3, (i) => ["pricing", { name: `[produto ${i}]`, price: "[preço]", period: "", features: "[descrição curta]", cta: "Pedir", highlighted: i === 2 ? "yes" : "no" }]),
+      ...times<Child>(4, (i) => ["menuitem", { name: `[produto ${i}]`, description: "[descrição curta]", price: "[preço]", photo: "" }]),
     ]),
   },
   {

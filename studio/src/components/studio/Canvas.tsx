@@ -276,6 +276,18 @@ function Wireframe({ node }: { node: DraftNode }) {
           </p>
         </div>
       );
+    case "menuitem":
+      return (
+        <div className="flex items-center gap-2 text-sm">
+          {p.photo ? <CanvasImg src={p.photo} className="size-9 shrink-0" fallback="" /> : null}
+          <div className="min-w-0 flex-1">
+            <p className="flex justify-between gap-2">
+              <b className="truncate">{p.name}</b> <span className="shrink-0 text-muted">{p.price}</span>
+            </p>
+            {p.description ? <p className="line-clamp-1 text-xs text-muted">{p.description}</p> : null}
+          </div>
+        </div>
+      );
     case "contact":
       return (
         <div className="space-y-0.5 text-xs text-muted">

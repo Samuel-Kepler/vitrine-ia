@@ -1,4 +1,5 @@
 import {
+  UtensilsCrossed,
   BadgeHelp,
   BarChart3,
   Building2,
@@ -44,6 +45,7 @@ const MAP: Record<BlockType, React.ComponentType<LucideProps>> = {
   faq: BadgeHelp,
   step: Footprints,
   team: Users,
+  menuitem: UtensilsCrossed,
   contact: MapPin,
   logos: Building2,
   gallery: GalleryHorizontal,

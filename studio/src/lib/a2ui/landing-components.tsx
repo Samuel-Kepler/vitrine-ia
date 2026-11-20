@@ -425,6 +425,34 @@ const initials = (name = "") =>
     .map((w) => w[0]?.toUpperCase())
     .join("") || "?";
 
+/** Item de cardápio: foto opcional, nome, preço alinhado à direita e descrição curta. */
+export function MenuItem({ name, price, description, photo }: { name?: string; price?: string; description?: string; photo?: string }) {
+  return (
+    <div className="flex h-full items-start gap-4">
+      {photo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photo} alt={name ?? ""} className="size-20 shrink-0 rounded-xl object-cover" />
+      ) : null}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-3">
+          <h3 className="lp-hf text-lg font-semibold">{name}</h3>
+          <span className="min-w-4 flex-1 border-b border-dotted" style={{ borderColor: "var(--lp-soft)", opacity: 0.5 }} aria-hidden />
+          {price ? (
+            <span className="lp-hf shrink-0 font-semibold" style={{ color: "var(--lp-accent)" }}>
+              {price}
+            </span>
+          ) : null}
+        </div>
+        {description ? (
+          <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--lp-soft)" }}>
+            {description}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 /** Pessoa da equipe: foto (ou iniciais), nome, cargo e uma linha sobre ela. */
 export function TeamMember({ name, role, bio, photo }: { name?: string; role?: string; bio?: string; photo?: string }) {
   return (
