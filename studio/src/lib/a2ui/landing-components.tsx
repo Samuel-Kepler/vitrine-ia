@@ -9,6 +9,16 @@ export const ICONS: Record<string, typeof Sparkles> = { sparkles: Sparkles, zap:
 
 type Children = { children?: ReactNode };
 
+const SLOT = /\[([^\[\]]{1,60})\]/;
+/**
+ * Placeholder que a IA deixa no texto ("[preço]") vira um chip "lp-slot" em vez de
+ * colchetes crus. Só muda a exibição: o dado mantém os colchetes.
+ */
+export function withSlots(v: string | undefined): ReactNode {
+  if (!v || !SLOT.test(v)) return v;
+  return v.split(/\[([^\[\]]{1,60})\]/).map((part, i) => (i % 2 ? <span key={i} className="lp-slot" title="Preencha antes de publicar">{part}</span> : part));
+}
+
 /** Raiz: paleta (cores) + tema (tipografia, cantos, sombras) + movimento. */
 export function Page({ palette = "ocean", theme = "moderno", motion = "calm", children }: { palette?: string; theme?: string; motion?: string } & Children) {
   return <div className={`lp lp-${palette} lp-theme-${theme} lp-motion-${motion}`}>{children}</div>;
@@ -22,18 +32,18 @@ export function Navbar({ brand, links = [], hrefs = [], cta, onCta }: { brand?: 
   return (
     <header className="sticky top-0 z-10 border-b border-black/5 backdrop-blur" style={{ background: "color-mix(in srgb, var(--lp-bg) 88%, transparent)" }}>
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-5 py-3 @3xl:gap-6 @3xl:px-6 @3xl:py-4">
-        <span className="lp-h min-w-0 truncate text-lg">{brand}</span>
+        <span className="lp-h min-w-0 truncate text-lg">{withSlots(brand)}</span>
         <div className="ml-auto flex shrink-0 items-center gap-2 @3xl:gap-6">
           <nav className="hidden gap-6 text-sm @3xl:flex" style={{ color: "var(--lp-soft)" }}>
             {links.map((l, i) => (
               <a key={l} href={href(i)} className="hover:opacity-70">
-                {l}
+                {withSlots(l)}
               </a>
             ))}
           </nav>
           {cta ? (
             <button className="lp-btn hidden py-2 text-sm @md:inline-flex" onClick={() => onCta?.()}>
-              {cta}
+              {withSlots(cta)}
             </button>
           ) : null}
           {links.length || cta ? (
@@ -45,7 +55,7 @@ export function Navbar({ brand, links = [], hrefs = [], cta, onCta }: { brand?: 
               <nav className="absolute inset-x-0 top-full flex flex-col border-b border-black/5 px-5 pb-4 pt-1 shadow-lg" style={{ background: "var(--lp-bg)" }}>
                 {links.map((l, i) => (
                   <a key={l} href={href(i)} onClick={closeMenu} className="flex min-h-11 items-center border-b border-black/5 text-base font-medium">
-                    {l}
+                    {withSlots(l)}
                   </a>
                 ))}
                 {cta ? (
@@ -56,7 +66,7 @@ export function Navbar({ brand, links = [], hrefs = [], cta, onCta }: { brand?: 
                       onCta?.();
                     }}
                   >
-                    {cta}
+                    {withSlots(cta)}
                   </button>
                 ) : null}
               </nav>
@@ -79,10 +89,10 @@ export function Hero({ title, subtitle, cta, onCta, image, eyebrow, variant }: H
   const v = variant ?? (image ? "split" : "centered");
   const button = cta ? (
     <button className="lp-btn w-full text-base @md:w-auto" onClick={() => onCta?.()}>
-      {cta}
+      {withSlots(cta)}
     </button>
   ) : null;
-  const tag = eyebrow ? <span className="lp-eyebrow mb-5">{eyebrow}</span> : null;
+  const tag = eyebrow ? <span className="lp-eyebrow mb-5">{withSlots(eyebrow)}</span> : null;
 
   if (v === "image-bg" || v === "gradient") {
     const photo = v === "image-bg" && image;
@@ -91,8 +101,8 @@ export function Hero({ title, subtitle, cta, onCta, image, eyebrow, variant }: H
         <div className="relative mx-auto max-w-6xl px-5 py-20 @md:py-28 @3xl:px-6 @3xl:py-36">
           <div className="lp-rise max-w-3xl">
             {tag}
-            <h1 className="lp-h text-balance text-[2.25rem] leading-[1.05] @md:text-5xl @3xl:text-6xl @5xl:text-7xl">{title}</h1>
-            {subtitle ? <p className="mt-5 max-w-2xl text-pretty text-base leading-relaxed @md:text-lg @3xl:text-xl" style={{ color: "var(--lp-soft)" }}>{subtitle}</p> : null}
+            <h1 className="lp-h text-balance text-[2.25rem] leading-[1.05] @md:text-5xl @3xl:text-6xl @5xl:text-7xl">{withSlots(title)}</h1>
+            {subtitle ? <p className="mt-5 max-w-2xl text-pretty text-base leading-relaxed @md:text-lg @3xl:text-xl" style={{ color: "var(--lp-soft)" }}>{withSlots(subtitle)}</p> : null}
             {button ? <div className="mt-8 flex flex-col gap-3 @md:flex-row @3xl:mt-10">{button}</div> : null}
           </div>
         </div>
@@ -105,9 +115,9 @@ export function Hero({ title, subtitle, cta, onCta, image, eyebrow, variant }: H
       <section className="border-b border-black/5">
         <div className="lp-rise mx-auto max-w-6xl px-5 pb-12 pt-16 @3xl:px-6 @3xl:pb-20 @3xl:pt-28">
           {tag}
-          <h1 className="lp-h max-w-5xl text-balance text-[2.5rem] leading-[1.02] @md:text-6xl @5xl:text-8xl">{title}</h1>
+          <h1 className="lp-h max-w-5xl text-balance text-[2.5rem] leading-[1.02] @md:text-6xl @5xl:text-8xl">{withSlots(title)}</h1>
           <div className="mt-8 flex flex-col gap-6 @3xl:mt-12 @3xl:flex-row @3xl:items-end @3xl:justify-between">
-            {subtitle ? <p className="max-w-xl text-pretty text-base leading-relaxed @md:text-lg" style={{ color: "var(--lp-soft)" }}>{subtitle}</p> : <span />}
+            {subtitle ? <p className="max-w-xl text-pretty text-base leading-relaxed @md:text-lg" style={{ color: "var(--lp-soft)" }}>{withSlots(subtitle)}</p> : <span />}
             {button}
           </div>
         </div>
@@ -122,10 +132,10 @@ export function Hero({ title, subtitle, cta, onCta, image, eyebrow, variant }: H
       <div className={`relative mx-auto grid max-w-6xl items-center gap-8 px-5 py-14 @md:py-20 @3xl:gap-12 @3xl:px-6 @3xl:py-24 ${split ? "@3xl:grid-cols-2" : ""}`}>
         <div className={`lp-rise ${split ? "" : "mx-auto max-w-3xl text-center"}`}>
           {tag}
-          <h1 className="lp-h text-balance text-[2rem] leading-[1.08] @md:text-4xl @3xl:text-5xl @5xl:text-6xl">{title}</h1>
+          <h1 className="lp-h text-balance text-[2rem] leading-[1.08] @md:text-4xl @3xl:text-5xl @5xl:text-6xl">{withSlots(title)}</h1>
           {subtitle ? (
             <p className="mt-4 text-pretty text-base leading-relaxed @md:text-lg @3xl:mt-6 @3xl:text-xl" style={{ color: "var(--lp-soft)" }}>
-              {subtitle}
+              {withSlots(subtitle)}
             </p>
           ) : null}
           {button ? <div className={`mt-8 flex flex-col gap-3 @md:flex-row @3xl:mt-10 ${split ? "" : "justify-center"}`}>{button}</div> : null}
@@ -146,7 +156,7 @@ export function Hero({ title, subtitle, cta, onCta, image, eyebrow, variant }: H
 export function Heading({ text, level = "2", align }: { text?: string; level?: string; align?: string }) {
   const cls = level === "1" ? "text-3xl @md:text-4xl @3xl:text-5xl" : level === "2" ? "text-2xl @md:text-3xl @3xl:text-4xl" : "text-lg @3xl:text-2xl";
   const Tag = `h${level === "1" || level === "3" ? level : "2"}` as "h1" | "h2" | "h3";
-  return <Tag className={`${cls} lp-h text-balance ${align === "center" ? "text-center" : ""}`}>{text}</Tag>;
+  return <Tag className={`${cls} lp-h text-balance ${align === "center" ? "text-center" : ""}`}>{withSlots(text)}</Tag>;
 }
 
 /** animation: rise (padrão) | slide | zoom | blur | none — CSS ligado à rolagem, ver landing.css. */
@@ -178,9 +188,9 @@ export function Feature({ icon = "sparkles", title, text, variant = "card" }: { 
       <div className="flex h-full gap-4 py-2">
         {badge}
         <div>
-          <h3 className="lp-hf text-lg font-semibold">{title}</h3>
+          <h3 className="lp-hf text-lg font-semibold">{withSlots(title)}</h3>
           <p className="mt-1 leading-relaxed" style={{ color: "var(--lp-soft)" }}>
-            {text}
+            {withSlots(text)}
           </p>
         </div>
       </div>
@@ -190,9 +200,9 @@ export function Feature({ icon = "sparkles", title, text, variant = "card" }: { 
     return (
       <div className="h-full border-t-2 pt-5" style={{ borderColor: "var(--lp-accent)" }}>
         <Icon size={22} style={{ color: "var(--lp-accent)" }} />
-        <h3 className="lp-hf mt-3 text-lg font-semibold">{title}</h3>
+        <h3 className="lp-hf mt-3 text-lg font-semibold">{withSlots(title)}</h3>
         <p className="mt-2 leading-relaxed" style={{ color: "var(--lp-soft)" }}>
-          {text}
+          {withSlots(text)}
         </p>
       </div>
     );
@@ -200,9 +210,9 @@ export function Feature({ icon = "sparkles", title, text, variant = "card" }: { 
   return (
     <div className="lp-card h-full p-5 @3xl:p-6">
       <div className="mb-4">{badge}</div>
-      <h3 className="lp-hf text-lg font-semibold">{title}</h3>
+      <h3 className="lp-hf text-lg font-semibold">{withSlots(title)}</h3>
       <p className="mt-2 leading-relaxed" style={{ color: "var(--lp-soft)" }}>
-        {text}
+        {withSlots(text)}
       </p>
     </div>
   );
@@ -214,10 +224,10 @@ export function Testimonial({ quote, author, role, variant = "card" }: { quote?:
     return (
       <figure className="mx-auto max-w-3xl py-4 text-center">
         <Quote size={34} className="mx-auto" style={{ color: "var(--lp-accent)" }} />
-        <blockquote className="lp-hf mt-5 text-balance text-2xl leading-snug @3xl:text-3xl">“{quote}”</blockquote>
+        <blockquote className="lp-hf mt-5 text-balance text-2xl leading-snug @3xl:text-3xl">“{withSlots(quote)}”</blockquote>
         <figcaption className="mt-6 text-sm">
-          <strong>{author}</strong>
-          {role ? <span style={{ color: "var(--lp-soft)" }}> · {role}</span> : null}
+          <strong>{withSlots(author)}</strong>
+          {role ? <span style={{ color: "var(--lp-soft)" }}> · {withSlots(role)}</span> : null}
         </figcaption>
       </figure>
     );
@@ -225,10 +235,10 @@ export function Testimonial({ quote, author, role, variant = "card" }: { quote?:
   return (
     <figure className="lp-card h-full p-5 @3xl:p-6">
       <Quote size={22} style={{ color: "var(--lp-accent)" }} />
-      <blockquote className="mt-3 text-base leading-relaxed @3xl:text-lg">“{quote}”</blockquote>
+      <blockquote className="mt-3 text-base leading-relaxed @3xl:text-lg">“{withSlots(quote)}”</blockquote>
       <figcaption className="mt-4 text-sm">
-        <strong>{author}</strong>
-        {role ? <span style={{ color: "var(--lp-soft)" }}> · {role}</span> : null}
+        <strong>{withSlots(author)}</strong>
+        {role ? <span style={{ color: "var(--lp-soft)" }}> · {withSlots(role)}</span> : null}
       </figcaption>
     </figure>
   );
@@ -238,7 +248,7 @@ export function PricingCard({ name, price, period, features = [], cta, onCta, hi
   return (
     <div className="lp-card flex h-full flex-col p-6 @3xl:p-7" style={highlighted ? { borderColor: "var(--lp-accent)", boxShadow: "0 20px 50px -25px var(--lp-accent)" } : undefined}>
       <div className="flex items-center justify-between">
-        <h3 className="lp-hf text-lg font-semibold">{name}</h3>
+        <h3 className="lp-hf text-lg font-semibold">{withSlots(name)}</h3>
         {highlighted ? (
           <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: "var(--lp-accent)", color: "var(--lp-accent-fg)" }}>
             Popular
@@ -246,19 +256,19 @@ export function PricingCard({ name, price, period, features = [], cta, onCta, hi
         ) : null}
       </div>
       <p className="mt-4">
-        <span className="lp-h text-3xl @3xl:text-4xl">{price}</span>
-        {period ? <span style={{ color: "var(--lp-soft)" }}> {period}</span> : null}
+        <span className="lp-h text-3xl @3xl:text-4xl">{withSlots(price)}</span>
+        {period ? <span style={{ color: "var(--lp-soft)" }}> {withSlots(period)}</span> : null}
       </p>
       <ul className="mt-6 flex-1 space-y-2.5">
         {features.map((f) => (
           <li key={f} className="flex items-start gap-2">
             <Check size={18} className="mt-0.5 shrink-0" style={{ color: "var(--lp-accent)" }} />
-            <span>{f}</span>
+            <span>{withSlots(f)}</span>
           </li>
         ))}
       </ul>
       <button className={`lp-btn mt-8 w-full ${highlighted ? "" : "lp-btn-ghost"}`} onClick={() => onCta?.()}>
-        {cta}
+        {withSlots(cta)}
       </button>
     </div>
   );
@@ -268,11 +278,11 @@ export function Footer({ text, links = [], hrefs = [] }: { text?: string; links?
   return (
     <footer className="tone-dark px-5 py-10 @3xl:px-6">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-center text-sm @3xl:flex-row @3xl:text-left">
-        <span style={{ color: "var(--lp-soft)" }}>{text}</span>
+        <span style={{ color: "var(--lp-soft)" }}>{withSlots(text)}</span>
         <nav className="flex flex-wrap justify-center gap-x-5 gap-y-1">
           {links.map((l, i) => (
             <a key={l} href={hrefs[i] ?? "#"} className="inline-flex min-h-11 items-center hover:opacity-70">
-              {l}
+              {withSlots(l)}
             </a>
           ))}
         </nav>
@@ -325,7 +335,7 @@ export function Icon({ name = "sparkles" }: { name?: string }) {
 export function TextField({ label, name }: { label?: string; name?: string }) {
   return (
     <label className="flex flex-col gap-1.5 text-sm font-medium">
-      {label}
+      {withSlots(label)}
       <input
         name={name}
         className="min-h-11 rounded-xl border px-3 text-base outline-none focus:ring-2"
@@ -375,10 +385,10 @@ export function Stat({ value, label, variant = "plain" }: { value?: string; labe
   return (
     <div className={variant === "card" ? "lp-card h-full p-6 text-center" : "text-center"}>
       <p className="lp-h text-4xl @3xl:text-5xl" style={{ color: "var(--lp-accent)" }}>
-        {value}
+        {withSlots(value)}
       </p>
       <p className="mt-2 text-sm leading-snug @3xl:text-base" style={{ color: "var(--lp-soft)" }}>
-        {label}
+        {withSlots(label)}
       </p>
     </div>
   );
@@ -389,11 +399,11 @@ export function FaqItem({ question, answer }: { question?: string; answer?: stri
   return (
     <details className="lp-faq border-b" style={{ borderColor: "color-mix(in srgb, var(--lp-fg) 12%, transparent)" }}>
       <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-4 py-4 text-left text-base font-semibold @3xl:text-lg">
-        <span>{question}</span>
+        <span>{withSlots(question)}</span>
         <Plus size={20} className="lp-faq-icon shrink-0" style={{ color: "var(--lp-accent)" }} />
       </summary>
       <p className="pb-5 pr-8 leading-relaxed" style={{ color: "var(--lp-soft)" }}>
-        {answer}
+        {withSlots(answer)}
       </p>
     </details>
   );
@@ -405,12 +415,12 @@ export function Step({ index, title, text }: { index?: string; title?: string; t
     <div className="h-full">
       {index ? (
         <span className="lp-h inline-flex size-11 items-center justify-center rounded-full text-lg" style={{ background: "var(--lp-accent)", color: "var(--lp-accent-fg)" }}>
-          {index}
+          {withSlots(index)}
         </span>
       ) : null}
-      <h3 className="lp-hf mt-4 text-lg font-semibold">{title}</h3>
+      <h3 className="lp-hf mt-4 text-lg font-semibold">{withSlots(title)}</h3>
       <p className="mt-2 leading-relaxed" style={{ color: "var(--lp-soft)" }}>
-        {text}
+        {withSlots(text)}
       </p>
     </div>
   );
@@ -438,16 +448,16 @@ export function MenuItem({ name, price, description, photo, variant = "list" }: 
         )}
         <div className="flex flex-1 flex-col p-5">
           <div className="flex items-baseline justify-between gap-3">
-            <h3 className="lp-hf text-lg font-semibold">{name}</h3>
+            <h3 className="lp-hf text-lg font-semibold">{withSlots(name)}</h3>
             {price ? (
               <span className="lp-hf shrink-0 font-semibold" style={{ color: "var(--lp-accent)" }}>
-                {price}
+                {withSlots(price)}
               </span>
             ) : null}
           </div>
           {description ? (
             <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--lp-soft)" }}>
-              {description}
+              {withSlots(description)}
             </p>
           ) : null}
         </div>
@@ -461,17 +471,17 @@ export function MenuItem({ name, price, description, photo, variant = "list" }: 
       ) : null}
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-3">
-          <h3 className="lp-hf text-lg font-semibold">{name}</h3>
+          <h3 className="lp-hf text-lg font-semibold">{withSlots(name)}</h3>
           <span className="min-w-4 flex-1 border-b border-dotted" style={{ borderColor: "var(--lp-soft)", opacity: 0.5 }} aria-hidden />
           {price ? (
             <span className="lp-hf shrink-0 font-semibold" style={{ color: "var(--lp-accent)" }}>
-              {price}
+              {withSlots(price)}
             </span>
           ) : null}
         </div>
         {description ? (
           <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--lp-soft)" }}>
-            {description}
+            {withSlots(description)}
           </p>
         ) : null}
       </div>
@@ -529,15 +539,15 @@ export function TeamMember({ name, role, bio, photo }: { name?: string; role?: s
           {initials(name)}
         </div>
       )}
-      <h3 className="lp-hf mt-4 text-lg font-semibold">{name}</h3>
+      <h3 className="lp-hf mt-4 text-lg font-semibold">{withSlots(name)}</h3>
       {role ? (
         <p className="text-sm" style={{ color: "var(--lp-accent)" }}>
-          {role}
+          {withSlots(role)}
         </p>
       ) : null}
       {bio ? (
         <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--lp-soft)" }}>
-          {bio}
+          {withSlots(bio)}
         </p>
       ) : null}
     </div>
@@ -554,7 +564,7 @@ export function ContactInfo({ hours = [], address, phone, email, whatsapp }: { h
         <Icon size={18} />
       </span>
       <div className="min-w-0">
-        <p className="text-sm font-semibold">{label}</p>
+        <p className="text-sm font-semibold">{withSlots(label)}</p>
         <div className="mt-0.5 text-sm leading-relaxed" style={{ color: "var(--lp-soft)" }}>
           {body}
         </div>
@@ -564,8 +574,8 @@ export function ContactInfo({ hours = [], address, phone, email, whatsapp }: { h
   const wa = digits(whatsapp);
   return (
     <div className="lp-card grid gap-6 p-6 @xl:grid-cols-2 @3xl:p-8">
-      {hours.length ? row(Clock, "Horários", hours.map((h) => <p key={h}>{h}</p>)) : null}
-      {address ? row(MapPin, "Endereço", <p>{address}</p>) : null}
+      {hours.length ? row(Clock, "Horários", hours.map((h) => <p key={h}>{withSlots(h)}</p>)) : null}
+      {address ? row(MapPin, "Endereço", <p>{withSlots(address)}</p>) : null}
       {phone ? row(Phone, "Telefone", <a href={`tel:${digits(phone)}`} className="underline-offset-2 hover:underline">{phone}</a>) : null}
       {whatsapp ? row(MessageCircle, "WhatsApp", <a href={wa ? `https://wa.me/${wa.length <= 11 ? `55${wa}` : wa}` : "#"} className="underline-offset-2 hover:underline">{whatsapp}</a>) : null}
       {email ? row(Mail, "E-mail", <a href={`mailto:${email}`} className="break-all underline-offset-2 hover:underline">{email}</a>) : null}
@@ -577,14 +587,14 @@ export function ContactInfo({ hours = [], address, phone, email, whatsapp }: { h
 export function LogoStrip({ title, names = [], variant = "static" }: { title?: string; names?: string[]; variant?: string }) {
   const item = (n: string, key: string, hidden?: boolean) => (
     <span key={key} aria-hidden={hidden} className="lp-hf shrink-0 text-xl font-semibold opacity-60 @3xl:text-2xl">
-      {n}
+      {withSlots(n)}
     </span>
   );
   return (
     <div className="text-center">
       {title ? (
         <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--lp-soft)" }}>
-          {title}
+          {withSlots(title)}
         </p>
       ) : null}
       {variant === "marquee" ? (
@@ -628,11 +638,11 @@ export function Gallery({ images = [], captions = [], variant = "grid" }: { imag
             ) : (
               <div className={`lp-deco flex ${ratio} w-full items-end p-3`} role="img" aria-label={caption ?? "foto"}>
                 <span className="rounded-md px-2 py-1 text-xs" style={{ background: "var(--lp-bg)", color: "var(--lp-soft)" }}>
-                  {caption ?? "[foto]"}
+                  {withSlots(caption ?? "[foto]")}
                 </span>
               </div>
             )}
-            {src && caption ? <figcaption className="pt-2 text-sm" style={{ color: "var(--lp-soft)" }}>{caption}</figcaption> : null}
+            {src && caption ? <figcaption className="pt-2 text-sm" style={{ color: "var(--lp-soft)" }}>{withSlots(caption)}</figcaption> : null}
           </figure>
         );
       })}

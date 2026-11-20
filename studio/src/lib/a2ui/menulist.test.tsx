@@ -59,7 +59,7 @@ describe("Cardápio ligado à API", () => {
       );
     });
     await waitFor(() => expect(screen.getByText("Espresso")).toBeTruthy());
-    expect(screen.queryByText("[exemplo 1]")).toBeNull();
+    expect(screen.queryByText("exemplo 1")).toBeNull();
     expect(document.body.textContent).toContain(formatPrice("7.5")!);
     expect(document.querySelector("img")).toBeNull();
     cleanup();
@@ -72,7 +72,7 @@ describe("Cardápio ligado à API", () => {
         </MenuList>,
       );
     });
-    expect(screen.getByText("[exemplo 1]")).toBeTruthy();
+    expect(screen.getByText("exemplo 1")).toBeTruthy();
   });
 
   it("formata preço do banco e deixa texto livre como está", () => {

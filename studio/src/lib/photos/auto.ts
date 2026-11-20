@@ -128,6 +128,39 @@ export function glossaryQuery(text: string, business: string): string {
   return terms.join(" ").trim() || text.split(/\s+/).slice(0, 4).join(" ");
 }
 
+/** Palavras genéricas: sozinhas não acham foto de nada ("modern", "lighting"...). */
+const GENERIC = new Set([
+  "a", "an", "the", "of", "in", "on", "at", "to", "for", "with", "and", "or", "by", "from", "is", "are", "our", "its", "some", "very",
+  "modern", "interior", "interiors", "lighting", "light", "beautiful", "professional", "close", "up", "view", "shot", "photo", "image",
+  "picture", "background", "style", "clean", "nice", "great", "good", "high", "quality", "detail", "details", "wide", "top", "front",
+  "side", "empty", "new", "natural", "bright", "simple",
+]);
+
+/**
+ * Buscas em ordem de amplitude para um espaço cuja busca não achou nada: a completa,
+ * as 2 últimas palavras, as 2 primeiras, cada palavra específica e o termo amplo do negócio.
+ * Sem repetição (sem diferenciar maiúsculas) e sem buscas só de palavras genéricas.
+ */
+export function fallbackQueries(query: string, broad?: string): string[] {
+  const words = query.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const specific = (w: string) => {
+    const k = w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+    return k.length >= 3 && !GENERIC.has(k);
+  };
+  const cands = [words.join(" ")];
+  if (words.length > 2) cands.push(words.slice(-2).join(" "), words.slice(0, 2).join(" "));
+  for (const w of words) if (specific(w)) cands.push(w);
+  if (broad?.trim()) cands.push(broad.trim());
+  const seen = new Set<string>();
+  return cands.filter((c, i) => {
+    const k = c.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return i === 0 || c.split(/\s+/).some(specific);
+  });
+}
+
 export interface QueriesResult {
   queries: string[];
   /** Busca ampla (tipo de negócio) para quando uma específica não achar nada. */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createNode } from "@/lib/draft/tree";
 import { fetchPhoto, isValidPhotoId, MAX_PHOTO_BYTES, photoSource, searchPhotos } from "./photos";
-import { photoQueries, photoSlots } from "./auto";
+import { fallbackQueries, photoQueries, photoSlots } from "./auto";
 
 const OV_ID = "560cadfd-c4dc-44f6-ba6d-7a3af6e9a307";
 type Call = { url: string; headers: Record<string, string> };
@@ -119,6 +119,42 @@ describe("buscas sem IA (glossário)", () => {
     expect(glossaryQuery("Ambiente externo", "")).toBe("ambience outdoor");
     expect(businessTerm("Studio de pilates no Leblon")).toBe("yoga");
     expect(businessTerm("algo sem negócio conhecido")).toBe("");
+  });
+});
+
+describe("fallbackQueries (buscas de reserva para espaços sem foto)", () => {
+  it("vai da busca completa para as mais amplas, sem repetir e sem buscas só genéricas", () => {
+    expect(fallbackQueries("modern barbershop interior lighting", "barbershop")).toEqual([
+      "modern barbershop interior lighting",
+      "modern barbershop",
+      "barbershop",
+    ]);
+  });
+
+  it("começa pela busca completa e inclui o termo específico", () => {
+    const r = fallbackQueries("modern barbershop interior lighting", "barbershop");
+    expect(r[0]).toBe("modern barbershop interior lighting");
+    expect(r).toContain("barbershop");
+    expect(r).not.toContain("lighting");
+  });
+
+  it("acrescenta o termo amplo do negócio no fim, se for diferente", () => {
+    expect(fallbackQueries("modern barbershop interior lighting", "coffee shop")).toEqual([
+      "modern barbershop interior lighting",
+      "modern barbershop",
+      "barbershop",
+      "coffee shop",
+    ]);
+  });
+
+  it("deduplica sem diferenciar maiúsculas e ignora termo amplo vazio", () => {
+    expect(fallbackQueries("Barbershop", "barbershop")).toEqual(["Barbershop"]);
+    expect(fallbackQueries("coffee beans", "  ")).toEqual(["coffee beans", "coffee", "beans"]);
+  });
+
+  it("consulta só genérica continua valendo como primeira tentativa; vazio não gera nada", () => {
+    expect(fallbackQueries("modern lighting")).toEqual(["modern lighting"]);
+    expect(fallbackQueries("   ")).toEqual([]);
   });
 });
 
