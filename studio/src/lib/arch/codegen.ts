@@ -2,7 +2,7 @@
 // Determinístico. Quando uma rota bate com uma tabela do canvas Banco e o
 // serviço grava no Postgres, o handler já sai com SQL de verdade.
 import { ARCH, authMode, routeLines, type ArchGraph, type ArchNode, type RouteLine } from "./model";
-import { ensureAuthUsers, fkColumns, pascal, PASSWORD_COL, pkOf, snake, USERS_TABLE, type ColType, type ErModel, type Table } from "@/lib/db/model";
+import { canonicalDefault, ensureAuthUsers, fkColumns, pascal, PASSWORD_COL, pkOf, snake, USERS_TABLE, type ColType, type ErModel, type Table } from "@/lib/db/model";
 import { toSql, type GeneratedFile } from "@/lib/db/codegen";
 import { authFile, type OwnAuthSpec } from "./codegen-auth";
 
@@ -100,7 +100,8 @@ interface BodyField {
 function bodyFields(t: Table, er: ErModel): BodyField[] {
   const out: BodyField[] = [];
   for (const c of t.columns) {
-    if (c.default && GENERATED_DEFAULTS.has(c.default)) continue;
+    const def = canonicalDefault(c.default);
+    if (def && GENERATED_DEFAULTS.has(def)) continue;
     if (snake(c.name) === PASSWORD_COL) continue; // só /auth/register grava o hash
     if (c.pk && c.default) continue;
     let z = zodFor(c.type, c.name, !c.nullable && !c.default);

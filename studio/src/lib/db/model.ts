@@ -203,3 +203,20 @@ export function camel(s: string): string {
   const p = pascal(s);
   return p.charAt(0).toLowerCase() + p.slice(1);
 }
+
+/**
+ * Valor padrão canônico de uma coluna. A IA (e quem digita) às vezes escreve a
+ * expressão SQL ("now()", "uuid_generate_v4()", "CURRENT_TIMESTAMP") em vez do
+ * marcador do modelo ("now" | "uuid" | "autoincrement"); sem isto o gerador a
+ * colocaria entre aspas como texto e a migração falharia.
+ */
+export function canonicalDefault(raw?: string): string | undefined {
+  if (raw == null) return undefined;
+  let v = raw.trim().replace(/^`|`$/g, "");
+  while (/^\(.*\)$/.test(v)) v = v.slice(1, -1).trim();
+  if (!v) return undefined;
+  if (/^(now(\(\))?|current_timestamp(\(\d*\))?|localtimestamp|getdate\(\)|datetime\('now'\))$/i.test(v)) return "now";
+  if (/^(uuid|gen_random_uuid\(\)|uuid_generate_v4\(\)|uuid\(\)|newid\(\)|cuid\(\))$/i.test(v)) return "uuid";
+  if (/^(autoincrement(\(\))?|auto_increment|serial|identity)$/i.test(v)) return "autoincrement";
+  return v;
+}

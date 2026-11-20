@@ -1,6 +1,6 @@
 // Diagrama ER -> SQL (Postgres, MySQL, SQLite), Prisma, Drizzle e DBML.
 // Tudo determinístico: mesma entrada, mesma saída, funciona offline.
-import { camel, fkColumns, joinTables, pascal, pkOf, singular, snake, type ColType, type Column, type ErModel, type Table } from "./model";
+import { camel, canonicalDefault, fkColumns, joinTables, pascal, pkOf, singular, snake, type ColType, type Column, type ErModel, type Table } from "./model";
 
 export type Dialect = "postgres" | "mysql" | "sqlite";
 export interface GeneratedFile {
@@ -22,7 +22,7 @@ function literal(v: string): string {
 }
 
 function sqlDefault(d: Dialect, c: Column): string {
-  const v = c.default?.trim();
+  const v = canonicalDefault(c.default);
   if (!v || v === "autoincrement") return "";
   if (v === "now") return d === "mysql" ? " DEFAULT CURRENT_TIMESTAMP(3)" : " DEFAULT CURRENT_TIMESTAMP";
   if (v === "uuid") return d === "postgres" ? " DEFAULT gen_random_uuid()" : d === "mysql" ? " DEFAULT (UUID())" : "";
@@ -30,7 +30,7 @@ function sqlDefault(d: Dialect, c: Column): string {
 }
 
 function sqlColumn(d: Dialect, c: Column, singlePk: boolean): string {
-  const auto = c.default === "autoincrement" && (c.type === "int" || c.type === "bigint");
+  const auto = canonicalDefault(c.default) === "autoincrement" && (c.type === "int" || c.type === "bigint");
   let type = SQL_TYPES[d][c.type];
   let extra = "";
   if (auto) {
@@ -125,7 +125,7 @@ function prismaType(t: ColType, optional: boolean): string {
 }
 
 function prismaDefault(c: Column): string {
-  const v = c.default?.trim();
+  const v = canonicalDefault(c.default);
   if (!v) return "";
   if (v === "now") return " @default(now())";
   if (v === "uuid") return " @default(uuid())";
@@ -218,7 +218,7 @@ const DRIZZLE: Record<ColType, (n: string) => string> = {
 
 function drizzleCol(c: Column, singlePk: boolean): string {
   let s = DRIZZLE[c.type](snake(c.name));
-  const v = c.default?.trim();
+  const v = canonicalDefault(c.default);
   if (v === "autoincrement" && (c.type === "int" || c.type === "bigint")) s += ".generatedByDefaultAsIdentity()";
   if (c.pk && singlePk) s += ".primaryKey()";
   if (!c.pk && !c.nullable) s += ".notNull()";
@@ -282,8 +282,9 @@ export function toDbml(model: ErModel): string {
   for (const t of model.tables) {
     out.push(`Table ${snake(t.name)} {`);
     for (const c of t.columns) {
-      const attrs = [c.pk ? "pk" : "", c.pk || c.nullable ? "" : "not null", c.unique && !c.pk ? "unique" : "", c.default === "autoincrement" ? "increment" : ""];
-      if (c.default && !["autoincrement"].includes(c.default)) attrs.push(`default: ${c.default === "now" ? "`now()`" : c.default === "uuid" ? "`gen_random_uuid()`" : literal(c.default)}`);
+      const d = canonicalDefault(c.default);
+      const attrs = [c.pk ? "pk" : "", c.pk || c.nullable ? "" : "not null", c.unique && !c.pk ? "unique" : "", d === "autoincrement" ? "increment" : ""];
+      if (d && d !== "autoincrement") attrs.push(`default: ${d === "now" ? "`now()`" : d === "uuid" ? "`gen_random_uuid()`" : literal(d)}`);
       const a = attrs.filter(Boolean);
       out.push(`  ${snake(c.name)} ${SQL_TYPES.postgres[c.type]}${a.length ? ` [${a.join(", ")}]` : ""}`);
     }
