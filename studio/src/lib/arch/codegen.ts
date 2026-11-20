@@ -2,7 +2,7 @@
 // Determinístico. Quando uma rota bate com uma tabela do canvas Banco e o
 // serviço grava no Postgres, o handler já sai com SQL de verdade.
 import { ARCH, authMode, routeLines, type ArchGraph, type ArchNode, type RouteLine } from "./model";
-import { canonicalDefault, ensureAuthUsers, fkColumns, pascal, PASSWORD_COL, pkOf, snake, USERS_TABLE, type ColType, type ErModel, type Table } from "@/lib/db/model";
+import { canonicalDefault, ensureAuthUsers, fkColumns, pascal, PASSWORD_COL, pkOf, singular, snake, USERS_TABLE, type ColType, type ErModel, type Table } from "@/lib/db/model";
 import { toSql, type GeneratedFile } from "@/lib/db/codegen";
 import { authFile, type OwnAuthSpec } from "./codegen-auth";
 
@@ -80,10 +80,46 @@ function plan(graph: ArchGraph): ServicePlan[] {
 
 const streamName = (q: ArchNode) => q.props.stream?.trim() || snake(q.name);
 
-function tableForPath(path: string, er: ErModel): Table | undefined {
-  const seg = path.split("/").filter(Boolean)[0];
-  if (!seg) return undefined;
-  return er.tables.find((t) => snake(t.name) === snake(seg));
+/** Plural simples em inglês/português (category → categories, team → teams, box → boxes). */
+function pluralOf(name: string): string {
+  if (/[^aeiou]y$/.test(name)) return name.replace(/y$/, "ies");
+  if (/(s|x|z|ch|sh)$/.test(name)) return `${name}es`;
+  return `${name}s`;
+}
+
+/**
+ * Resolve o primeiro segmento da rota para uma tabela, em ordem; para no primeiro
+ * passo que achar exatamente uma tabela (ambiguidade = sem tabela, vira stub 501):
+ *  1. nome exato (snake);
+ *  2. singular/plural (team ↔ teams, category ↔ categories);
+ *  3. tabela que começa com "segmento_" (team → team_members) ou termina com "_segmento" (members → team_members);
+ *  4. nome sem separadores (teammembers / team-members → team_members).
+ * Passos 2–4 nunca escolhem a tabela de auth (users) — ela só casa por nome exato.
+ */
+export function tableForPath(path: string, er: ErModel): Table | undefined {
+  const raw = path.split("/").filter(Boolean)[0];
+  if (!raw) return undefined;
+  const exact = er.tables.find((t) => snake(t.name) === snake(raw));
+  if (exact) return exact;
+  // Segmento de parâmetro (":id", "{id}") nunca é nome de tabela.
+  if (/^[:{]/.test(raw)) return undefined;
+
+  const seg = snake(raw);
+  const sing = singular(seg);
+  const variants = new Set([seg, sing, pluralOf(seg), pluralOf(sing)]);
+  const squashed = seg.replace(/_/g, "");
+  const candidates = er.tables.filter((t) => snake(t.name) !== USERS_TABLE);
+  const steps: Array<(name: string) => boolean> = [
+    (name) => variants.has(name),
+    (name) => [...variants].some((v) => name.startsWith(`${v}_`) || name.endsWith(`_${v}`)),
+    (name) => name.replace(/_/g, "") === squashed,
+  ];
+  for (const matches of steps) {
+    const found = candidates.filter((t) => matches(snake(t.name)));
+    if (found.length === 1) return found[0];
+    if (found.length > 1) return undefined; // ambíguo: não chuta
+  }
+  return undefined;
 }
 
 const GENERATED_DEFAULTS = new Set(["now", "uuid", "autoincrement"]);

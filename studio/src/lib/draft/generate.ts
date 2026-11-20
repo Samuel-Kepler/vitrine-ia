@@ -3,6 +3,7 @@ import { generateText, Output } from "ai";
 import { resolveModel } from "@/lib/ai/providers";
 import { friendlyAIError } from "@/lib/ai/errors";
 import type { ProviderSettings } from "@/lib/ai/settings";
+import { plainText } from "@/lib/ai/plain-text";
 import type { DraftNode } from "./tree";
 import { GeneratedPageSchema, GeneratedSiteSchema, generatePrompt, generateSiteSystem, generateSystem, templateFromPrompt, templateSite, toDraft, toSite, type GeneratedPage, type GeneratedSite, type SiteDraft } from "./generate-shared";
 
@@ -37,7 +38,7 @@ export async function generatePage(input: { prompt: string; brief?: string; sett
     const g = res.output as GeneratedPage;
     const draft = toDraft(g);
     if (!draft.length) return template("a IA devolveu uma página vazia");
-    return { ...base, draft, notes: g.notes, fallback: false };
+    return { ...base, draft, notes: g.notes.map(plainText), fallback: false };
   } catch (err) {
     return template(friendlyAIError(err, resolved.kind, resolved.baseURL));
   }

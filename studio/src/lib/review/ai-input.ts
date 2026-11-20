@@ -2,6 +2,7 @@
 // no cliente e no servidor): monta a entrada do modelo, o schema da resposta,
 // a revisão só com regras (plano B) e a junção regras + IA.
 import { z } from "zod/v4";
+import { plainText } from "@/lib/ai/plain-text";
 import { ARCH, EDGE_LABELS, authMode, type ArchGraph } from "@/lib/arch/model";
 import { toDbml } from "@/lib/db/codegen";
 import type { ErModel } from "@/lib/db/model";
@@ -140,7 +141,7 @@ Regras:
 - No máximo 6 problemas, do mais importante para o menos. Cada um com título curto e sugestão concreta.
 - "target" é o nome EXATO de um bloco, tabela ou seção que aparece na entrada; null se o problema for geral.
 - Os "problemas já apontados pelas regras" aparecem para o painel: NÃO os repita, mas considere-os na nota.
-- Não invente partes que não estão na entrada. Escreva tudo em português do Brasil.
+- Não invente partes que não estão na entrada. Escreva tudo em português do Brasil, em texto puro: sem markdown (nada de **negrito**, #, listas com traço) e sem emojis.
 - Nas sugestões, NUNCA proponha fatos concretos que não estão na entrada (horários, preços, endereços, telefones, nomes, números, depoimentos): eles viram texto do site. Use marcadores, ex.: "informe o horário completo, como [dias e horários]".`;
 }
 
@@ -184,11 +185,11 @@ export function mergeReview(mode: ReviewMode, s: ReviewState, raw: AiReviewRaw, 
   const targets = targetIndex(mode, s);
   const seen = new Set(findings.map((f) => f.message.toLowerCase()));
   const ai: ReviewIssue[] = raw.issues
-    .filter((i) => !seen.has(i.title.toLowerCase()))
+    .filter((i) => !seen.has(plainText(i.title).toLowerCase()))
     .map((i) => ({
       severity: i.severity,
-      title: i.title,
-      suggestion: i.suggestion,
+      title: plainText(i.title),
+      suggestion: plainText(i.suggestion),
       target: i.target ?? undefined,
       targetId: i.target ? targets.get(i.target.trim().toLowerCase()) : undefined,
       source: "ia" as const,
@@ -197,7 +198,7 @@ export function mergeReview(mode: ReviewMode, s: ReviewState, raw: AiReviewRaw, 
   return {
     mode,
     score: hasError ? Math.min(raw.score, ERROR_CAP) : raw.score,
-    summary: raw.summary,
+    summary: plainText(raw.summary),
     issues: [...findings.map(fromRule), ...ai],
     ...base,
     fallback: false,

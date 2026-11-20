@@ -3,6 +3,7 @@ import { generateText, Output } from "ai";
 import { resolveVisionModel } from "@/lib/ai/providers";
 import { friendlyAIError } from "@/lib/ai/errors";
 import type { ProviderSettings } from "@/lib/ai/settings";
+import { plainText } from "@/lib/ai/plain-text";
 import { GeneratedPageSchema, toDraft, type GeneratedPage } from "./generate-shared";
 import { mergeHeadingOnly, sketchPrompt, sketchSystem, templateFromSketch } from "./sketch-shared";
 import type { DraftNode } from "./tree";
@@ -51,7 +52,7 @@ export async function runSketch(input: { image?: string; name?: string; descript
     const g = res.output as GeneratedPage;
     const draft = mergeHeadingOnly(toDraft(g).filter((n) => n.type !== "navbar" && n.type !== "footer"));
     if (!draft.length) return template("a IA devolveu um bloco vazio");
-    return { ...base, draft, notes: g.notes, fallback: false };
+    return { ...base, draft, notes: g.notes.map(plainText), fallback: false };
   } catch (err) {
     lastError = err;
   }

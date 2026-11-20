@@ -3,7 +3,7 @@ import { compressImage, STOCK_IMAGE_SIDE } from "@/lib/assets/assets";
 import { useStudio } from "@/lib/draft/store";
 import { findNode } from "@/lib/draft/tree";
 import type { Photo, PhotoSource } from "@/lib/photos/photos";
-import { shouldAutoFillPhotos, type PhotoSlot } from "@/lib/photos/auto";
+import { heroVariantWithPhoto, shouldAutoFillPhotos, type PhotoSlot } from "@/lib/photos/auto";
 import { pageBrief } from "./reimagine-client";
 
 export type { Photo, PhotoSource };
@@ -73,7 +73,11 @@ export async function autoFillPhotos(onProgress?: (done: number, total: number) 
       try {
         const url = await importStock(photo);
         if (slot.key === "images") gallery.set(slot.nodeId, [...(gallery.get(slot.nodeId) ?? []), url]);
-        else useStudio.getState().update(slot.nodeId, { [slot.key]: url });
+        else if (slot.key === "image") {
+          // Hero: a foto só aparece se o estilo mostrar imagem (centralizado/gradiente viram imagem de fundo).
+          const hero = findNode(useStudio.getState().tree, slot.nodeId);
+          useStudio.getState().update(slot.nodeId, { image: url, variant: heroVariantWithPhoto(hero?.props.variant) ?? "" });
+        } else useStudio.getState().update(slot.nodeId, { [slot.key]: url });
         filled++;
         break;
       } catch {

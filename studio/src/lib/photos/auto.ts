@@ -19,8 +19,8 @@ export interface PhotoSlot {
 }
 
 const lines = (s: string | undefined) => (s ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
-/** Estilos de hero em que a imagem aparece. */
-const HERO_WITH_IMAGE = new Set(["", "auto", "split", "image-bg"]);
+/** Único estilo de hero sem espaço de imagem; os demais (centralizado, gradiente, sem estilo...) recebem foto. */
+const HERO_NO_IMAGE = "minimal";
 /** Galeria sem legendas: quantas fotos sugerir. */
 const GALLERY_DEFAULT = 3;
 const GALLERY_MAX = 9;
@@ -34,7 +34,7 @@ export function photoSlots(draft: DraftNode[]): PhotoSlot[] {
   const visit = (ns: DraftNode[]) => {
     for (const n of ns) {
       const p = n.props;
-      if (n.type === "hero" && !p.image?.trim() && HERO_WITH_IMAGE.has(p.variant ?? "")) {
+      if (n.type === "hero" && !p.image?.trim() && (p.variant ?? "") !== HERO_NO_IMAGE) {
         out.push({ nodeId: n.id, key: "image", text: [p.title, p.subtitle].filter(Boolean).join(". ") });
       } else if (n.type === "image" && !p.url?.trim()) {
         out.push({ nodeId: n.id, key: "url", text: p.alt || p.caption || "" });
@@ -141,6 +141,16 @@ const GENERIC = new Set([
  * as 2 últimas palavras, as 2 primeiras, cada palavra específica e o termo amplo do negócio.
  * Sem repetição (sem diferenciar maiúsculas) e sem buscas só de palavras genéricas.
  */
+/**
+ * Estilo do Hero depois que o preenchimento automático põe uma foto nele: centralizado,
+ * gradiente ou sem estilo viram "Imagem de fundo" (a foto aparece no preview e a IA a mantém).
+ * Dividido, minimalista e "A IA escolhe" não mudam.
+ */
+export function heroVariantWithPhoto(variant: string | undefined): string | undefined {
+  if (variant === undefined || variant === "" || variant === "centered" || variant === "gradient") return "image-bg";
+  return variant;
+}
+
 /** Antes de reimaginar: preenche só se a opção estiver ligada e houver espaço vazio. */
 export function shouldAutoFillPhotos(draft: DraftNode[], enabled: boolean): boolean {
   return enabled && photoSlots(draft).length > 0;

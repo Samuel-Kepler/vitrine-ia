@@ -8,6 +8,7 @@ import { compileResponse, promptSnippet, type A2uiMessage } from "@/lib/a2ui/age
 import { resolveModel } from "@/lib/ai/providers";
 import { friendlyAIError } from "@/lib/ai/errors";
 import type { ProviderSettings } from "@/lib/ai/settings";
+import { plainText } from "@/lib/ai/plain-text";
 import { systemPrompt, userPrompt } from "./prompt";
 import { checkFacts, factWarnings } from "./fact-check";
 
@@ -84,7 +85,7 @@ export async function reimagine(input: ReimagineInput): Promise<ReimagineResult>
         messages: compiled.messages,
         express: compiled.express,
         facts: factWarnings(checkFacts(compiled.messages, input.draft, input.brief)),
-        note: compiled.prose,
+        note: plainText(compiled.prose),
         usage: { inputTokens, outputTokens },
       };
     } catch (err) {

@@ -5,6 +5,7 @@ import { generateText, Output } from "ai";
 import { resolveModel } from "@/lib/ai/providers";
 import { friendlyAIError } from "@/lib/ai/errors";
 import type { ProviderSettings } from "@/lib/ai/settings";
+import { plainText } from "@/lib/ai/plain-text";
 import type { DraftNode } from "@/lib/draft/tree";
 import { blockCatalog, GeneratedPageSchema, GeneratedSiteSchema, toDraft, toSite, type GeneratedPage, type GeneratedSite } from "@/lib/draft/generate-shared";
 import { outlinesToSite, outlineToPrompt, pageNameFromFile, type PageOutline } from "./outline";
@@ -68,7 +69,7 @@ export async function importSite(input: { outlines: PageOutline[]; brief?: strin
       const g = res.output as GeneratedPage;
       const tree = toDraft(g);
       if (!tree.length) return fallback("a IA devolveu uma página vazia");
-      return { ...base, pages: [{ name: pageNameFromFile(outlines[0].file, outlines[0].title), tree }], notes: g.notes, fallback: false };
+      return { ...base, pages: [{ name: pageNameFromFile(outlines[0].file, outlines[0].title), tree }], notes: g.notes.map(plainText), fallback: false };
     }
     const res = await generateText({
       model: resolved.model,

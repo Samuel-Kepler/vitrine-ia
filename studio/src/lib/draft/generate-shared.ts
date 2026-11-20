@@ -7,6 +7,7 @@ import { BLOCKS, type BlockType } from "./blocks";
 import { createNode, type DraftNode } from "./tree";
 import { chromeOf } from "./pages";
 import { recipeHints } from "./recipes";
+import { plainText } from "@/lib/ai/plain-text";
 
 /** Blocos que podem ficar direto na página. */
 export const TOP_TYPES = ["navbar", "hero", "section", "form", "footer", "custom"] as const satisfies readonly BlockType[];
@@ -71,9 +72,11 @@ function contentRules(year: number): string {
 - NÃO INVENTE FATOS: nada de preço, horário, endereço, telefone, número, nome de cliente, depoimento ou marca que o usuário não escreveu. Quando faltar, use um marcador entre colchetes, como "[preço]", "[horário]", "[depoimento de um cliente]", "[nome do cliente]".
 - Itens de cardápio, produtos, serviços, diferenciais, história, tempo de mercado e prêmios: só os que o usuário citou. Se ele só disse "cardápio", use "[produto 1]", "[produto 2]" com texto "[descrição curta]". Nunca escreva nomes de produtos que ele não escreveu.
 - Imagens: deixe url/image vazios (o usuário põe depois); nunca invente endereço de imagem.
+- Hero.variant: para negócio com lugar físico ou produtos (restaurante, clínica, loja, salão...) use "image-bg" ou "split"; "centered" ou "gradient" só para software e serviços abstratos.
 - Rodapé: "© ${year} [sua marca]" (ou o nome que o usuário deu).
 - Se o usuário não disse o nome do negócio, use "[sua marca]".
-- Em notes, diga em 1 a 3 frases o que a pessoa precisa preencher (os marcadores).`;
+- Em notes, diga em 1 a 3 frases o que a pessoa precisa preencher (os marcadores).
+- Responda em texto puro, sem markdown (nada de **negrito**, #, listas com traço) e sem emojis.`;
 }
 
 export function generatePrompt(prompt: string, brief?: string): string {
@@ -311,7 +314,7 @@ export function toSite(g: GeneratedSite): SiteDraft {
   const navbar = makeNode("navbar", g.navbar.props.filter((x) => x.key !== "links"));
   navbar.props.links = pages.map((p) => p.name).join("\n");
   const footer = makeNode("footer", g.footer.props);
-  return { pages: pages.map((p) => ({ name: p.name, tree: [navbar, ...p.body, footer] })), notes: g.notes };
+  return { pages: pages.map((p) => ({ name: p.name, tree: [navbar, ...p.body, footer] })), notes: g.notes.map(plainText) };
 }
 
 /** Sem IA: Início + uma página por assunto encontrado no pedido. */

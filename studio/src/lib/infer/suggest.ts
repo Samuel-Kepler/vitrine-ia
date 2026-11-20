@@ -8,6 +8,7 @@ import { ARCH_KINDS, EDGE_KINDS } from "@/lib/arch/model";
 import { COL_TYPES } from "@/lib/db/model";
 import { resolveModel } from "@/lib/ai/providers";
 import { friendlyAIError } from "@/lib/ai/errors";
+import { plainText } from "@/lib/ai/plain-text";
 import type { ProviderSettings } from "@/lib/ai/settings";
 import { inferFromDraft, type Suggestion } from "./from-draft";
 
@@ -62,7 +63,8 @@ Regras:
 - Login: o bloco "auth" gera register/login/me dentro da API (não liste rotas /auth). Inclua a tabela "users" com "email" varchar unique e "password_hash" text. Rotas que exigem usuário logado terminam com " auth" (ex.: "POST /subscriptions auth").
 - Seja enxuto: nada de microsserviços sem motivo.
 - Não invente funcionalidades: só proponha integrações, serviços externos, tabelas e rotas que a landing ou o briefing sugerem (formulário, planos, depoimentos, login, imagens). Nada de CRM, analytics, chat, recomendação, estoque ou pagamento se a página não pede. As notas explicam cada peça citando o bloco da landing que a justifica.
-- Ligações: quem grava no Postgres é a api/service/worker; fila e site nunca ligam direto no banco.`;
+- Ligações: quem grava no Postgres é a api/service/worker; fila e site nunca ligam direto no banco.
+- Responda em texto puro, em português: sem markdown (nada de **negrito**, #, listas com traço) e sem emojis.`;
 
 // Provedores com saída estruturada estrita (Groq, OpenAI) exigem que toda
 // propriedade esteja em "required"; por isso os opcionais são nullable e os
@@ -75,7 +77,7 @@ export function normalizeSuggestion(raw: Raw): Suggestion {
   return {
     arch: { nodes: raw.arch.nodes.map(dropNulls) as Suggestion["arch"]["nodes"], edges: raw.arch.edges },
     db: { tables: raw.db.tables.map((t) => ({ name: t.name, columns: t.columns.map(dropNulls) as Suggestion["db"]["tables"][number]["columns"] })), relations: raw.db.relations },
-    notes: raw.notes,
+    notes: raw.notes.map(plainText),
   };
 }
 

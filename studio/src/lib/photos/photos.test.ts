@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createNode } from "@/lib/draft/tree";
 import { fetchPhoto, isValidPhotoId, MAX_PHOTO_BYTES, photoSource, searchPhotos } from "./photos";
-import { fallbackQueries, photoQueries, photoSlots, shouldAutoFillPhotos } from "./auto";
+import { fallbackQueries, heroVariantWithPhoto, photoQueries, photoSlots, shouldAutoFillPhotos } from "./auto";
 
 const OV_ID = "560cadfd-c4dc-44f6-ba6d-7a3af6e9a307";
 type Call = { url: string; headers: Record<string, string> };
@@ -93,15 +93,31 @@ describe("photoSlots", () => {
     const gallery = node("gallery", { images: "https://a/1.jpg", captions: "Balcão\nTorra\nGrãos\nMesa" });
     const team = node("team", { photo: "" });
     const slots = photoSlots([hero, centered, img, gallery, team]);
-    expect(slots.map((s) => `${s.key}${s.index ?? ""}:${s.text}`)).toEqual(["image:Café fresco. Torra semanal", "url:Balcão da loja", "images1:Torra", "images2:Grãos", "images3:Mesa"]);
+    expect(slots.map((s) => `${s.key}${s.index ?? ""}:${s.text}`)).toEqual(["image:Café fresco. Torra semanal", "image:Outro. Explique o benefício principal.", "url:Balcão da loja", "images1:Torra", "images2:Grãos", "images3:Mesa"]);
   });
 
-  it("hero com estilo padrão (auto) sem imagem é espaço; com imagem ou estilo sem foto não", () => {
+  it("hero com estilo padrão (auto) sem imagem é espaço; com imagem não", () => {
     const auto = node("hero", { title: "Café", image: "" });
     expect(auto.props.variant).toBe("auto");
     expect(photoSlots([auto]).map((s) => s.key)).toEqual(["image"]);
     expect(photoSlots([node("hero", { title: "Café", image: "https://a/1.jpg" })])).toEqual([]);
-    expect(photoSlots([node("hero", { title: "Café", image: "", variant: "gradient" })])).toEqual([]);
+  });
+
+  it("hero centralizado e com gradiente sem imagem são espaço; minimalista não", () => {
+    expect(photoSlots([node("hero", { title: "Software", image: "", variant: "centered" })]).map((s) => s.key)).toEqual(["image"]);
+    expect(photoSlots([node("hero", { title: "Software", image: "", variant: "gradient" })]).map((s) => s.key)).toEqual(["image"]);
+    expect(photoSlots([node("hero", { title: "Café", image: "", variant: "minimal" })])).toEqual([]);
+  });
+
+  it("troca do estilo do hero ao receber foto: centralizado, gradiente e sem estilo viram imagem de fundo", () => {
+    expect(heroVariantWithPhoto("centered")).toBe("image-bg");
+    expect(heroVariantWithPhoto("gradient")).toBe("image-bg");
+    expect(heroVariantWithPhoto(undefined)).toBe("image-bg");
+    expect(heroVariantWithPhoto("")).toBe("image-bg");
+    expect(heroVariantWithPhoto("split")).toBe("split");
+    expect(heroVariantWithPhoto("image-bg")).toBe("image-bg");
+    expect(heroVariantWithPhoto("minimal")).toBe("minimal");
+    expect(heroVariantWithPhoto("auto")).toBe("auto");
   });
 
   it("antes de reimaginar: só com a opção ligada e espaço vazio", () => {
