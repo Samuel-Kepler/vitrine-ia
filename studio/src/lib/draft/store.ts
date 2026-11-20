@@ -135,6 +135,10 @@ function nodeFromPayload(state: StudioState, payload: Exclude<DragPayload, { kin
   return saved ? cloneWithNewIds(saved.node) : undefined;
 }
 
+/** Assets criados há pouco (id -> instante): ainda não entraram em nenhum bloco, mas não podem sumir. */
+const freshAssets = new Map<string, number>();
+const FRESH_ASSET_MS = 5 * 60_000;
+
 export const useStudio = create<StudioState>()(
   persist(
     temporal(
@@ -320,10 +324,15 @@ export const useStudio = create<StudioState>()(
         addAsset: (dataUrl) => {
           const s = get();
           // Imagens que nenhuma página usa mais saem (o localStorage é pequeno).
+          // As recém-criadas ficam: várias fotos chegam uma a uma e só depois
+          // entram no bloco (galeria com vários arquivos, "Preencher fotos").
           const used = referencedAssets(s.allPages());
-          const kept = Object.fromEntries(Object.entries(s.assets).filter(([id]) => used.has(id)));
+          const now = Date.now();
+          for (const [k, t] of freshAssets) if (now - t > FRESH_ASSET_MS) freshAssets.delete(k);
+          const kept = Object.fromEntries(Object.entries(s.assets).filter(([id]) => used.has(id) || freshAssets.has(id)));
           const same = Object.entries(kept).find(([, d]) => d === dataUrl)?.[0];
           const id = same ?? newAssetId();
+          freshAssets.set(id, now);
           set({ assets: { ...kept, [id]: dataUrl } });
           return assetUrl(id);
         },

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MessageProcessor } from "@a2ui/web_core/v1_0";
 import { compileResponse } from "@/lib/a2ui/agent";
 import { CUSTOM_APIS, buildCatalog } from "@/lib/a2ui/catalog-api";
@@ -84,14 +84,20 @@ describe("store: addAsset", () => {
 
     const a = useStudio.getState().addAsset(PNG);
     expect(isAssetUrl(a)).toBe(true);
-    expect(useStudio.getState().addAsset(PNG)).not.toBe(a); // a não estava em uso: foi limpa e recriada
+    // Recém-criada ainda não está em bloco nenhum, mas fica (e a mesma imagem reaproveita o id).
+    expect(useStudio.getState().addAsset(PNG)).toBe(a);
 
     const hero = createNode("hero");
-    const url = useStudio.getState().addAsset(PNG);
-    hero.props.image = url;
+    hero.props.image = a;
     useStudio.getState().reset([hero]);
-    expect(useStudio.getState().addAsset(PNG)).toBe(url); // em uso: reaproveita
     const other = useStudio.getState().addAsset(PNG.replace("AAAA", "AAAB"));
-    expect(Object.keys(useStudio.getState().assets).sort()).toEqual([url, other].map((u) => u.slice(ASSET_PREFIX.length)).sort());
+    expect(Object.keys(useStudio.getState().assets).sort()).toEqual([a, other].map((u) => u.slice(ASSET_PREFIX.length)).sort());
+
+    // Passado o prazo, a que nenhuma página usa sai; a do hero fica.
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.now() + 10 * 60_000);
+    const third = useStudio.getState().addAsset(PNG.replace("AAAA", "AAAC"));
+    vi.useRealTimers();
+    expect(Object.keys(useStudio.getState().assets).sort()).toEqual([a, third].map((u) => u.slice(ASSET_PREFIX.length)).sort());
   });
 });

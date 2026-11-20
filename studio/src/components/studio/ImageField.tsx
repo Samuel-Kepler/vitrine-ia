@@ -1,8 +1,9 @@
 "use client";
 import { useRef, useState } from "react";
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { ImagePlus, Images, Loader2, Search, X } from "lucide-react";
 import { useStudio } from "@/lib/draft/store";
 import { compressImage, dataUrlKb, IMAGE_ACCEPT, isAssetUrl, resolveAssets } from "@/lib/assets/assets";
+import { importStock, searchStock, SOURCE_LABEL, type Photo, type PhotoSource } from "./photos-client";
 
 const input =
   "w-full rounded-md border border-line bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -55,8 +56,103 @@ function Thumb({ src, label, onRemove }: { src: string; label: string; onRemove:
   );
 }
 
+/** Busca no banco de fotos gratuito; ao clicar, baixa, comprime e guarda no projeto. */
+function StockPicker({ id, suggest, onPick, keepOpen }: { id: string; suggest?: string; onPick: (url: string) => void; keepOpen?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState(suggest ?? "");
+  const [photos, setPhotos] = useState<Photo[] | null>(null);
+  const [source, setSource] = useState<PhotoSource | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const search = async () => {
+    if (!q.trim()) return;
+    setBusy("search");
+    setError(null);
+    try {
+      const r = await searchStock(q.trim());
+      setPhotos(r.photos);
+      setSource(r.source);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+  const pick = async (p: Photo) => {
+    setBusy(p.id);
+    setError(null);
+    try {
+      onPick(await importStock(p));
+      if (!keepOpen) setOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+  if (!open)
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-1.5 flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs hover:bg-gray-50"
+        data-testid={`${id}-stock`}
+      >
+        <Images size={13} /> Banco de fotos grátis
+      </button>
+    );
+  return (
+    <div className="mt-1.5 rounded-md border border-line bg-canvas p-2" data-testid={`${id}-stock-panel`}>
+      <form
+        className="flex gap-1.5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void search();
+        }}
+      >
+        <input className={input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="ex.: coffee shop counter" aria-label="Buscar foto" autoFocus />
+        <button type="submit" className="rounded-md border border-line bg-white px-2 hover:bg-gray-50 disabled:opacity-50" disabled={busy === "search"} aria-label="Buscar">
+          {busy === "search" ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+        </button>
+        <button type="button" className="rounded-md px-1 text-muted hover:text-gray-900" onClick={() => setOpen(false)} aria-label="Fechar banco de fotos">
+          <X size={13} />
+        </button>
+      </form>
+      <p className="mt-1 text-[10px] text-muted">Termos em inglês trazem mais resultados.</p>
+      {photos ? (
+        photos.length ? (
+          <div className="mt-1.5 grid max-h-64 grid-cols-3 gap-1 overflow-y-auto">
+            {photos.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => void pick(p)}
+                disabled={!!busy}
+                title={`${p.title}${p.creator ? ` — ${p.creator}` : ""} (${p.license})`}
+                className="relative overflow-hidden rounded border border-line bg-white hover:ring-2 hover:ring-brand disabled:opacity-60"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.thumb} alt={p.title} loading="lazy" className="aspect-[4/3] w-full object-cover" referrerPolicy="no-referrer" />
+                {busy === p.id ? (
+                  <span className="absolute inset-0 flex items-center justify-center bg-white/60">
+                    <Loader2 size={14} className="animate-spin" />
+                  </span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-1.5 text-[11px] text-muted">Nada encontrado. Tente outras palavras (em inglês).</p>
+        )
+      ) : null}
+      {source ? <p className="mt-1 text-[10px] text-muted">{SOURCE_LABEL[source]}</p> : null}
+      {error ? <p className="mt-1 text-[11px] text-red-700">{error}</p> : null}
+    </div>
+  );
+}
+
 /** Uma imagem: do computador (comprimida e guardada no projeto) ou URL https. */
-export function SingleImageField({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (v: string) => void }) {
+export function SingleImageField({ id, label, value, onChange, suggest }: { id: string; label: string; value: string; onChange: (v: string) => void; suggest?: string }) {
   const file = useRef<HTMLInputElement>(null);
   const { upload, busy, error } = useUpload();
   const fromComputer = isAssetUrl(value);
@@ -85,6 +181,7 @@ export function SingleImageField({ id, label, value, onChange }: { id: string; l
         />
       </div>
       {error ? <p className="mt-1 text-[11px] text-red-700">{error}</p> : null}
+      <StockPicker id={id} suggest={suggest} onPick={onChange} />
       <input
         ref={file}
         type="file"
@@ -104,7 +201,7 @@ export function SingleImageField({ id, label, value, onChange }: { id: string; l
 }
 
 /** Galeria: várias imagens (uma por linha no rascunho). */
-export function GalleryImagesField({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (v: string) => void }) {
+export function GalleryImagesField({ id, label, value, onChange, suggest }: { id: string; label: string; value: string; onChange: (v: string) => void; suggest?: string }) {
   const file = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState("");
   const { upload, busy, error } = useUpload();
@@ -146,6 +243,8 @@ export function GalleryImagesField({ id, label, value, onChange }: { id: string;
         </form>
       </div>
       {error ? <p className="mt-1 text-[11px] text-red-700">{error}</p> : null}
+      {/* Galeria: o painel fica aberto para escolher várias (um download por vez). */}
+      <StockPicker id={id} suggest={suggest} keepOpen onPick={(u) => set([...list, u])} />
       <input
         ref={file}
         type="file"

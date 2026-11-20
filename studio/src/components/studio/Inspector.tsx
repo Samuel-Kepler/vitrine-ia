@@ -9,7 +9,8 @@ import { BlockIcon } from "./icons";
 import { GalleryImagesField, IMAGE_KEYS, SingleImageField } from "./ImageField";
 import { SketchDialog } from "./SketchDialog";
 import { useState } from "react";
-import { PencilLine } from "lucide-react";
+import { Images, Loader2, PencilLine } from "lucide-react";
+import { autoFillPhotos } from "./photos-client";
 
 const input =
   "w-full rounded-md border border-line bg-white px-2.5 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -43,7 +44,7 @@ function NodeEditor({ id }: { id: string }) {
 
       <div className="space-y-3">
         {def.fields.map((f) => (
-          <Field key={f.key} field={f} value={node.props[f.key] ?? ""} onChange={(v) => update(id, { [f.key]: v })} />
+          <Field key={f.key} field={f} value={node.props[f.key] ?? ""} onChange={(v) => update(id, { [f.key]: v })} context={photoContext(node.props)} />
         ))}
         {def.fields.length === 0 ? <p className="text-sm text-muted">Arraste blocos para dentro deste container.</p> : null}
       </div>
@@ -95,13 +96,19 @@ function NodeEditor({ id }: { id: string }) {
   );
 }
 
-function Field({ field, value, onChange }: { field: FieldDef; value: string; onChange: (v: string) => void }) {
+/** Sugestão inicial para a busca de fotos: o texto que descreve a imagem no bloco. */
+function photoContext(p: Record<string, string>): string {
+  const first = (s?: string) => (s ?? "").split("\n").map((l) => l.trim()).find(Boolean) ?? "";
+  return (p.alt || first(p.captions) || p.title || p.role || "").slice(0, 80);
+}
+
+function Field({ field, value, onChange, context }: { field: FieldDef; value: string; onChange: (v: string) => void; context?: string }) {
   const id = `f-${field.key}`;
   if (IMAGE_KEYS.has(field.key)) {
     return field.kind === "lines" ? (
-      <GalleryImagesField id={id} label={field.label} value={value} onChange={onChange} />
+      <GalleryImagesField id={id} label={field.label} value={value} onChange={onChange} suggest={context} />
     ) : (
-      <SingleImageField id={id} label={field.label} value={value} onChange={onChange} />
+      <SingleImageField id={id} label={field.label} value={value} onChange={onChange} suggest={context} />
     );
   }
   return (
@@ -189,9 +196,47 @@ function PageSettings() {
           ))}
         </select>
       </label>
+      <AutoPhotos />
       <p className="mt-6 text-xs text-muted">
         Dica: clique num bloco para editar. Selecionado um container (Seção, Linha, Coluna, Cartão), o clique na paleta adiciona dentro dele.
       </p>
+    </div>
+  );
+}
+
+/** Completa hero, imagens e galerias vazias da página com fotos de banco gratuito. */
+function AutoPhotos() {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const run = async () => {
+    setBusy("buscando…");
+    setMsg(null);
+    try {
+      const r = await autoFillPhotos((done, total) => setBusy(`baixando ${Math.min(done + 1, total)}/${total}…`));
+      setMsg(
+        r.total === 0
+          ? { ok: true, text: "Nenhum espaço de foto vazio nesta página." }
+          : { ok: r.filled > 0, text: `${r.filled} de ${r.total} foto(s) adicionada(s). Buscas: ${[...new Set(r.queries)].join(", ")}.${r.note ? ` ${r.note}` : ""} Ctrl+Z desfaz.` },
+      );
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div className="mt-4 rounded-md border border-line p-2.5">
+      <button
+        type="button"
+        onClick={() => void run()}
+        disabled={!!busy}
+        className="flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-white px-2 py-1.5 text-xs font-medium hover:bg-gray-50 disabled:opacity-60"
+        data-testid="auto-photos"
+      >
+        {busy ? <Loader2 size={13} className="animate-spin" /> : <Images size={13} />} {busy ? `Fotos: ${busy}` : "Preencher fotos vazias"}
+      </button>
+      <p className="mt-1.5 text-[11px] text-muted">Hero, imagens e galerias sem foto recebem fotos de banco gratuito. Fotos da equipe ficam de fora: use as pessoas reais.</p>
+      {msg ? <p className={`mt-1.5 text-[11px] ${msg.ok ? "text-gray-700" : "text-red-700"}`}>{msg.text}</p> : null}
     </div>
   );
 }

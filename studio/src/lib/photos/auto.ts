@@ -1,0 +1,168 @@
+// "Preencher fotos": acha os espaços de imagem vazios de uma página e monta
+// buscas para o banco de fotos. A IA só traduz o contexto em termos de busca
+// em inglês (os bancos indexam em inglês); sem IA, usa o próprio texto.
+import { generateText, Output } from "ai";
+import { z } from "zod";
+import type { DraftNode } from "@/lib/draft/tree";
+import { resolveModel } from "@/lib/ai/providers";
+import type { ProviderSettings } from "@/lib/ai/settings";
+import { friendlyAIError } from "@/lib/ai/errors";
+
+export interface PhotoSlot {
+  nodeId: string;
+  /** Prop do bloco: hero.image, image.url ou gallery.images (com index). */
+  key: "image" | "url" | "images";
+  /** Posição na galeria (uma foto por linha). */
+  index?: number;
+  /** Contexto em português: título, legenda, descrição. */
+  text: string;
+}
+
+const lines = (s: string | undefined) => (s ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+/** Estilos de hero em que a imagem aparece. */
+const HERO_WITH_IMAGE = new Set(["", "auto", "split", "image-bg"]);
+/** Galeria sem legendas: quantas fotos sugerir. */
+const GALLERY_DEFAULT = 3;
+const GALLERY_MAX = 9;
+
+/**
+ * Espaços vazios, na ordem da página. Fotos da Equipe ficam de fora de propósito:
+ * rosto de banco de imagens no lugar da equipe real engana quem visita o site.
+ */
+export function photoSlots(draft: DraftNode[]): PhotoSlot[] {
+  const out: PhotoSlot[] = [];
+  const visit = (ns: DraftNode[]) => {
+    for (const n of ns) {
+      const p = n.props;
+      if (n.type === "hero" && !p.image?.trim() && HERO_WITH_IMAGE.has(p.variant ?? "")) {
+        out.push({ nodeId: n.id, key: "image", text: [p.title, p.subtitle].filter(Boolean).join(". ") });
+      } else if (n.type === "image" && !p.url?.trim()) {
+        out.push({ nodeId: n.id, key: "url", text: p.alt || p.caption || "" });
+      } else if (n.type === "gallery") {
+        const have = lines(p.images).length;
+        const captions = lines(p.captions);
+        const want = Math.min(Math.max(captions.length, GALLERY_DEFAULT), GALLERY_MAX);
+        for (let i = have; i < want; i++) out.push({ nodeId: n.id, key: "images", index: i, text: captions[i] ?? "" });
+      }
+      visit(n.children ?? []);
+    }
+  };
+  visit(draft);
+  return out;
+}
+
+const QueriesSchema = z.object({ queries: z.array(z.string()) });
+
+const SYSTEM = `You write search queries for a free stock photo site (Openverse/Pexels).
+For each numbered slot, return ONE query in ENGLISH with 2 to 4 concrete, photographable words
+(objects, place, scene). Use the business brief for context. No brand names, no people's names,
+no text/logos. Different slots should get different queries. Return exactly one query per slot, in order.`;
+
+// ---------------- sem IA: glossário português -> inglês ----------------
+// Os bancos de fotos indexam em inglês: "Café sendo coado" acha 0 fotos e
+// "coffee brewing" acha dezenas. Sem modelo, traduzimos o que for conhecido.
+
+/** Tipo de negócio (procurado no briefing e no texto): vira o termo amplo da busca. */
+const BUSINESS: [RegExp, string][] = [
+  [/\b(cafeteria|cafe|torrefacao|torra)\b/, "coffee shop"],
+  [/\b(padaria|confeitaria)\b/, "bakery"],
+  [/\b(pizzaria|pizza)\b/, "pizza"],
+  [/\b(hamburgueria|burger)\b/, "burger"],
+  [/\b(restaurante|bistro|comida)\b/, "restaurant"],
+  [/\b(bar|cervejaria|pub)\b/, "bar"],
+  [/\bsorveteria\b/, "ice cream"],
+  [/\b(salao|cabelo|cabeleireir\w*|beleza|estetica)\b/, "beauty salon"],
+  [/\bbarbearia\b/, "barbershop"],
+  [/\b(academia|personal|treino|crossfit)\b/, "gym fitness"],
+  [/\b(yoga|pilates)\b/, "yoga"],
+  [/\b(clinica|consultorio|saude|fisioterapia)\b/, "clinic"],
+  [/\b(dentista|odontologia)\b/, "dentist"],
+  [/\b(pet|petshop|veterinari\w*|cachorro|gato)\b/, "pet"],
+  [/\b(escola|curso|aula)\b/, "classroom"],
+  [/\b(hotel|pousada|hostel)\b/, "hotel"],
+  [/\b(floricultura|flores)\b/, "flowers"],
+  [/\b(loja|boutique|moda|roupas)\b/, "shop"],
+  [/\b(escritorio|advocacia|contabilidade|consultoria)\b/, "office"],
+  [/\b(imobiliaria|imoveis|apartamento)\b/, "house interior"],
+];
+
+const WORDS: Record<string, string> = {
+  cafe: "coffee", xicara: "cup", grao: "beans", graos: "beans", torra: "roasting", torrado: "roasted",
+  torradeira: "coffee roaster", coado: "pour over", espresso: "espresso", latte: "latte", leite: "milk", bolo: "cake",
+  doce: "dessert", pao: "bread", paes: "bread", croissant: "croissant", pizza: "pizza", forno: "oven",
+  massa: "pasta", prato: "dish", comida: "food", cozinha: "kitchen", chef: "chef", vinho: "wine",
+  cerveja: "beer", drink: "cocktail", suco: "juice", fruta: "fruit", salada: "salad",
+  balcao: "counter", mesa: "table", loja: "shop", interior: "interior", fachada: "storefront",
+  ambiente: "ambience", externo: "outdoor", jardim: "garden", varanda: "terrace", salao: "salon",
+  equipe: "team", cliente: "customer", barista: "barista", entrega: "delivery", caixa: "box",
+  cabelo: "hair", corte: "haircut", unha: "nails", maquiagem: "makeup", spa: "spa", massagem: "massage",
+  treino: "workout", academia: "gym", peso: "weights", corrida: "running", yoga: "yoga", bicicleta: "bicycle",
+  cachorro: "dog", gato: "cat", flor: "flower", flores: "flowers", livro: "book", sala: "room",
+  quarto: "bedroom", piscina: "pool", praia: "beach", montanha: "mountain", cidade: "city", rua: "street",
+  escritorio: "office", reuniao: "meeting", computador: "laptop", notebook: "laptop", celular: "smartphone",
+  fazenda: "farm", plantacao: "plantation", colheita: "harvest", maquina: "machine", ferramenta: "tools",
+  noite: "night", manha: "morning", sol: "sunlight", artesanal: "artisan", fresco: "fresh",
+};
+
+const fold = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+/** Termo amplo do negócio, achado no briefing (ou no texto da página). */
+export function businessTerm(text: string): string {
+  const t = fold(text);
+  return BUSINESS.find(([re]) => re.test(t))?.[1] ?? "";
+}
+
+/** Busca sem IA: palavras conhecidas traduzidas + o tipo de negócio. */
+export function glossaryQuery(text: string, business: string): string {
+  const out: string[] = [];
+  for (const w of fold(text).split(/[^a-z0-9]+/).filter(Boolean)) {
+    const en = WORDS[w] ?? WORDS[w.replace(/e?s$/, "")];
+    if (en && !out.includes(en)) out.push(en);
+  }
+  const terms = out.slice(0, 3);
+  const head = business.split(" ")[0];
+  if (business && !terms.some((t) => t.includes(head))) terms.push(business);
+  return terms.join(" ").trim() || text.split(/\s+/).slice(0, 4).join(" ");
+}
+
+export interface QueriesResult {
+  queries: string[];
+  /** Busca ampla (tipo de negócio) para quando uma específica não achar nada. */
+  broad: string;
+  provider: string;
+  modelId: string;
+  fallback: boolean;
+  error?: string;
+}
+
+export async function photoQueries(input: { slots: PhotoSlot[]; brief?: string; settings?: ProviderSettings }): Promise<QueriesResult> {
+  const brief = input.brief?.trim() ?? "";
+  const broad = businessTerm(brief) || businessTerm(input.slots.map((s) => s.text).join(" "));
+  const raw = input.slots.map((s) => glossaryQuery(s.text || brief, broad));
+  const resolved = resolveModel(input.settings);
+  const base = { provider: resolved.kind, modelId: resolved.modelId };
+  if (!input.slots.length) return { ...base, queries: [], broad, fallback: false };
+  if (resolved.kind === "mock") return { ...base, queries: raw, broad, fallback: true };
+  const prompt = [
+    brief ? `Business brief: ${brief.slice(0, 600)}` : "",
+    "Slots:",
+    ...input.slots.map((s, i) => `${i + 1}. ${s.key === "image" ? "hero (main photo)" : s.key === "images" ? "gallery photo" : "photo"}: ${s.text || "(no text)"}`),
+  ].join("\n");
+  try {
+    const res = await generateText({
+      model: resolved.model,
+      system: SYSTEM,
+      prompt,
+      output: Output.object({ schema: QueriesSchema }),
+      temperature: 0.2,
+      maxOutputTokens: 800,
+      maxRetries: 2,
+      providerOptions: resolved.providerOptions as never,
+    });
+    const got = (res.output as z.infer<typeof QueriesSchema>).queries.map((q) => q.trim().slice(0, 80));
+    // Faltou ou sobrou: completa com o texto cru, posição a posição.
+    return { ...base, queries: raw.map((r, i) => got[i] || r), broad, fallback: false };
+  } catch (err) {
+    return { ...base, queries: raw, broad, fallback: true, error: friendlyAIError(err, resolved.kind, resolved.baseURL) };
+  }
+}

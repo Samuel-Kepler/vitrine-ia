@@ -95,11 +95,14 @@ export function fitSize(w: number, h: number, max = MAX_IMAGE_SIDE): { w: number
 }
 
 /** Lê, reduz e comprime a imagem (WebP; JPEG se o navegador não gerar WebP). */
-export async function compressImage(file: File): Promise<string> {
+/** Fotos de banco: um pouco menores (o projeto mora no armazenamento do navegador). */
+export const STOCK_IMAGE_SIDE = 1280;
+
+export async function compressImage(file: File, maxSide = MAX_IMAGE_SIDE): Promise<string> {
   if (!ACCEPTED.test(file.type)) throw new Error("Use uma imagem PNG, JPEG, WebP, GIF ou AVIF (SVG não é aceito).");
   if (file.size > MAX_INPUT_BYTES) throw new Error("Imagem grande demais (máx. 20 MB).");
   const bmp = await createImageBitmap(file);
-  const { w, h } = fitSize(bmp.width, bmp.height);
+  const { w, h } = fitSize(bmp.width, bmp.height, maxSide);
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
