@@ -44,6 +44,20 @@ export const RECIPES: SectionRecipe[] = [
     ]),
   },
   {
+    id: "cardapio-api",
+    name: "Cardápio da API",
+    hint: "Itens vêm do banco (GET /menu-items)",
+    build: () => {
+      const s = section("default", [
+        heading("Cardápio"),
+        text("[uma frase sobre o cardápio]"),
+        ...times<Child>(2, (i) => ["menuitem", { name: `[exemplo ${i}]`, description: "[aparece até a API responder]", price: "[preço]", photo: "" }]),
+      ])();
+      s.props.source = "/menu-items";
+      return s;
+    },
+  },
+  {
     id: "horario-localizacao",
     name: "Horário e localização",
     hint: "Onde fica, quando abre e como chegar",

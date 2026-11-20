@@ -2,7 +2,7 @@
 // São usados pelo preview do Studio (views.tsx embrulha cada um no catálogo
 // A2UI) e copiados tal e qual para o projeto React exportado: o que aparece no
 // preview é exatamente o que vai no código. Só depende de react e lucide-react.
-import { useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
 import { Check, Clock, Heart, Mail, MapPin, Menu, MessageCircle, Phone, Plus, Quote, Rocket, Shield, Sparkles, Star, X, Zap } from "lucide-react";
 
 export const ICONS: Record<string, typeof Sparkles> = { sparkles: Sparkles, zap: Zap, shield: Shield, heart: Heart, clock: Clock, star: Star, rocket: Rocket, check: Check };
@@ -476,6 +476,44 @@ export function MenuItem({ name, price, description, photo, variant = "list" }: 
         ) : null}
       </div>
     </div>
+  );
+}
+
+type MenuRow = { name?: unknown; description?: unknown; price?: unknown; photo?: unknown };
+
+/** Preço vindo do banco (número ou "12.50") vira "R$ 12,50"; texto livre passa como está. */
+export function formatPrice(v: unknown): string | undefined {
+  if (v === null || v === undefined || v === "") return undefined;
+  const n = typeof v === "number" ? v : /^\d+(\.\d+)?$/.test(String(v)) ? Number(v) : NaN;
+  return Number.isFinite(n) ? n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : String(v);
+}
+
+const text = (v: unknown) => (typeof v === "string" && v.trim() ? v : undefined);
+const httpUrl = (v: unknown) => (typeof v === "string" && /^https?:\/\//.test(v) ? v : undefined);
+
+/**
+ * Itens de cardápio que vêm da API (GET endpoint, resposta = lista de linhas).
+ * Sem endpoint, carregando ou com erro: mostra os itens de exemplo (children).
+ */
+export function MenuList({ endpoint, variant, children }: { endpoint?: string; variant?: string } & Children) {
+  const [rows, setRows] = useState<MenuRow[] | null>(null);
+  useEffect(() => {
+    if (!endpoint) return;
+    const ctrl = new AbortController();
+    fetch(endpoint, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length) setRows(data as MenuRow[]);
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [endpoint]);
+  return (
+    <Grid columns="2">
+      {rows
+        ? rows.map((r, i) => <MenuItem key={i} name={text(r.name) ?? ""} description={text(r.description)} price={formatPrice(r.price)} photo={httpUrl(r.photo)} variant={variant} />)
+        : children}
+    </Grid>
   );
 }
 

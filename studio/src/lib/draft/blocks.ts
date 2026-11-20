@@ -90,6 +90,8 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
       { key: "tone", label: "Fundo", kind: "select", options: TONES },
       // Auto: o Reimaginar escolhe (ou vale o Movimento da página). Movimento "Nenhum" desliga todas.
       { key: "animation", label: "Animação ao rolar", kind: "select", options: SECTION_ANIMATION_OPTIONS },
+      // Itens de cardápio desta seção passam a vir da API gerada (o projeto React busca; aqui ficam de exemplo).
+      { key: "source", label: "Itens de cardápio da API (rota GET)", kind: "text", placeholder: "/menu-items" },
     ],
   },
   row: {

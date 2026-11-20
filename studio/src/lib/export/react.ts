@@ -3,6 +3,7 @@
 // (landing-components.tsx, copiado tal e qual). Várias páginas = várias
 // entradas HTML do Vite (index.html, cardapio.html…), sem roteador.
 import type { GeneratedFile } from "@/lib/db/codegen";
+import { API_PATH_RE } from "@/lib/a2ui/catalog-api";
 import { LANDING_COMPONENTS_TSX, LANDING_CSS } from "./react-sources";
 import { DEFAULT_THEME, fontLinks, isTheme } from "@/lib/a2ui/themes";
 
@@ -55,11 +56,15 @@ const pascal = (s: string) =>
     .join("")
     .replace(/^(\d)/, "P$1") || "Pagina";
 
+/** Expressão TS crua num atributo (ex.: endereço montado com a env). Só com valores já validados. */
+type Raw = { raw: string };
+const isRaw = (v: unknown): v is Raw => typeof v === "object" && v !== null && "raw" in v;
+
 /** Atributo JSX: strings e listas via JSON (escapa aspas, quebras e chaves). */
 function attrs(o: Record<string, unknown>): string {
   return Object.entries(o)
     .filter(([, v]) => v !== undefined && v !== "" && v !== false && !(Array.isArray(v) && !v.length))
-    .map(([k, v]) => (v === true ? ` ${k}` : ` ${k}={${JSON.stringify(v)}}`))
+    .map(([k, v]) => (v === true ? ` ${k}` : isRaw(v) ? ` ${k}={${v.raw}}` : ` ${k}={${JSON.stringify(v)}}`))
     .join("");
 }
 
@@ -67,6 +72,8 @@ interface Ctx {
   map: Map<string, Comp>;
   used: Set<string>;
   hasForm: boolean;
+  /** Alguma lista busca na API (VITE_API_URL). */
+  hasApi: boolean;
   href: (label: string) => string;
   /** Coluna filha direta da Page: sem espaço entre as seções. */
   rootColumn?: string;
@@ -132,6 +139,12 @@ function emit(ctx: Ctx, id: string, depth: number, inForm = false): string {
       return tag("TeamMember", { name: str(c.name), role: str(c.role), bio: str(c.bio), photo: str(c.photo) });
     case "MenuItem":
       return tag("MenuItem", { name: str(c.name), price: str(c.price), description: str(c.description), photo: str(c.photo), variant: str(c.variant) });
+    case "MenuList": {
+      const source = str(c.source) ?? "";
+      if (!API_PATH_RE.test(source)) return tag("Grid", { columns: "2" }, children(c.children));
+      ctx.hasApi = true;
+      return tag("MenuList", { endpoint: { raw: `apiUrl(${JSON.stringify(source)})` }, variant: str(c.variant) }, children(c.children));
+    }
     case "ContactInfo":
       return tag("ContactInfo", { hours: strList(c.hours), address: str(c.address), phone: str(c.phone), email: str(c.email), whatsapp: str(c.whatsapp) });
     case "LogoStrip":
@@ -178,7 +191,7 @@ function emit(ctx: Ctx, id: string, depth: number, inForm = false): string {
 export function pageToTsx(page: ReactPage, href: (label: string) => string): { code: string; component: string } {
   const map = componentsOf(page.messages);
   const root = [...map.values()].find((c) => c.component === "Page")?.id ?? [...map.keys()].pop();
-  const ctx: Ctx = { map, used: new Set(), hasForm: false, href };
+  const ctx: Ctx = { map, used: new Set(), hasForm: false, hasApi: false, href };
   const body = root ? emit(ctx, root, 2) : "    <div />";
   const component = pascal(page.name);
   const imports = [...ctx.used].sort();
@@ -186,6 +199,14 @@ export function pageToTsx(page: ReactPage, href: (label: string) => string): { c
     `// Página "${page.name}" exportada do Vitrine Studio.`,
     `import { ${imports.join(", ")} } from "../components/landing";`,
     "",
+    ...(ctx.hasApi
+      ? [
+          "// Base da API gerada (ex.: http://localhost:3001). Sem ela, as listas mostram os itens de exemplo.",
+          "const API_URL = import.meta.env.VITE_API_URL as string | undefined;",
+          'const apiUrl = (path: string) => (API_URL ? API_URL.replace(/\\/$/, "") + path : undefined);',
+          "",
+        ]
+      : []),
     ...(ctx.hasForm ? ['// Endereço que recebe o formulário (ex.: http://localhost:3001/leads). Sem ele, o envio só confirma na tela.', "const LEADS_URL = import.meta.env.VITE_LEADS_URL as string | undefined;", ""] : []),
     `export default function ${component}() {`,
     "  return (",
@@ -247,7 +268,7 @@ export function reactProject(pages: ReactPage[], opts: { brand?: string } = {}):
     "src/index.css",
     `@import "tailwindcss";\n\n@theme {\n  --font-landing: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;\n}\n\nhtml,\nbody {\n  margin: 0;\n}\n\n${LANDING_CSS}`,
   );
-  add("src/vite-env.d.ts", '/// <reference types="vite/client" />\n\ninterface ImportMetaEnv {\n  readonly VITE_LEADS_URL?: string;\n}\n');
+  add("src/vite-env.d.ts", '/// <reference types="vite/client" />\n\ninterface ImportMetaEnv {\n  readonly VITE_LEADS_URL?: string;\n  readonly VITE_API_URL?: string;\n}\n');
   add(
     "vite.config.ts",
     [
@@ -318,7 +339,7 @@ export function reactProject(pages: ReactPage[], opts: { brand?: string } = {}):
     ) + "\n",
   );
   add(".gitignore", "node_modules\ndist\n.env\n");
-  add(".env.example", "# Endereço que recebe os formulários (a API gerada pelo Studio, por exemplo).\nVITE_LEADS_URL=http://localhost:3001/leads\n");
+  add(".env.example", "# Endereço que recebe os formulários (a API gerada pelo Studio, por exemplo).\nVITE_LEADS_URL=http://localhost:3001/leads\n\n# Base da API para as listas que vêm do banco (ex.: GET /menu-items).\nVITE_API_URL=http://localhost:3001\n");
   add(
     "README.md",
     [

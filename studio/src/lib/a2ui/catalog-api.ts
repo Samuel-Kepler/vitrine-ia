@@ -162,6 +162,19 @@ export const MenuItemApi = {
   }),
 };
 
+/** Rota GET da API gerada, ex.: "/menu-items". */
+export const API_PATH_RE = /^\/[a-z0-9][a-z0-9/_-]{0,60}$/;
+
+export const MenuListApi = {
+  name: "MenuList",
+  description: "Menu items loaded at runtime from the site's own API (GET source). The MenuItem children are the examples shown until the data arrives. Use ONLY where the draft has it; keep source exactly as given.",
+  schema: z.object({
+    source: z.string().regex(API_PATH_RE).describe('API route, e.g. "/menu-items"'),
+    children: S.ChildList,
+    variant: z.enum(MENU_VARIANTS).optional().describe("list (default) or card; applied to loaded items too."),
+  }),
+};
+
 export const FaqItemApi = {
   name: "FaqItem",
   description: "Frequently asked question that expands on click. Stack several in a Column inside a Section.",
@@ -238,6 +251,7 @@ export const CUSTOM_APIS = [
   PricingCardApi,
   StatApi,
   MenuItemApi,
+  MenuListApi,
   FaqItemApi,
   StepApi,
   TeamMemberApi,

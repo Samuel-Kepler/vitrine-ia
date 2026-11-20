@@ -20,12 +20,13 @@ import {
   StepApi,
   TeamMemberApi,
   MenuItemApi,
+  MenuListApi,
   ContactInfoApi,
   LogoStripApi,
   GalleryApi,
   buildCatalog,
 } from "./catalog-api";
-import { ContactInfo, FaqItem, Feature, Footer, Gallery, Grid, Heading, Hero, LogoStrip, MenuItem, Navbar, Page, PricingCard, Section, Stat, Step, TeamMember, Testimonial } from "./landing-components";
+import { ContactInfo, FaqItem, Feature, Footer, Gallery, Grid, Heading, Hero, LogoStrip, MenuItem, MenuList, Navbar, Page, PricingCard, Section, Stat, Step, TeamMember, Testimonial } from "./landing-components";
 
 type Any = any; // tipos do renderer são v0_9; o runtime v1.0 é compatível.
 type Build = (id: string, basePath?: string) => ReactNode;
@@ -66,6 +67,8 @@ const FaqItemView = createComponentImplementation(FaqItemApi as Any, ({ props }:
 const StepView = createComponentImplementation(StepApi as Any, ({ props }: Any) => <Step index={props.index} title={props.title} text={props.text} />);
 const TeamMemberView = createComponentImplementation(TeamMemberApi as Any, ({ props }: Any) => <TeamMember name={props.name} role={props.role} bio={props.bio} photo={props.photo} />);
 const MenuItemView = createComponentImplementation(MenuItemApi as Any, ({ props }: Any) => <MenuItem name={props.name} price={props.price} description={props.description} photo={props.photo} variant={props.variant} />);
+// No Studio a lista mostra os exemplos; quem busca na API é o projeto React exportado.
+const MenuListView = createComponentImplementation(MenuListApi as Any, ({ props, buildChild }: Any) => <MenuList variant={props.variant}>{children(props.children, buildChild)}</MenuList>);
 const ContactInfoView = createComponentImplementation(ContactInfoApi as Any, ({ props }: Any) => (
   <ContactInfo hours={props.hours} address={props.address} phone={props.phone} email={props.email} whatsapp={props.whatsapp} />
 ));
@@ -73,5 +76,5 @@ const LogoStripView = createComponentImplementation(LogoStripApi as Any, ({ prop
 const GalleryView = createComponentImplementation(GalleryApi as Any, ({ props }: Any) => <Gallery images={props.images} captions={props.captions} variant={props.variant} />);
 
 export const landingCatalog = buildCatalog(
-  [PageView, NavbarView, HeroView, HeadingView, SectionView, GridView, FeatureView, TestimonialView, PricingCardView, StatView, FaqItemView, StepView, TeamMemberView, MenuItemView, ContactInfoView, LogoStripView, GalleryView, FooterView] as Any,
+  [PageView, NavbarView, HeroView, HeadingView, SectionView, GridView, FeatureView, TestimonialView, PricingCardView, StatView, FaqItemView, StepView, TeamMemberView, MenuItemView, MenuListView, ContactInfoView, LogoStripView, GalleryView, FooterView] as Any,
 );

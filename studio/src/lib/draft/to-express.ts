@@ -1,6 +1,7 @@
 // Compilador determinístico: rascunho -> A2UI Express.
 // Usado (1) pelo modelo mock, (2) como plano B quando a IA falha e
 // (3) para mostrar ao modelo um "esqueleto" válido do rascunho.
+import { API_PATH_RE } from "@/lib/a2ui/catalog-api";
 import type { DraftNode } from "./tree";
 import { lines } from "./tree";
 import { BLOCKS } from "./blocks";
@@ -44,6 +45,8 @@ const PAGE_LEVEL = new Set(["navbar", "hero", "section", "footer"]);
 
 class Emitter {
   out: string[] = [];
+  /** Rota GET da seção atual: itens de cardápio dela viram MenuList. */
+  private source?: string;
   data: Record<string, unknown> = {};
   private n = 0;
 
@@ -66,7 +69,12 @@ class Emitter {
       const t = nodes[i].type;
       let j = i;
       while (j < nodes.length && nodes[j].type === t) j++;
-      if (GRIDDABLE.has(t) && j - i >= 2) {
+      if (t === "menuitem" && this.source) {
+        const kids = nodes.slice(i, j).map((n) => this.node(n)).filter(Boolean) as string[];
+        const variant = variantOf(nodes[i].props);
+        names.push(this.line(this.fresh("menu"), `MenuList(source=${str(this.source)}, children=[${kids.join(", ")}]${variant})`));
+        i = j;
+      } else if (GRIDDABLE.has(t) && j - i >= 2) {
         // Passos ganham o número pela posição na sequência.
         const kids = nodes.slice(i, j).map((n, k) => this.node(n, t === "step" ? k + 1 : undefined)).filter(Boolean) as string[];
         const cols = Math.min(Math.max(kids.length, 2), t === "pricing" ? 3 : t === "menuitem" ? 2 : 4);
@@ -91,7 +99,11 @@ class Emitter {
     const v = this.v(n.id);
     switch (n.type) {
       case "section": {
+        const outer = this.source;
+        const src = p.source?.trim();
+        this.source = src && API_PATH_RE.test(src) ? src : undefined;
         const col = this.column(n.children ?? [], this.v(n.id, "_col"));
+        this.source = outer;
         // "auto" (ou vazio): não manda; o Reimaginar pode escolher, senão vale o padrão.
         const anim = (SECTION_ANIMATIONS as readonly string[]).includes(p.animation) ? `, animation=${str(p.animation)}` : "";
         return this.line(v, `Section(child=${col}, tone=${str(p.tone || "default")}${anim})`);

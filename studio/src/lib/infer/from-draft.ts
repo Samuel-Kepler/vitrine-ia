@@ -3,6 +3,7 @@
 import type { DraftNode } from "@/lib/draft/tree";
 import { lines } from "@/lib/draft/tree";
 import { slug } from "@/lib/draft/to-express";
+import { API_PATH_RE } from "@/lib/a2ui/catalog-api";
 import type { ColType } from "@/lib/db/model";
 import type { ArchEdgeKind, ArchKind } from "@/lib/arch/model";
 
@@ -87,6 +88,34 @@ export function inferFromDraft(draft: DraftNode[], brief = ""): Suggestion {
     notes.push("Planos → tabelas plans e subscriptions, mais a API externa de Pagamentos.");
   }
 
+  // Seção com "Itens de cardápio da API": cada rota vira uma tabela no formato do MenuItem.
+  const menuSources = [
+    ...new Set(
+      all
+        .filter((n) => n.type === "section" && n.children?.some((c) => c.type === "menuitem"))
+        .map((n) => n.props.source?.trim() ?? "")
+        .filter((s) => API_PATH_RE.test(s)),
+    ),
+  ];
+  for (const source of menuSources) {
+    const name = source.split("/").filter(Boolean)[0].replace(/-/g, "_");
+    if (db.tables.some((t) => t.name === name)) continue;
+    db.tables.push({
+      name,
+      columns: [
+        ID,
+        { name: "name", type: "varchar" },
+        { name: "description", type: "text", nullable: true },
+        { name: "price", type: "decimal" },
+        { name: "photo", type: "varchar", nullable: true },
+        { name: "active", type: "boolean", default: "true" },
+        CREATED,
+      ],
+    });
+    routes.push(`GET /${source.split("/").filter(Boolean)[0]}`);
+    notes.push(`Cardápio ligado à API → tabela ${name} e GET /${source.split("/").filter(Boolean)[0]} (o site React busca os itens; sem a API, mostra os de exemplo).`);
+  }
+
   if (has("testimonial")) {
     db.tables.push({ name: "testimonials", columns: [ID, { name: "quote", type: "text" }, { name: "author", type: "varchar" }, { name: "role", type: "varchar", nullable: true }, { name: "published", type: "boolean", default: "false" }, CREATED] });
     routes.push("GET /testimonials");
@@ -115,7 +144,7 @@ export function inferFromDraft(draft: DraftNode[], brief = ""): Suggestion {
     arch.nodes.push({ key: "db", kind: "postgres", name: "Banco" });
     arch.edges.push({ from: "api", to: "db", kind: "writes" });
   } else {
-    notes.push("A landing não tem formulário, planos nem depoimentos: o backend fica só com a API.");
+    notes.push("A landing não tem formulário, planos, depoimentos nem cardápio da API: o backend fica só com a API.");
   }
   return { arch, db, notes };
 }

@@ -37,10 +37,13 @@ export type GenerateMode = "replace" | "append";
 
 // ---------------- prompt ----------------
 
+const AI_HIDDEN_FIELDS = new Set(["source"]);
+
 export function blockCatalog(): string {
   const line = (t: BlockType) => {
     const d = BLOCKS[t];
-    const fields = d.fields.map((f) => (f.options ? `${f.key} (${f.options.map((o) => o.value).join("|")})` : `${f.key}${f.kind === "lines" ? " (um por linha, separados por \\n)" : ""}`));
+    // "source" (lista da API) é ligado pelo usuário, nunca pela IA.
+    const fields = d.fields.filter((f) => !AI_HIDDEN_FIELDS.has(f.key)).map((f) => (f.options ? `${f.key} (${f.options.map((o) => o.value).join("|")})` : `${f.key}${f.kind === "lines" ? " (um por linha, separados por \\n)" : ""}`));
     return `- ${t}: ${d.hint}. Campos: ${fields.join(", ") || "nenhum"}`;
   };
   return ["Blocos da página (blocks[].type):", ...TOP_TYPES.map(line), "", "Blocos dentro de uma seção (children[].type):", ...CHILD_TYPES.filter((t) => !(TOP_TYPES as readonly string[]).includes(t)).map(line)].join("\n");
@@ -89,7 +92,7 @@ function makeNode(type: BlockType, props: { key: string; value: string }[]): Dra
   for (const f of def.fields) if (TEXT_KINDS.has(f.kind)) out[f.key] = "";
   for (const { key, value } of props) {
     const f = def.fields.find((x) => x.key === key);
-    if (!f) continue;
+    if (!f || AI_HIDDEN_FIELDS.has(key)) continue;
     if (f.options && !f.options.some((o) => o.value === value)) continue;
     const v = value.replace(/\\n/g, "\n").trim();
     // Endereço de imagem só se for http(s) de verdade; "url-da-imagem.jpg" ou "[imagem]" viram vazio.
