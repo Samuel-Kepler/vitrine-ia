@@ -141,6 +141,15 @@ function nodeFromPayload(state: StudioState, payload: Exclude<DragPayload, { kin
   return saved ? cloneWithNewIds(saved.node) : undefined;
 }
 
+const PAGE_LEVEL_TYPES = new Set<BlockType>(["navbar", "hero", "section", "footer"]);
+
+/** Id do bloco de primeiro nível que contém `id` (ou o próprio). */
+export function topLevelOf(tree: DraftNode[], id: string): string {
+  let cur = id;
+  for (let loc = locate(tree, cur); loc?.parent; loc = locate(tree, cur)) cur = loc.parent.id;
+  return cur;
+}
+
 /** Assets criados há pouco (id -> instante): ainda não entraram em nenhum bloco, mas não podem sumir. */
 const freshAssets = new Map<string, number>();
 const FRESH_ASSET_MS = 5 * 60_000;
@@ -291,8 +300,10 @@ export const useStudio = create<StudioState>()(
           if (!node) return;
           // Selecionado é container -> entra nele; senão -> logo depois dele; senão -> fim da página.
           const sel = s.selectedId ? findNode(s.tree, s.selectedId) : undefined;
+          // Faixas da página (seção, receita, menu, hero, rodapé) nunca entram em outra: vão depois da faixa selecionada.
           let target: DropTarget = { kind: "inside", parentId: null };
-          if (sel && BLOCKS[sel.type].container) target = { kind: "inside", parentId: sel.id };
+          if (sel && PAGE_LEVEL_TYPES.has(node.type)) target = { kind: "after", targetId: topLevelOf(s.tree, sel.id) };
+          else if (sel && BLOCKS[sel.type].container) target = { kind: "inside", parentId: sel.id };
           else if (sel) target = { kind: "after", targetId: sel.id };
           set({ tree: insertNode(s.tree, node, target), selectedId: node.id });
         },

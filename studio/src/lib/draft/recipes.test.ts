@@ -50,3 +50,25 @@ describe("receitas de seção", () => {
     expect(generateSystem(2026)).toContain("Horário e localização");
   });
 });
+
+describe("adicionar receita com clique", () => {
+  it("com uma seção (ou um filho dela) selecionado, a receita entra depois da seção, nunca dentro", async () => {
+    const { useStudio } = await import("./store");
+    useStudio.setState({ tree: [], selectedId: null });
+    const add = (id: string) => useStudio.getState().addByClick({ kind: "recipe", recipeId: id });
+    add("cardapio-precos");
+    add("galeria");
+    // seleciona um item dentro da galeria e adiciona outra receita
+    const gal = useStudio.getState().tree[1];
+    useStudio.getState().select(gal.children![1].id);
+    add("faq");
+    const tree = useStudio.getState().tree;
+    expect(tree.map((n) => n.type)).toEqual(["section", "section", "section"]);
+    expect(tree[0].children!.some((c) => c.type === "section")).toBe(false);
+    expect(tree[2].children![0].props.text).toBe("Perguntas frequentes");
+    // bloco comum continua entrando na seção selecionada
+    useStudio.getState().select(tree[0].id);
+    useStudio.getState().addByClick({ kind: "new", type: "text" });
+    expect(useStudio.getState().tree[0].children!.at(-1)!.type).toBe("text");
+  });
+});

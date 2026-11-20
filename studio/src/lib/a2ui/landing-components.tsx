@@ -572,7 +572,7 @@ export function Gallery({ images = [], captions = [], variant = "grid" }: { imag
     variant === "strip"
       ? "-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 @3xl:gap-4"
       : variant === "mosaic"
-        ? "grid grid-flow-dense gap-3 @md:grid-cols-2 @3xl:grid-cols-4 @3xl:gap-4"
+        ? "grid grid-flow-dense gap-3 @md:grid-cols-2 @3xl:grid-cols-3 @3xl:gap-4"
         : "grid gap-3 @md:grid-cols-2 @3xl:grid-cols-3 @3xl:gap-4";
   return (
     <div className={wrap}>
